@@ -75,51 +75,49 @@ def plot_portfolio_comparison(
         for col in history.columns:
             if col.endswith('_value'):
                 symbol = col.replace('_value', '')
-                # Get the price history for this symbol
-                price_col = f'{symbol}'
-                if f'{symbol}_qty' in history.columns:
-                    # We have position data, now get prices from first and last non-zero position
-                    qty_col = f'{symbol}_qty'
-                    qty_series = history[qty_col]
+                qty_col = f'{symbol}_qty'
 
-                    # Find first and last non-zero quantities
-                    non_zero_idx = qty_series[qty_series != 0].index
-                    if len(non_zero_idx) > 0:
-                        first_date = non_zero_idx[0]
-                        last_date = non_zero_idx[-1]
+                if qty_col in history.columns:
+                    # Calculate price at each point: price = position_value / position_qty
+                    # When qty is 0, we'll use the previous known price
+                    qty_series = history[qty_col].astype(float)
+                    value_series = history[col].astype(float)
 
-                        # Get values at first and last date
-                        first_value = history.loc[first_date, col]
-                        last_value = history.loc[last_date, col]
-                        first_qty = history.loc[first_date, qty_col]
-                        last_qty = history.loc[last_date, qty_col]
+                    # Calculate prices where we have positions
+                    prices = pd.Series(index=history.index, dtype=float)
+                    for idx in history.index:
+                        if qty_series[idx] > 0:
+                            prices[idx] = value_series[idx] / qty_series[idx]
 
-                        if first_qty > 0 and first_value > 0:
-                            first_price = first_value / first_qty
-                            # Estimate final price from last position
-                            if last_qty > 0:
-                                last_price = last_value / last_qty
-                                # Calculate what full investment in this ETF would be worth
-                                price_return = (last_price / first_price - 1)
-                                etf_portfolio_value = initial_capital * (1 + price_return)
+                    # Forward fill prices to handle gaps when qty is 0
+                    prices = prices.ffill()
 
-                                # Create value series from start price to end price
-                                etf_values = pd.Series(
-                                    initial_capital * (1 + (history[col] / first_value - 1)),
-                                    index=history.index
-                                )
-                                etf_values = etf_values[etf_values > 0]  # Only plot where we have data
+                    # Find the first date where we have a price
+                    valid_prices = prices[prices.notna()]
+                    if len(valid_prices) > 0:
+                        first_price_date = valid_prices.index[0]
+                        first_price = valid_prices.iloc[0]
 
-                                ax1.plot(
-                                    etf_values.index,
-                                    etf_values,
-                                    label=f'{symbol} (100%)',
-                                    color=etf_colors[etf_index % len(etf_colors)],
-                                    linewidth=1,
-                                    linestyle=':',
-                                    alpha=0.7
-                                )
-                                etf_index += 1
+                        # Calculate what full investment in this ETF would return
+                        # portfolio_value = initial_capital * (price_at_date / first_price)
+                        etf_values = pd.Series(
+                            initial_capital * (prices / first_price),
+                            index=history.index
+                        )
+
+                        # Plot only from the first price onwards
+                        etf_values_valid = etf_values[first_price_date:]
+                        if len(etf_values_valid) > 1:
+                            ax1.plot(
+                                etf_values_valid.index,
+                                etf_values_valid,
+                                label=f'{symbol} (100%)',
+                                color=etf_colors[etf_index % len(etf_colors)],
+                                linewidth=2,
+                                linestyle='-',
+                                alpha=1.0
+                            )
+                        etf_index += 1
 
         # Add initial capital baseline
         ax1.axhline(

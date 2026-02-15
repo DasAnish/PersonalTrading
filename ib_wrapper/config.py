@@ -10,6 +10,7 @@ import yaml
 import logging
 from typing import Any, Optional, Dict
 from pathlib import Path
+from dotenv import load_dotenv
 
 from .exceptions import ConfigurationException
 from .models import ConnectionConfig
@@ -34,6 +35,9 @@ class Config:
         Args:
             config_path: Path to YAML config file (optional)
         """
+        # Load .env file if it exists
+        load_dotenv()
+
         self._config: Dict[str, Any] = {}
         self._load_defaults()
 

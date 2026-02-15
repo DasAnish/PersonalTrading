@@ -7,7 +7,7 @@ name = "ib-wrapper"
 version = "0.1.0"
 description = "Python wrapper for Interactive Brokers API using ib_insync"
 authors = [
-    {name = "DasAnish", email = ""}
+    {name = "DasAnish"}
 ]
 readme = "README.md"
 requires-python = ">=3.9"

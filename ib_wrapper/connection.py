@@ -71,7 +71,7 @@ class IBConnectionManager:
                     f"(attempt {attempt + 1}/{self.max_retries})"
                 )
 
-                self.ib.connect(
+                await self.ib.connectAsync(
                     host=self.config.host,
                     port=self.config.port,
                     clientId=self.config.client_id,

@@ -108,7 +108,7 @@ class PortfolioService:
             logger.debug(f"Fetching account summary for {account_code}")
 
             # Request account summary
-            summary_items = self.ib.accountSummary(account_code)
+            summary_items = await self.ib.accountSummaryAsync(account_code)
 
             # Convert to dictionary
             result = {}
@@ -148,7 +148,7 @@ class PortfolioService:
         try:
             logger.debug("Fetching account values")
 
-            account_values = self.ib.accountValues(account)
+            account_values = await self.ib.accountValuesAsync(account)
 
             result = {}
             for av in account_values:

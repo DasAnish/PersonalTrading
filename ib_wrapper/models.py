@@ -40,11 +40,11 @@ class Position:
             symbol=ib_position.contract.symbol,
             contract_id=ib_position.contract.conId,
             position=ib_position.position,
-            market_price=ib_position.marketPrice if ib_position.marketPrice else 0.0,
-            market_value=ib_position.marketValue if ib_position.marketValue else 0.0,
-            average_cost=ib_position.averageCost if ib_position.averageCost else 0.0,
-            unrealized_pnl=ib_position.unrealizedPNL if ib_position.unrealizedPNL else 0.0,
-            realized_pnl=ib_position.realizedPNL if ib_position.realizedPNL else 0.0,
+            market_price=getattr(ib_position, 'marketPrice', 0.0) or 0.0,
+            market_value=getattr(ib_position, 'marketValue', 0.0) or 0.0,
+            average_cost=getattr(ib_position, 'averageCost', 0.0) or 0.0,
+            unrealized_pnl=getattr(ib_position, 'unrealizedPNL', 0.0) or 0.0,
+            realized_pnl=getattr(ib_position, 'realizedPNL', 0.0) or 0.0,
             account=ib_position.account
         )
 

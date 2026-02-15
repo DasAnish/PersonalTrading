@@ -26,6 +26,7 @@ class BacktestResults:
     Attributes:
         strategy_name: Name of the strategy tested
         portfolio_history: DataFrame with columns: timestamp, cash, total_value, position columns
+        weights_history: DataFrame with columns=symbols, index=dates, values=weights at each rebalance
         transactions: List of all transactions executed
         metrics: Dict of performance metrics
         initial_capital: Starting capital
@@ -34,6 +35,7 @@ class BacktestResults:
 
     strategy_name: str
     portfolio_history: pd.DataFrame
+    weights_history: pd.DataFrame
     transactions: List[Transaction]
     metrics: Dict[str, float] = field(default_factory=dict)
     initial_capital: float = 0.0
@@ -147,6 +149,7 @@ class BacktestEngine:
 
         # Track history
         portfolio_history = []
+        weights_history = []
         all_transactions = []
 
         # Record initial state
@@ -170,6 +173,11 @@ class BacktestEngine:
 
                 # Calculate strategy weights
                 weights = strategy.calculate_weights(lookback_data)
+
+                # Record weights at this rebalance date
+                weight_record = {'timestamp': rebalance_date}
+                weight_record.update(weights.to_dict())
+                weights_history.append(weight_record)
 
                 # Get current prices
                 current_prices = backtest_data.loc[rebalance_date]
@@ -203,6 +211,14 @@ class BacktestEngine:
         history_df = pd.DataFrame(portfolio_history)
         history_df.set_index('timestamp', inplace=True)
 
+        # Convert weights history to DataFrame
+        if weights_history:
+            weights_df = pd.DataFrame(weights_history)
+            weights_df.set_index('timestamp', inplace=True)
+        else:
+            # Empty DataFrame with proper structure if no rebalances
+            weights_df = pd.DataFrame()
+
         # Calculate final value
         final_value = portfolio.total_value()
 
@@ -217,6 +233,7 @@ class BacktestEngine:
         results = BacktestResults(
             strategy_name=strategy.name,
             portfolio_history=history_df,
+            weights_history=weights_df,
             transactions=all_transactions,
             initial_capital=self.initial_capital,
             final_value=final_value

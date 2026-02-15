@@ -10,21 +10,23 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from typing import Dict
 from backtesting.engine import BacktestResults
-from .metrics import calculate_drawdown
+from .metrics import calculate_drawdown, calculate_return_attribution
 
 
 def plot_portfolio_comparison(
     results_dict: Dict[str, BacktestResults],
-    figsize: tuple = (14, 10),
+    figsize: tuple = (14, 14),
     save_path: str = None
 ) -> plt.Figure:
     """
     Create comparison plot for multiple backtest results.
 
-    Creates a 3-panel figure showing:
+    Creates a 5-panel figure showing:
     1. Portfolio value over time
     2. Drawdown over time
-    3. Performance metrics table
+    3. Portfolio weights over time (for first strategy)
+    4. Return attribution by asset (for first strategy)
+    5. Performance metrics table
 
     Args:
         results_dict: Dict mapping strategy name to BacktestResults
@@ -41,8 +43,8 @@ def plot_portfolio_comparison(
         ... }
         >>> fig = plot_portfolio_comparison(results, save_path='backtest.png')
     """
-    # Create figure with 3 subplots
-    fig, axes = plt.subplots(3, 1, figsize=figsize)
+    # Create figure with 5 subplots
+    fig, axes = plt.subplots(5, 1, figsize=figsize)
     fig.suptitle('Portfolio Strategy Comparison', fontsize=16, fontweight='bold')
 
     # Color palette
@@ -60,10 +62,66 @@ def plot_portfolio_comparison(
             linewidth=2
         )
 
-    # Add initial capital baseline
+    # Add individual ETF benchmarks (fully invested in each ETF)
     if len(results_dict) > 0:
         first_results = list(results_dict.values())[0]
         initial_capital = first_results.initial_capital
+        history = first_results.portfolio_history
+
+        # Extract ETF prices and calculate individual ETF performance
+        etf_colors = ['#ff9999', '#99ccff', '#99ff99', '#ffcc99']
+        etf_index = 0
+
+        for col in history.columns:
+            if col.endswith('_value'):
+                symbol = col.replace('_value', '')
+                # Get the price history for this symbol
+                price_col = f'{symbol}'
+                if f'{symbol}_qty' in history.columns:
+                    # We have position data, now get prices from first and last non-zero position
+                    qty_col = f'{symbol}_qty'
+                    qty_series = history[qty_col]
+
+                    # Find first and last non-zero quantities
+                    non_zero_idx = qty_series[qty_series != 0].index
+                    if len(non_zero_idx) > 0:
+                        first_date = non_zero_idx[0]
+                        last_date = non_zero_idx[-1]
+
+                        # Get values at first and last date
+                        first_value = history.loc[first_date, col]
+                        last_value = history.loc[last_date, col]
+                        first_qty = history.loc[first_date, qty_col]
+                        last_qty = history.loc[last_date, qty_col]
+
+                        if first_qty > 0 and first_value > 0:
+                            first_price = first_value / first_qty
+                            # Estimate final price from last position
+                            if last_qty > 0:
+                                last_price = last_value / last_qty
+                                # Calculate what full investment in this ETF would be worth
+                                price_return = (last_price / first_price - 1)
+                                etf_portfolio_value = initial_capital * (1 + price_return)
+
+                                # Create value series from start price to end price
+                                etf_values = pd.Series(
+                                    initial_capital * (1 + (history[col] / first_value - 1)),
+                                    index=history.index
+                                )
+                                etf_values = etf_values[etf_values > 0]  # Only plot where we have data
+
+                                ax1.plot(
+                                    etf_values.index,
+                                    etf_values,
+                                    label=f'{symbol} (100%)',
+                                    color=etf_colors[etf_index % len(etf_colors)],
+                                    linewidth=1,
+                                    linestyle=':',
+                                    alpha=0.7
+                                )
+                                etf_index += 1
+
+        # Add initial capital baseline
         ax1.axhline(
             y=initial_capital,
             color='gray',
@@ -74,8 +132,8 @@ def plot_portfolio_comparison(
         )
 
     ax1.set_ylabel('Portfolio Value (£)', fontsize=12)
-    ax1.set_title('Portfolio Value Over Time', fontsize=14, fontweight='bold')
-    ax1.legend(loc='best', fontsize=10)
+    ax1.set_title('Portfolio Value Over Time (with Individual ETF Benchmarks)', fontsize=14, fontweight='bold')
+    ax1.legend(loc='best', fontsize=9)
     ax1.grid(True, alpha=0.3)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
@@ -108,10 +166,63 @@ def plot_portfolio_comparison(
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
 
-    # Panel 3: Performance Metrics Table
+    # Panel 3: Portfolio Weights Over Time (for first strategy)
     ax3 = axes[2]
-    ax3.axis('tight')
-    ax3.axis('off')
+    first_name = list(results_dict.keys())[0]
+    first_results = results_dict[first_name]
+
+    if not first_results.weights_history.empty:
+        weights_df = first_results.weights_history
+        # Create stacked area chart of weights
+        ax3.stackplot(
+            weights_df.index,
+            *[weights_df[col] * 100 for col in weights_df.columns],
+            labels=weights_df.columns,
+            alpha=0.8
+        )
+        ax3.set_ylabel('Weight (%)', fontsize=12)
+        ax3.set_title(f'Portfolio Weights Over Time - {first_name}', fontsize=14, fontweight='bold')
+        ax3.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=9)
+        ax3.set_ylim(0, 100)
+        ax3.grid(True, alpha=0.3)
+        ax3.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    else:
+        ax3.text(0.5, 0.5, 'No weights history available',
+                ha='center', va='center', transform=ax3.transAxes)
+        ax3.set_title(f'Portfolio Weights Over Time - {first_name}', fontsize=14, fontweight='bold')
+        ax3.axis('off')
+
+    # Panel 4: Return Attribution by Asset
+    ax4 = axes[3]
+    attribution = calculate_return_attribution(first_results.portfolio_history)
+
+    if not attribution.empty and len(attribution.columns) > 0:
+        # Plot return contribution of each asset over time
+        for col in attribution.columns:
+            ax4.plot(
+                attribution.index,
+                attribution[col],
+                label=col,
+                linewidth=2
+            )
+        ax4.axhline(y=0, color='black', linestyle='-', linewidth=0.5, alpha=0.5)
+        ax4.set_ylabel('Return Contribution (£)', fontsize=12)
+        ax4.set_title(f'Return Attribution by Asset - {first_name}', fontsize=14, fontweight='bold')
+        ax4.legend(loc='best', fontsize=9)
+        ax4.grid(True, alpha=0.3)
+        ax4.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        plt.setp(ax4.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    else:
+        ax4.text(0.5, 0.5, 'No return attribution data available',
+                ha='center', va='center', transform=ax4.transAxes)
+        ax4.set_title(f'Return Attribution by Asset - {first_name}', fontsize=14, fontweight='bold')
+        ax4.axis('off')
+
+    # Panel 5: Performance Metrics Table
+    ax5 = axes[4]
+    ax5.axis('tight')
+    ax5.axis('off')
 
     # Prepare metrics table
     metrics_data = []
@@ -141,7 +252,7 @@ def plot_portfolio_comparison(
         metrics_data.append(row)
 
     # Create table
-    table = ax3.table(
+    table = ax5.table(
         cellText=metrics_data,
         rowLabels=list(results_dict.keys()),
         colLabels=metrics_labels,
@@ -166,7 +277,7 @@ def plot_portfolio_comparison(
         cell.set_facecolor('#f0f0f0')
         cell.set_text_props(weight='bold')
 
-    ax3.set_title('Performance Metrics Summary', fontsize=14, fontweight='bold', pad=20)
+    ax5.set_title('Performance Metrics Summary', fontsize=14, fontweight='bold', pad=20)
 
     # Adjust layout
     plt.tight_layout()

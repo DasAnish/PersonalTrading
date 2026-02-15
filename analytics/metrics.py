@@ -275,4 +275,49 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
     # Store in backtest results
     backtest_results.metrics = metrics
 
+
+def calculate_return_attribution(history: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate return attribution by asset over time.
+
+    Args:
+        history: Portfolio history DataFrame with position values (columns: SYMBOL_value)
+
+    Returns:
+        DataFrame with cumulative return for each asset over time
+    """
+    # Extract position value columns (format: SYMBOL_value)
+    position_cols = [col for col in history.columns if col.endswith('_value')]
+
+    if not position_cols:
+        return pd.DataFrame()
+
+    # Extract symbol names from column names (remove _value suffix)
+    symbols = [col.replace('_value', '') for col in position_cols]
+
+    # Get position values
+    positions = history[position_cols].copy()
+    positions.columns = symbols
+
+    # Fill NaN values with 0 (no position yet)
+    positions = positions.fillna(0)
+
+    # Calculate cumulative return for each asset
+    # Start with initial value of 0, then calculate how much each asset gained/lost
+    attribution = positions.copy()
+
+    # Convert to cumulative change from start (each column - its first non-zero value)
+    for col in attribution.columns:
+        first_nonzero_idx = (attribution[col] != 0).idxmax()
+        if attribution[col].iloc[0] == 0 and first_nonzero_idx in attribution.index:
+            first_nonzero_value = attribution[col].loc[first_nonzero_idx]
+            if first_nonzero_value > 0:
+                # Calculate return contribution: current value - initial invested value
+                attribution[col] = attribution[col] - first_nonzero_value
+        else:
+            # No position, set to 0
+            attribution[col] = attribution[col] - attribution[col].iloc[0]
+
+    return attribution
+
     return metrics

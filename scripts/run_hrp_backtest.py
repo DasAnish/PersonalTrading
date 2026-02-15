@@ -6,10 +6,15 @@ This script:
 2. Runs HRP and Equal Weight strategies
 3. Generates performance metrics and visualizations
 4. Saves results to CSV and PNG files
+
+Usage:
+    python run_hrp_backtest.py              # Use cached data (faster)
+    python run_hrp_backtest.py --refresh    # Force fresh data from IB (slower)
 """
 
 import asyncio
 import logging
+import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -57,19 +62,23 @@ RESULTS_DIR = Path('results')
 RESULTS_DIR.mkdir(exist_ok=True)
 
 
-async def fetch_historical_data(client: IBClient, cache: HistoricalDataCache):
+async def fetch_historical_data(client: IBClient, cache: HistoricalDataCache, refresh: bool = False):
     """
     Fetch historical data for all symbols.
 
     Args:
         client: IBClient instance
         cache: HistoricalDataCache instance
+        refresh: If True, force fresh data from IB (skip cache). If False, use cache if available.
 
     Returns:
         Dict mapping symbol to DataFrame
     """
     logger.info("=" * 60)
-    logger.info("FETCHING HISTORICAL DATA")
+    if refresh:
+        logger.info("FETCHING FRESH DATA FROM INTERACTIVE BROKERS (CACHE SKIPPED)")
+    else:
+        logger.info("FETCHING HISTORICAL DATA (USING CACHE IF AVAILABLE)")
     logger.info("=" * 60)
 
     data_dict = {}
@@ -78,17 +87,33 @@ async def fetch_historical_data(client: IBClient, cache: HistoricalDataCache):
         logger.info(f"\nFetching {symbol}...")
 
         try:
-            # Use cache to avoid rate limits
-            df = await cache.get_or_fetch_data(
-                symbol=symbol,
-                start_date=START_DATE,
-                end_date=END_DATE,
-                market_data_service=client.market_data,
-                bar_size=BAR_SIZE,
-                sec_type=SEC_TYPE,
-                exchange=EXCHANGE,
-                currency=CURRENCY
-            )
+            if refresh:
+                # Force fresh fetch from IB, skip cache
+                logger.info(f"  (fetching fresh from IB...)")
+                df = await client.market_data.download_extended_history(
+                    symbol=symbol,
+                    start_date=START_DATE,
+                    end_date=END_DATE,
+                    bar_size=BAR_SIZE,
+                    sec_type=SEC_TYPE,
+                    exchange=EXCHANGE,
+                    currency=CURRENCY
+                )
+                # Save to cache for future use
+                if not df.empty:
+                    cache.save_cached_data(symbol, df, START_DATE, END_DATE)
+            else:
+                # Use cache-aware fetch (faster, uses existing data if available)
+                df = await cache.get_or_fetch_data(
+                    symbol=symbol,
+                    start_date=START_DATE,
+                    end_date=END_DATE,
+                    market_data_service=client.market_data,
+                    bar_size=BAR_SIZE,
+                    sec_type=SEC_TYPE,
+                    exchange=EXCHANGE,
+                    currency=CURRENCY
+                )
 
             if not df.empty:
                 data_dict[symbol] = df
@@ -105,8 +130,13 @@ async def fetch_historical_data(client: IBClient, cache: HistoricalDataCache):
     return data_dict
 
 
-async def main():
-    """Main execution function."""
+async def main(refresh: bool = False):
+    """
+    Main execution function.
+
+    Args:
+        refresh: If True, force fresh data from IB (skip cache)
+    """
     print("\n" + "=" * 60)
     print("HIERARCHICAL RISK PARITY BACKTEST")
     print("=" * 60)
@@ -116,6 +146,10 @@ async def main():
     print(f"Transaction Cost: {TRANSACTION_COST_BPS} basis points")
     print(f"Rebalance Frequency: {REBALANCE_FREQUENCY}")
     print(f"Lookback Period: {LOOKBACK_DAYS} days (1 year)")
+    if refresh:
+        print("Data Mode: FRESH FROM IB (cache skipped)")
+    else:
+        print("Data Mode: Using cache if available (faster)")
     print("=" * 60 + "\n")
 
     # Initialize cache
@@ -130,7 +164,7 @@ async def main():
             logger.info("✓ Connected to IB")
 
             # Fetch historical data
-            data_dict = await fetch_historical_data(client, cache)
+            data_dict = await fetch_historical_data(client, cache, refresh=refresh)
 
             if not data_dict:
                 logger.error("No data fetched. Exiting.")
@@ -319,5 +353,23 @@ async def main():
 
 
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Run HRP backtest on UK ETFs",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python run_hrp_backtest.py              # Use cached data (faster)
+  python run_hrp_backtest.py --refresh    # Force fresh data from IB (slower)
+        """
+    )
+    parser.add_argument(
+        '--refresh',
+        action='store_true',
+        help='Force fresh data from Interactive Brokers (skip cache). '
+             'Useful for getting the latest market data.'
+    )
+    args = parser.parse_args()
+
     # Run the async main function
-    asyncio.run(main())
+    asyncio.run(main(refresh=args.refresh))

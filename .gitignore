@@ -56,3 +56,5 @@ Thumbs.db
 config/local_config.yaml
 *.db
 *.sqlite
+
+references/

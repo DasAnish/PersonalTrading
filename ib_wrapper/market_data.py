@@ -126,6 +126,15 @@ class MarketDataService:
             # Convert to DataFrame
             df = util.df(bars)
 
+            # Force set datetime index from bars to ensure it's proper DatetimeIndex
+            if not df.empty and bars:
+                try:
+                    dates = pd.to_datetime([bar.date for bar in bars])
+                    df.index = dates
+                    df.index.name = 'date'
+                except Exception as e:
+                    logger.warning(f"Could not set datetime index: {e}")
+
             logger.info(f"Received {len(df)} bars for {symbol}")
             return df
 
@@ -294,7 +303,18 @@ class MarketDataService:
                 chunk_count += 1
 
                 # Move end date back for next chunk
-                current_end = df.index[0] - timedelta(days=1)
+                # Get the first date from the dataframe
+                if hasattr(df.index, 'to_pydatetime'):
+                    first_date = df.index[0].to_pydatetime()
+                else:
+                    first_date = df.index[0]
+
+                # Ensure first_date is a datetime object
+                if isinstance(first_date, datetime):
+                    current_end = first_date - timedelta(days=1)
+                else:
+                    logger.warning(f"Could not extract datetime from index: {type(first_date)}")
+                    break
 
                 # Stop if we've gone before start_date
                 if current_end < start_date:

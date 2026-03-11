@@ -40,7 +40,7 @@ def load_results():
 
     # Load portfolio histories
     file_mappings = {
-        "HRP Strategy": "hrp",
+        "Strategy": "hrp",
         "Equal Weight": "ew"
     }
 
@@ -51,7 +51,7 @@ def load_results():
         if file_path.exists():
             print(f"   [+] Loaded {strategy} history from {file_path.name}")
             df = pd.read_csv(file_path)
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            df["timestamp"] = pd.to_datetime(df["timestamp"].tolist())
             results[f"{key}_history"] = df
         else:
             print(f"   [-] {strategy} history not found: {file_path.name}")
@@ -78,7 +78,7 @@ def get_portfolio_value_data(results):
 
     if "hrp_strategy_history" in results:
         df = results["hrp_strategy_history"]
-        data["HRP"] = {
+        data["Strategy"] = {
             "dates": df["timestamp"].dt.strftime("%Y-%m-%d").tolist(),
             "values": df["total_value"].tolist(),
         }
@@ -97,7 +97,7 @@ def get_drawdown_data(results):
     """Calculate and return drawdown data."""
     data = {}
 
-    for key, label in [("hrp_strategy_history", "HRP"), ("equal_weight_history", "Equal Weight")]:
+    for key, label in [("hrp_strategy_history", "Strategy"), ("equal_weight_history", "Equal Weight")]:
         if key in results:
             df = results[key].copy()
             df["running_max"] = df["total_value"].cummax()
@@ -130,7 +130,63 @@ def get_weights_data(results):
                     (df[value_col] / df["total_value"]) * 100
                 ).fillna(0).tolist()
 
-        data["HRP"] = weights_data
+        data["Strategy"] = weights_data
+
+    return data
+
+
+def get_attribution_data(results):
+    """Calculate daily attribution: previous weights × asset returns."""
+    data = {}
+
+    for key, label in [("hrp_strategy_history", "Strategy"), ("equal_weight_history", "Equal Weight")]:
+        if key in results:
+            df = results[key].copy()
+            df = df.reset_index(drop=True)
+
+            # Get symbols
+            symbols = [col.replace("_qty", "") for col in df.columns if col.endswith("_qty")]
+
+            attribution_data = {"dates": [], "symbols": symbols}
+
+            # Initialize attribution lists for each symbol
+            for symbol in symbols:
+                attribution_data[symbol] = []
+
+            # Calculate daily attribution for each day
+            for i in range(1, len(df)):
+                prev_row = df.iloc[i - 1]
+                curr_row = df.iloc[i]
+
+                # Calculate previous day's weights
+                prev_total = prev_row["total_value"]
+                if prev_total <= 0:
+                    continue
+
+                attribution_data["dates"].append(curr_row["timestamp"].strftime("%Y-%m-%d"))
+
+                for symbol in symbols:
+                    prev_value_col = f"{symbol}_value"
+                    curr_value_col = f"{symbol}_value"
+
+                    if prev_value_col in df.columns and curr_value_col in df.columns:
+                        prev_value = prev_row[prev_value_col]
+                        curr_value = curr_row[curr_value_col]
+
+                        # Handle missing values
+                        if pd.isna(prev_value) or pd.isna(curr_value) or prev_value == 0:
+                            daily_attribution = 0
+                        else:
+                            # Weight at T-1
+                            weight_t_minus_1 = (prev_value / prev_total) * 100
+                            # Return from T-1 to T
+                            asset_return = ((curr_value - prev_value) / prev_value) * 100
+                            # Attribution = weight * return
+                            daily_attribution = (weight_t_minus_1 / 100) * asset_return
+
+                        attribution_data[symbol].append(daily_attribution)
+
+            data[label] = attribution_data
 
     return data
 
@@ -146,7 +202,7 @@ def get_transactions_data(results):
             df["transaction_cost"] = df["cost"]
         if "cost" in df.columns and "total_cost" not in df.columns:
             df["total_cost"] = df["cost"] * df["quantity"] * df["price"]
-        data["HRP"] = df.to_dict("records")
+        data["Strategy"] = df.to_dict("records")
 
     if "equal_weight_transactions" in results:
         df = results["equal_weight_transactions"].copy()
@@ -202,7 +258,7 @@ def index():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>HRP Backtest Dashboard</title>
+        <title>Strategy Backtest Dashboard</title>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
         <style>
             * {
@@ -426,6 +482,31 @@ def index():
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             }
 
+            .view-toggle-btn {
+                padding: 10px 20px;
+                margin-right: 10px;
+                border: 2px solid #667eea;
+                background: white;
+                color: #667eea;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+
+            .view-toggle-btn:hover {
+                background: #f0f4ff;
+            }
+
+            .view-toggle-btn.active {
+                background: #667eea;
+                color: white;
+            }
+
+            .attribution-container {
+                margin-top: 20px;
+            }
+
             @media (max-width: 768px) {
                 .header h1 {
                     font-size: 1.8em;
@@ -447,13 +528,17 @@ def index():
                 .chart-container {
                     height: 300px;
                 }
+
+                .attribution-container {
+                    grid-template-columns: 1fr !important;
+                }
             }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h1>📊 HRP Backtest Dashboard</h1>
+                <h1>📊 Strategy Backtest Dashboard</h1>
                 <p>Interactive visualization of portfolio optimization results</p>
             </div>
 
@@ -462,6 +547,7 @@ def index():
                 <button class="tab-button" onclick="showTab('portfolio')">Portfolio Value</button>
                 <button class="tab-button" onclick="showTab('drawdown')">Drawdown</button>
                 <button class="tab-button" onclick="showTab('weights')">Weights</button>
+                <button class="tab-button" onclick="showTab('attribution')">Attribution</button>
                 <button class="tab-button" onclick="showTab('transactions')">Transactions</button>
             </div>
 
@@ -473,7 +559,7 @@ def index():
                         <thead>
                             <tr>
                                 <th>Metric</th>
-                                <th>HRP Strategy</th>
+                                <th>Strategy</th>
                                 <th>Equal Weight</th>
                             </tr>
                         </thead>
@@ -504,17 +590,43 @@ def index():
 
                 <!-- Weights Tab -->
                 <div id="weights" class="tab-panel">
-                    <h2>HRP Portfolio Weights Over Time</h2>
+                    <h2>Strategy Portfolio Weights Over Time</h2>
+                    <div style="margin-bottom: 20px;">
+                        <button onclick="toggleWeightsMode('cumulative')" id="weightsModeCumulative" class="view-toggle-btn active">Cumulative View</button>
+                        <button onclick="toggleWeightsMode('individual')" id="weightsModIndividual" class="view-toggle-btn">Individual Assets</button>
+                    </div>
                     <div class="chart-container">
                         <canvas id="weightsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Attribution Tab -->
+                <div id="attribution" class="tab-panel">
+                    <h2>Daily Attribution Analysis</h2>
+                    <p style="margin-bottom: 20px; color: #666;">Daily attribution calculated as: T-1 portfolio weight × asset return (T-1 to T)</p>
+                    <div class="attribution-container">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h3>Strategy Attribution</h3>
+                                <div class="chart-container" style="margin-top: 10px;">
+                                    <canvas id="attributionStrategyChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3>Equal Weight Attribution</h3>
+                                <div class="chart-container" style="margin-top: 10px;">
+                                    <canvas id="attributionEWChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Transactions Tab -->
                 <div id="transactions" class="tab-panel">
                     <h2>Transaction History</h2>
-                    <h3 style="margin-top: 30px; margin-bottom: 15px;">HRP Strategy Transactions</h3>
-                    <table class="transactions-table" id="hrpTransactionsTable">
+                    <h3 style="margin-top: 30px; margin-bottom: 15px;">Strategy Transactions</h3>
+                    <table class="transactions-table" id="strategyTransactionsTable">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -525,7 +637,7 @@ def index():
                                 <th>Cost</th>
                             </tr>
                         </thead>
-                        <tbody id="hrpTransactionsBody">
+                        <tbody id="strategyTransactionsBody">
                             <tr><td colspan="6">No transactions</td></tr>
                         </tbody>
                     </table>
@@ -552,16 +664,20 @@ def index():
 
         <script>
             let charts = {};
+            let weightsMode = 'cumulative';
+            let weightsData = null;
 
             async function loadData() {
                 try {
                     const response = await fetch('/api/data');
                     const data = await response.json();
 
+                    weightsData = data.weights;
                     displayMetrics(data.metrics);
                     displayPortfolioChart(data.portfolio_value);
                     displayDrawdownChart(data.drawdown);
                     displayWeightsChart(data.weights);
+                    displayAttributionCharts(data.attribution);
                     displayTransactions(data.transactions);
                 } catch (error) {
                     console.error('Error loading data:', error);
@@ -575,12 +691,12 @@ def index():
 
                 for (const [metric, values] of Object.entries(metrics)) {
                     const row = document.createElement('tr');
-                    const hrpValue = values['HRP Strategy'] || 'N/A';
+                    const strategyValue = values['Strategy'] || 'N/A';
                     const ewValue = values['Equal Weight'] || 'N/A';
 
                     row.innerHTML = `
                         <td><strong>${metric}</strong></td>
-                        <td class="${isPositive(hrpValue) ? 'positive' : 'negative'}">${hrpValue}</td>
+                        <td class="${isPositive(strategyValue) ? 'positive' : 'negative'}">${strategyValue}</td>
                         <td class="${isPositive(ewValue) ? 'positive' : 'negative'}">${ewValue}</td>
                     `;
                     tbody.appendChild(row);
@@ -597,7 +713,7 @@ def index():
                         card.className = 'metric-card';
                         card.innerHTML = `
                             <h3>${metric}</h3>
-                            <div class="value" style="color: #4ade80;">HRP: ${metrics[metric]['HRP Strategy']}</div>
+                            <div class="value" style="color: #4ade80;">Strategy: ${metrics[metric]['Strategy']}</div>
                             <div class="value" style="color: #f87171; margin-top: 10px;">EW: ${metrics[metric]['Equal Weight']}</div>
                         `;
                         grid.appendChild(card);
@@ -612,11 +728,11 @@ def index():
 
                 const datasets = [];
 
-                // Add HRP data if available
-                if (data.HRP && data.HRP.values && data.HRP.values.length > 0) {
+                // Add Strategy data if available
+                if (data.Strategy && data.Strategy.values && data.Strategy.values.length > 0) {
                     datasets.push({
-                        label: 'HRP Strategy',
-                        data: data.HRP.values,
+                        label: 'Strategy',
+                        data: data.Strategy.values,
                         borderColor: '#667eea',
                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
                         tension: 0.4,
@@ -641,7 +757,7 @@ def index():
                 charts.portfolio = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: data.HRP ? data.HRP.dates : (data['Equal Weight'] ? data['Equal Weight'].dates : []),
+                        labels: data.Strategy ? data.Strategy.dates : (data['Equal Weight'] ? data['Equal Weight'].dates : []),
                         datasets: datasets
                     },
                     options: {
@@ -669,11 +785,11 @@ def index():
 
                 const datasets = [];
 
-                // Add HRP data if available
-                if (data.HRP && data.HRP.drawdown && data.HRP.drawdown.length > 0) {
+                // Add Strategy data if available
+                if (data.Strategy && data.Strategy.drawdown && data.Strategy.drawdown.length > 0) {
                     datasets.push({
-                        label: 'HRP Strategy',
-                        data: data.HRP.drawdown,
+                        label: 'Strategy',
+                        data: data.Strategy.drawdown,
                         borderColor: '#667eea',
                         backgroundColor: 'rgba(102, 126, 234, 0.2)',
                         tension: 0.4,
@@ -700,7 +816,7 @@ def index():
                 charts.drawdown = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: data.HRP ? data.HRP.dates : (data['Equal Weight'] ? data['Equal Weight'].dates : []),
+                        labels: data.Strategy ? data.Strategy.dates : (data['Equal Weight'] ? data['Equal Weight'].dates : []),
                         datasets: datasets
                     },
                     options: {
@@ -727,27 +843,31 @@ def index():
             }
 
             function displayWeightsChart(data) {
-                if (!data.HRP || !data.HRP.dates || data.HRP.dates.length === 0) {
+                if (!data.Strategy || !data.Strategy.dates || data.Strategy.dates.length === 0) {
                     document.getElementById('weightsChart').parentElement.innerHTML = '<p>Weights data not available</p>';
                     return;
                 }
 
+                renderWeightsChart(data);
+            }
+
+            function renderWeightsChart(data) {
                 const ctx = document.getElementById('weightsChart').getContext('2d');
 
                 if (charts.weights) charts.weights.destroy();
 
                 // Extract symbols (skip dates)
-                const symbols = Object.keys(data.HRP).filter(k => k !== 'dates');
+                const symbols = Object.keys(data.Strategy).filter(k => k !== 'dates');
                 const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
 
                 const datasets = symbols.map((symbol, idx) => ({
                     label: symbol,
-                    data: data.HRP[symbol] || [],
+                    data: data.Strategy[symbol] || [],
                     backgroundColor: colors[idx % colors.length],
                     borderColor: colors[idx % colors.length],
                     pointRadius: 0,
-                    borderWidth: 0,
-                    fill: true,
+                    borderWidth: weightsMode === 'individual' ? 2 : 0,
+                    fill: weightsMode === 'cumulative',
                     tension: 0.2
                 }));
 
@@ -759,7 +879,7 @@ def index():
                 charts.weights = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: data.HRP.dates,
+                        labels: data.Strategy.dates,
                         datasets: datasets
                     },
                     options: {
@@ -767,7 +887,7 @@ def index():
                         maintainAspectRatio: false,
                         scales: {
                             y: {
-                                stacked: true,
+                                stacked: weightsMode === 'cumulative',
                                 max: 100,
                                 ticks: {
                                     callback: function(value) {
@@ -789,12 +909,125 @@ def index():
                 });
             }
 
+            function toggleWeightsMode(mode) {
+                weightsMode = mode;
+
+                // Update button states
+                document.getElementById('weightsModeCumulative').classList.remove('active');
+                document.getElementById('weightsModIndividual').classList.remove('active');
+
+                if (mode === 'cumulative') {
+                    document.getElementById('weightsModeCumulative').classList.add('active');
+                } else {
+                    document.getElementById('weightsModIndividual').classList.add('active');
+                }
+
+                // Re-render chart
+                if (weightsData) {
+                    renderWeightsChart(weightsData);
+                }
+            }
+
+            function displayAttributionCharts(data) {
+                if (!data) return;
+
+                // Display Strategy Attribution
+                if (data.Strategy && data.Strategy.dates && data.Strategy.dates.length > 0) {
+                    const strategyCtx = document.getElementById('attributionStrategyChart').getContext('2d');
+                    if (charts.attributionStrategy) charts.attributionStrategy.destroy();
+
+                    const symbols = data.Strategy.symbols || [];
+                    const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
+                    const datasets = symbols.map((symbol, idx) => ({
+                        label: symbol,
+                        data: data.Strategy[symbol] || [],
+                        borderColor: colors[idx % colors.length],
+                        backgroundColor: colors[idx % colors.length],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                        tension: 0.2
+                    }));
+
+                    charts.attributionStrategy = new Chart(strategyCtx, {
+                        type: 'line',
+                        data: {
+                            labels: data.Strategy.dates,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value.toFixed(2) + '%';
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Display Equal Weight Attribution
+                if (data['Equal Weight'] && data['Equal Weight'].dates && data['Equal Weight'].dates.length > 0) {
+                    const ewCtx = document.getElementById('attributionEWChart').getContext('2d');
+                    if (charts.attributionEW) charts.attributionEW.destroy();
+
+                    const symbols = data['Equal Weight'].symbols || [];
+                    const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
+                    const datasets = symbols.map((symbol, idx) => ({
+                        label: symbol,
+                        data: data['Equal Weight'][symbol] || [],
+                        borderColor: colors[idx % colors.length],
+                        backgroundColor: colors[idx % colors.length],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                        tension: 0.2
+                    }));
+
+                    charts.attributionEW = new Chart(ewCtx, {
+                        type: 'line',
+                        data: {
+                            labels: data['Equal Weight'].dates,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value.toFixed(2) + '%';
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
             function displayTransactions(data) {
-                // HRP Transactions
-                const hrpBody = document.getElementById('hrpTransactionsBody');
-                hrpBody.innerHTML = '';
-                if (data.HRP && data.HRP.length > 0) {
-                    data.HRP.forEach(tx => {
+                // Strategy Transactions
+                const strategyBody = document.getElementById('strategyTransactionsBody');
+                strategyBody.innerHTML = '';
+                if (data.Strategy && data.Strategy.length > 0) {
+                    data.Strategy.forEach(tx => {
                         const row = document.createElement('tr');
                         const quantity = tx.quantity || 0;
                         const price = tx.price || 0;
@@ -809,10 +1042,10 @@ def index():
                             <td>£${tradeValue.toFixed(2)}</td>
                             <td>£${cost.toFixed(4)}</td>
                         `;
-                        hrpBody.appendChild(row);
+                        strategyBody.appendChild(row);
                     });
                 } else {
-                    hrpBody.innerHTML = '<tr><td colspan="6">No transactions</td></tr>';
+                    strategyBody.innerHTML = '<tr><td colspan="6">No transactions</td></tr>';
                 }
 
                 // Equal Weight Transactions
@@ -896,6 +1129,7 @@ def api_data():
                 "portfolio_value": get_portfolio_value_data(results),
                 "drawdown": get_drawdown_data(results),
                 "weights": get_weights_data(results),
+                "attribution": get_attribution_data(results),
                 "transactions": get_transactions_data(results),
             }
         )
@@ -907,7 +1141,7 @@ def api_data():
 
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("HRP Backtest Dashboard")
+    print("Strategy Backtest Dashboard")
     print("=" * 60)
     print("\n[*] Starting server...\n")
     print("[*] Open your browser and navigate to: http://localhost:5000\n")

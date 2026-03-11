@@ -98,6 +98,7 @@ class PortfolioState:
         # Generate transactions: target - current
         transactions = []
         total_cost = 0.0
+        total_buy_cost = 0.0  # Track total cost of buys (excluding costs, which are paid separately)
 
         for symbol in target_weights.index:
             current_qty = self.positions.get(symbol, 0.0)
@@ -114,6 +115,10 @@ class PortfolioState:
             cost = calculate_transaction_cost(trade_qty, price, transaction_cost_bps)
             total_cost += cost
 
+            # Track cost of buys (positive trade_qty * price)
+            if trade_qty > 0:
+                total_buy_cost += trade_qty * price
+
             # Create transaction record
             transaction = Transaction(
                 timestamp=self.timestamp,
@@ -128,26 +133,31 @@ class PortfolioState:
             # Update positions
             self.positions[symbol] = target_qty
 
-        # Deduct transaction costs from cash
-        if total_cost > self.cash:
-            # Insufficient cash - need to scale down trades
-            # This is a simplified approach; in practice, you might want more sophisticated logic
-            scale_factor = (self.cash * 0.99) / total_cost if total_cost > 0 else 1.0
+        # Check if we have enough cash for all trades (buys cost cash + transaction costs)
+        # Sells generate cash, so net cash needed = buys - sells + costs
+        net_cash_needed = sum(t.quantity * t.price for t in transactions if t.quantity > 0)
+        net_cash_available = self.cash + sum(-t.quantity * t.price for t in transactions if t.quantity < 0)
 
-            # Re-calculate with scaled trades
+        if net_cash_needed + total_cost > net_cash_available:
+            # Insufficient cash - need to scale down buys
+            # Strategy: Execute all sells first to raise cash, then scale down buys
+
+            # Recalculate with sells prioritized
             transactions = []
             total_cost = 0.0
 
+            # First pass: execute all sells
             for symbol in target_weights.index:
                 current_qty = self.positions.get(symbol, 0.0)
                 target_qty = target_units[symbol]
-                trade_qty = (target_qty - current_qty) * scale_factor
+                trade_qty = target_qty - current_qty
 
-                if abs(trade_qty) < 0.5:
+                # Only process sells in first pass
+                if trade_qty >= -0.5:
                     continue
 
-                trade_qty = round(trade_qty)
                 price = prices[symbol]
+                trade_qty = round(trade_qty)
 
                 cost = calculate_transaction_cost(trade_qty, price, transaction_cost_bps)
                 total_cost += cost
@@ -161,9 +171,57 @@ class PortfolioState:
                     total_cost=cost
                 )
                 transactions.append(transaction)
-
-                # Update positions with scaled trade
                 self.positions[symbol] = current_qty + trade_qty
+
+            # Calculate available cash after sells
+            sell_proceeds = sum(-t.quantity * t.price for t in transactions)
+            available_for_buys = self.cash + sell_proceeds - total_cost
+
+            # Second pass: scale down buys based on available cash
+            buy_transactions = []
+            buy_cost = 0.0
+
+            for symbol in target_weights.index:
+                current_qty = self.positions.get(symbol, 0.0)
+                target_qty = target_units[symbol]
+                trade_qty = target_qty - current_qty
+
+                # Only process buys in second pass
+                if trade_qty < 0.5:
+                    continue
+
+                price = prices[symbol]
+
+                # Scale down the buy if needed
+                if buy_cost + (trade_qty * price) <= available_for_buys:
+                    scaled_qty = round(trade_qty)
+                    buy_cost += trade_qty * price
+                else:
+                    # Scale this buy and skip remaining buys
+                    remaining_cash = available_for_buys - buy_cost
+                    if remaining_cash > price:
+                        scaled_qty = round(remaining_cash / price)
+                    else:
+                        scaled_qty = 0
+
+                if abs(scaled_qty) < 0.5:
+                    continue
+
+                cost = calculate_transaction_cost(scaled_qty, price, transaction_cost_bps)
+                total_cost += cost
+
+                transaction = Transaction(
+                    timestamp=self.timestamp,
+                    symbol=symbol,
+                    quantity=scaled_qty,
+                    price=price,
+                    cost_bps=transaction_cost_bps,
+                    total_cost=cost
+                )
+                buy_transactions.append(transaction)
+                self.positions[symbol] = current_qty + scaled_qty
+
+            transactions.extend(buy_transactions)
 
         # Calculate cash impact: -sum(quantity * price) - costs
         cash_impact = sum(t.quantity * t.price for t in transactions)

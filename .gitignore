@@ -58,3 +58,5 @@ config/local_config.yaml
 *.sqlite
 
 references/
+data/
+results/

@@ -9,7 +9,7 @@ from ib_wrapper import IBClient, Config
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
-async def main():
+async def main( symbol, CCY ):
     print("Testing with known LSE symbol (HSBA - HSBC Holdings)")
     print("=" * 70)
 
@@ -22,12 +22,12 @@ async def main():
 
         # Test with HSBC (a well-known LSE stock)
         bars = await client.get_historical_bars(
-            symbol="HSBA",
+            symbol=symbol,
             duration="1 D",
             bar_size="5 mins",
             sec_type="STK",
-            exchange="LSE",
-            currency="GBP"
+            exchange="SMART",
+            currency=CCY
         )
 
         if not bars.empty:
@@ -45,4 +45,4 @@ async def main():
         client.disconnect()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main("SGLN", "GBP"))

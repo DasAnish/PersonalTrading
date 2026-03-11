@@ -1,12 +1,15 @@
-# PersonalTrading Project - Claude Context
+# PersonalTrading - Development Context for Claude
+
+A production-ready Python trading system for portfolio optimization and backtesting with Interactive Brokers integration.
 
 ## Project Overview
 
-This is a Python-based trading system that provides:
+This system provides:
 1. **Interactive Brokers Wrapper** - Async Python wrapper for IB API using `ib_insync`
-2. **Market Data Service** - Historical and real-time market data fetching
+2. **Market Data Service** - Historical and real-time market data fetching with caching
 3. **Portfolio Management** - Position tracking, account monitoring, P&L tracking
-4. **Trading Strategies** - Portfolio optimization and backtesting (in development)
+4. **Trading Strategies** - Complete HRP portfolio optimization with backtesting
+5. **Performance Analytics** - Visualization, metrics, and comprehensive reporting
 
 ---
 
@@ -316,11 +319,71 @@ PersonalTrading/
 
 ---
 
+## Web Dashboard (NEW - Feb 2026)
+
+### Interactive Results Visualization
+
+**File**: `scripts/serve_results.py`
+
+**Purpose**: User-friendly web interface for viewing backtest results
+
+**Features**:
+- Portfolio value comparison chart (HRP vs Equal Weight)
+- Drawdown analysis with underwater plot
+- Portfolio weights visualization (stacked area chart)
+- Transaction history with full details
+- Performance metrics comparison table
+- Responsive design (desktop, tablet, mobile)
+- Interactive charts powered by Chart.js
+
+**Usage**:
+```bash
+# Start dashboard
+python scripts/serve_results.py
+
+# Or use startup scripts
+scripts/start_dashboard.bat    # Windows
+bash scripts/start_dashboard.sh # macOS/Linux
+
+# Then open browser: http://localhost:5000
+```
+
+**API Endpoints**:
+- `GET /` - Main dashboard page (HTML)
+- `GET /api/data` - Raw JSON data for all metrics, charts, and transactions
+
+**Data Flow**:
+1. Backtest generates CSV files in `results/` directory
+2. Dashboard loads CSVs and serves as JSON
+3. Frontend renders interactive visualizations
+4. User explores results via browser tabs
+
+**Technology Stack**:
+- Backend: Flask (Python)
+- Frontend: HTML5 + CSS3 + Vanilla JavaScript
+- Charting: Chart.js 3.9.1
+- Styling: Responsive CSS Grid + Flexbox
+
+**Documentation**: See [DASHBOARD.md](DASHBOARD.md) for complete user guide
+
+---
+
 ## Current Session Status
 
 **Session Date**: 2026-02-15
-**Status**: Planning complete, awaiting approval to begin implementation
-**Next Action**: User reviews plan, approves, and implementation begins with setup phase
+**Status**: ✅ Production Ready - All features complete and documented
+**Latest Addition**: Interactive web dashboard for results visualization
 
-**Plan Location**: `C:\Users\dasan\.claude\plans\vectorized-cooking-rainbow.md`
-**Plan Details**: Comprehensive 7-phase implementation plan with estimated 12-18 hour timeline
+**Completed Components**:
+- ✅ IB Wrapper + Market Data + Portfolio Management
+- ✅ HRP Strategy Implementation + Backtesting Engine
+- ✅ Performance Analytics + Metrics Calculation
+- ✅ Data Caching with --refresh flag support
+- ✅ Interactive Web Dashboard with responsive design
+- ✅ Comprehensive documentation (README + DASHBOARD + CLAUDE)
+
+**Next Actions** (Optional):
+- [ ] Deploy to production server
+- [ ] Add parameter tuning interface
+- [ ] Implement live trading integration
+- [ ] Add scenario analysis features

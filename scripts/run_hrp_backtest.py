@@ -342,10 +342,6 @@ async def main(refresh: bool = False):
     )
     logger.info(f"✓ Performance charts saved to: {RESULTS_DIR / 'performance_charts.png'}")
 
-    # Display the chart
-    import matplotlib.pyplot as plt
-    plt.show()
-
     logger.info("\n" + "=" * 60)
     logger.info("BACKTEST COMPLETE")
     logger.info("=" * 60)

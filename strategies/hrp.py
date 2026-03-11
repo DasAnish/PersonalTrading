@@ -14,9 +14,9 @@ The HRP algorithm consists of three stages:
 import pandas as pd
 import numpy as np
 from scipy.cluster.hierarchy import linkage
-from typing import List
+from typing import List, Optional
 
-from .base import BaseStrategy
+from strategies.base import AllocationStrategy, ExecutableStrategy
 
 
 def get_quasi_diag(link: np.ndarray) -> List[int]:
@@ -172,7 +172,7 @@ def get_rec_bipart(cov: pd.DataFrame, sort_ix: List[int]) -> pd.Series:
     return w
 
 
-class HRPStrategy(BaseStrategy):
+class HRPStrategy(AllocationStrategy):
     """
     Hierarchical Risk Parity (HRP) portfolio optimization strategy.
 
@@ -186,20 +186,25 @@ class HRPStrategy(BaseStrategy):
     1. Tree Clustering: Build hierarchical cluster tree from correlation matrix
     2. Quasi-Diagonalization: Reorganize assets by cluster similarity
     3. Recursive Bisection: Allocate weights inversely to cluster variance
+
+    Args:
+        underlying: MarketStrategy or AllocationStrategy that defines the asset universe
+        linkage_method: Linkage criterion for hierarchical clustering
+                      'single' = nearest neighbor (default, as in reference)
+                      'complete' = furthest neighbor
+                      'average' = average distance
+                      'ward' = minimize variance
     """
 
-    def __init__(self, linkage_method: str = 'single'):
+    def __init__(self, underlying: ExecutableStrategy, linkage_method: str = "single"):
         """
         Initialize HRP strategy.
 
         Args:
+            underlying: Strategy defining the market/asset universe
             linkage_method: Linkage criterion for hierarchical clustering
-                          'single' = nearest neighbor (default, as in reference)
-                          'complete' = furthest neighbor
-                          'average' = average distance
-                          'ward' = minimize variance
         """
-        super().__init__(name="Hierarchical Risk Parity")
+        super().__init__(underlying, name="Hierarchical Risk Parity")
         self.linkage_method = linkage_method
 
     def calculate_weights(self, prices: pd.DataFrame) -> pd.Series:

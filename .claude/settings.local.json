@@ -6,7 +6,9 @@
       "Bash(timeout 8 python:*)",
       "Bash(python:*)",
       "Bash(python3:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

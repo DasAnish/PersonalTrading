@@ -241,6 +241,190 @@ class BacktestEngine:
 
         return results
 
+    def run_backtest_with_overlay(
+        self,
+        underlying_strategy: 'BaseStrategy',
+        overlay_strategy: 'BaseStrategy',
+        historical_data: pd.DataFrame,
+        underlying_results: BacktestResults,
+        start_date: datetime = None,
+        end_date: datetime = None
+    ) -> BacktestResults:
+        """
+        Run backtest with overlay strategy transformations.
+
+        This method runs the backtest where at each rebalance, weights from the
+        underlying strategy are transformed by the overlay strategy. This enables
+        overlays like volatility targeting on top of any allocation strategy.
+
+        Args:
+            underlying_strategy: Base allocation strategy (e.g., HRP)
+            overlay_strategy: Overlay strategy that transforms weights
+            historical_data: DataFrame with columns=symbols, index=dates, values=prices
+            underlying_results: Results from running underlying strategy
+            start_date: Start date for backtest (default: first valid date after lookback)
+            end_date: End date for backtest (default: last date in data)
+
+        Returns:
+            BacktestResults with overlay-transformed portfolio history
+        """
+        logger.info(f"Starting overlay backtest: {overlay_strategy.name} > {underlying_strategy.name}")
+
+        # Validate input
+        if historical_data.empty:
+            raise ValueError("Historical data is empty")
+
+        # Set default date range
+        if start_date is None:
+            if len(historical_data) <= self.lookback_days:
+                raise ValueError(
+                    f"Insufficient data. Need at least {self.lookback_days} days "
+                    f"before backtest start. Have {len(historical_data)} days total."
+                )
+            start_date = historical_data.index[self.lookback_days]
+
+        if end_date is None:
+            end_date = historical_data.index[-1]
+
+        # Filter data to backtest period
+        backtest_data = historical_data[
+            (historical_data.index >= start_date) &
+            (historical_data.index <= end_date)
+        ]
+
+        if backtest_data.empty:
+            raise ValueError(f"No data in date range {start_date} to {end_date}")
+
+        logger.info(
+            f"Backtest period: {start_date.date()} to {end_date.date()} "
+            f"({len(backtest_data)} days)"
+        )
+
+        # Generate rebalance dates
+        rebalance_dates = self._generate_rebalance_dates(
+            start_date,
+            end_date,
+            backtest_data.index
+        )
+
+        logger.info(f"Will rebalance {len(rebalance_dates)} times with overlay")
+
+        # Get underlying portfolio values for overlay context
+        underlying_portfolio_values = underlying_results.portfolio_history['total_value']
+
+        # Initialize portfolio state
+        portfolio = PortfolioState(
+            timestamp=start_date,
+            cash=self.initial_capital,
+            positions={},
+            prices={}
+        )
+
+        # Track history
+        portfolio_history = []
+        weights_history = []
+        all_transactions = []
+
+        # Record initial state
+        portfolio_history.append(self._record_state(portfolio, backtest_data.loc[start_date]))
+
+        # Run backtest with overlay
+        for rebalance_date in rebalance_dates:
+            try:
+                # Get lookback window for strategy calculation
+                lookback_data = self._get_lookback_data(
+                    historical_data,
+                    rebalance_date,
+                    self.lookback_days
+                )
+
+                if lookback_data.empty or len(lookback_data) < 30:
+                    logger.warning(
+                        f"Insufficient lookback data at {rebalance_date.date()}, skipping"
+                    )
+                    continue
+
+                # Calculate underlying strategy weights
+                underlying_weights = underlying_strategy.calculate_weights(lookback_data)
+
+                # Get current prices for overlay context
+                current_prices = backtest_data.loc[rebalance_date]
+
+                # Create overlay context with underlying portfolio values
+                from strategies.models import OverlayContext
+                context = OverlayContext(
+                    current_date=rebalance_date,
+                    prices=current_prices,
+                    underlying_portfolio_values=underlying_portfolio_values,
+                    lookback_window=self.lookback_days
+                )
+
+                # Transform weights using overlay
+                overlay_weights = overlay_strategy.transform_weights(underlying_weights, context)
+
+                # Record weights at this rebalance date
+                weight_record = {'timestamp': rebalance_date}
+                weight_record.update(overlay_weights.to_dict())
+                weights_history.append(weight_record)
+
+                # Update portfolio timestamp
+                portfolio.timestamp = rebalance_date
+
+                # Execute rebalance with transformed weights
+                transactions = portfolio.execute_rebalance(
+                    target_weights=overlay_weights,
+                    prices=current_prices,
+                    transaction_cost_bps=self.transaction_cost_bps
+                )
+
+                all_transactions.extend(transactions)
+
+                # Record state after rebalance
+                portfolio_history.append(self._record_state(portfolio, current_prices))
+
+                logger.debug(
+                    f"Rebalanced at {rebalance_date.date()}: "
+                    f"value={portfolio.total_value():.2f}, "
+                    f"transactions={len(transactions)}"
+                )
+
+            except Exception as e:
+                logger.error(f"Error at rebalance date {rebalance_date.date()}: {e}")
+                continue
+
+        # Convert history to DataFrame
+        history_df = pd.DataFrame(portfolio_history)
+        history_df.set_index('timestamp', inplace=True)
+
+        # Convert weights history to DataFrame
+        if weights_history:
+            weights_df = pd.DataFrame(weights_history)
+            weights_df.set_index('timestamp', inplace=True)
+        else:
+            weights_df = pd.DataFrame()
+
+        # Calculate final value
+        final_value = portfolio.total_value()
+
+        logger.info(
+            f"Overlay backtest complete: "
+            f"Initial={self.initial_capital:.2f}, "
+            f"Final={final_value:.2f}, "
+            f"Return={(final_value/self.initial_capital - 1)*100:.2f}%"
+        )
+
+        # Create results object
+        results = BacktestResults(
+            strategy_name=f"{overlay_strategy.name} > {underlying_strategy.name}",
+            portfolio_history=history_df,
+            weights_history=weights_df,
+            transactions=all_transactions,
+            initial_capital=self.initial_capital,
+            final_value=final_value
+        )
+
+        return results
+
     def _generate_rebalance_dates(
         self,
         start_date: datetime,

@@ -1,19 +1,27 @@
 """
 Portfolio optimization strategies.
 
-This module provides various portfolio optimization strategies including:
-- Hierarchical Risk Parity (HRP)
-- Equal Weight benchmark
+This module provides:
+1. Legacy strategies (BaseStrategy interface):
+   - HRPStrategy: Hierarchical Risk Parity
+   - EqualWeightStrategy: 1/N benchmark
 
-Strategy Registry:
-    Provides a pluggable system for strategy selection via CLI arguments.
-    New strategies can be added by registering them in STRATEGY_REGISTRY.
+2. Composable strategies (ExecutableStrategy interface):
+   - MarketStrategy: Define asset universes (e.g., UKETFsMarket)
+   - AllocationStrategy: Calculate weights (HRPStrategy, EqualWeightStrategy)
+   - OverlayStrategy: Transform weights (e.g., VolatilityTargetOverlay)
+
+3. Strategy Registry:
+   Pluggable system for strategy selection via CLI arguments.
 """
 
 from typing import List, Type
-from .base import BaseStrategy
+from .base import BaseStrategy, ExecutableStrategy, MarketStrategy, AllocationStrategy, OverlayStrategy
+from .models import Instrument, MarketDefinition, OverlayContext
 from .hrp import HRPStrategy
 from .equal_weight import EqualWeightStrategy
+from .markets import UKETFsMarket, USEquitiesMarket, CustomMarket, EuropeanEquitiesMarket, BondsMarket, CommunitiesMarket
+from .overlays import VolatilityTargetOverlay, ConstraintOverlay, LeverageOverlay
 
 
 # Strategy Registry for pluggable strategy selection
@@ -106,9 +114,32 @@ def get_strategy_display_name(strategy_name: str) -> str:
 
 
 __all__ = [
+    # Legacy interfaces
     'BaseStrategy',
+    # Composable strategy interfaces
+    'ExecutableStrategy',
+    'MarketStrategy',
+    'AllocationStrategy',
+    'OverlayStrategy',
+    # Data models
+    'Instrument',
+    'MarketDefinition',
+    'OverlayContext',
+    # Strategies
     'HRPStrategy',
     'EqualWeightStrategy',
+    # Market strategies
+    'UKETFsMarket',
+    'USEquitiesMarket',
+    'CustomMarket',
+    'EuropeanEquitiesMarket',
+    'BondsMarket',
+    'CommunitiesMarket',
+    # Overlay strategies
+    'VolatilityTargetOverlay',
+    'ConstraintOverlay',
+    'LeverageOverlay',
+    # Registry and utilities
     'STRATEGY_REGISTRY',
     'create_strategy',
     'get_available_strategies',

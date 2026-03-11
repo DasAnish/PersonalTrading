@@ -1,0 +1,281 @@
+"""
+Overlay strategies for risk management and portfolio transformations.
+
+Overlay strategies apply transformations to weights from underlying allocation
+strategies. They enable powerful compositions like:
+- VolatilityTargetOverlay(HRPStrategy(UKETFsMarket()))
+- ConstraintOverlay(EqualWeightStrategy(USEquitiesMarket()))
+
+All overlays wrap an ExecutableStrategy and modify its weights at each rebalance.
+"""
+
+from __future__ import annotations
+import pandas as pd
+import numpy as np
+from typing import TYPE_CHECKING
+
+from strategies.base import OverlayStrategy, ExecutableStrategy
+from strategies.models import OverlayContext
+
+if TYPE_CHECKING:
+    from backtesting.engine import BacktestEngine
+
+
+class VolatilityTargetOverlay(OverlayStrategy):
+    """
+    Scale portfolio weights to achieve target volatility level.
+
+    This overlay runs the underlying strategy first to get its portfolio value
+    timeseries, then calculates realized volatility. At each rebalance, it
+    scales the allocation weights to achieve the target volatility level.
+
+    Example:
+        market = UKETFsMarket()
+        hrp = HRPStrategy(underlying=market)
+        vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+        results = await vol_target.run(engine, start_date, end_date)
+
+    The scaling works as follows:
+    1. Calculate realized vol from underlying portfolio returns
+    2. Calculate scale = target_vol / realized_vol
+    3. Scale weights: adjusted_weights = original_weights * scale
+    4. Remaining allocation goes to cash (cash weight = 1 - sum(scaled_weights))
+    5. Cap scaling to max 1.0 (no leverage)
+
+    This allows the overlay to:
+    - Reduce exposure when realized vol exceeds target (cash drag)
+    - Increase exposure when realized vol below target
+    - Never use leverage (scale capped at 1.0)
+    """
+
+    def __init__(
+        self,
+        underlying: ExecutableStrategy,
+        target_vol: float = 0.15,
+        lookback_days: int = 252,
+    ):
+        """
+        Initialize volatility target overlay.
+
+        Args:
+            underlying: Strategy to apply overlay to
+            target_vol: Target annualized volatility (default 0.15 = 15%)
+            lookback_days: Lookback window for volatility calculation (default 252 trading days)
+        """
+        super().__init__(
+            underlying, name=f"Vol Target ({target_vol*100:.0f}%)"
+        )
+        self.target_vol = target_vol
+        self.lookback_days = lookback_days
+
+    def transform_weights(
+        self, weights: pd.Series, context: OverlayContext
+    ) -> pd.Series:
+        """
+        Scale weights to achieve target volatility.
+
+        Args:
+            weights: Original weights from underlying strategy
+            context: OverlayContext with portfolio values and prices
+
+        Returns:
+            Scaled weights (sum may be < 1.0, with cash making up the difference)
+        """
+        portfolio_values = context.underlying_portfolio_values
+
+        # Need at least 2 data points to calculate returns
+        if len(portfolio_values) < 2:
+            return weights
+
+        # Get lookback window (at most all available data)
+        lookback_start = max(0, len(portfolio_values) - self.lookback_days)
+        recent_values = portfolio_values.iloc[lookback_start:]
+
+        if len(recent_values) < 30:
+            # Insufficient data for reliable volatility estimate
+            return weights
+
+        # Calculate returns from portfolio values
+        returns = recent_values.pct_change().dropna()
+
+        if len(returns) < 2:
+            return weights
+
+        # Calculate realized volatility (annualized)
+        realized_vol = returns.std() * np.sqrt(252)
+
+        # Avoid division by zero
+        if realized_vol < 1e-8:
+            # No volatility, return original weights
+            return weights
+
+        # Calculate scaling factor: target_vol / realized_vol
+        scale = self.target_vol / realized_vol
+
+        # Cap scaling to max 1.0 (no leverage)
+        # This allows scaling down to cash but not leveraging up
+        scale = min(scale, 1.0)
+        scale = max(scale, 0.0)
+
+        # Scale weights
+        scaled_weights = weights * scale
+
+        return scaled_weights
+
+
+class ConstraintOverlay(OverlayStrategy):
+    """
+    Apply minimum and maximum weight constraints to portfolio.
+
+    This overlay enforces position size limits on the underlying allocation:
+    - No position smaller than min_weight (or remove entirely)
+    - No position larger than max_weight (redistribute excess to others)
+
+    Example:
+        hrp = HRPStrategy(underlying=market)
+        constrained = ConstraintOverlay(
+            underlying=hrp,
+            min_weight=0.05,  # Minimum 5% per position
+            max_weight=0.40   # Maximum 40% per position
+        )
+
+    The constraint algorithm:
+    1. Remove any weights below min_weight
+    2. Cap any weights above max_weight
+    3. Redistribute removed/capped weight proportionally to remaining assets
+    4. Repeat until convergence
+    """
+
+    def __init__(
+        self,
+        underlying: ExecutableStrategy,
+        min_weight: float = 0.0,
+        max_weight: float = 1.0,
+    ):
+        """
+        Initialize constraint overlay.
+
+        Args:
+            underlying: Strategy to apply constraints to
+            min_weight: Minimum weight for any position (default 0.0)
+            max_weight: Maximum weight for any position (default 1.0)
+        """
+        if not 0 <= min_weight <= max_weight <= 1.0:
+            raise ValueError(
+                f"Invalid weights: min={min_weight}, max={max_weight}. "
+                "Must satisfy: 0 <= min <= max <= 1.0"
+            )
+
+        super().__init__(underlying, name=f"Constraints ({min_weight:.0%}-{max_weight:.0%})")
+        self.min_weight = min_weight
+        self.max_weight = max_weight
+
+    def transform_weights(
+        self, weights: pd.Series, context: OverlayContext
+    ) -> pd.Series:
+        """
+        Apply weight constraints.
+
+        Args:
+            weights: Original weights from underlying strategy
+            context: OverlayContext (unused for constraints)
+
+        Returns:
+            Constrained weights that satisfy min/max bounds
+        """
+        constrained = weights.copy()
+
+        # Iterate up to 10 times to handle redistribution
+        for _ in range(10):
+            # Identify violations
+            below_min = constrained < self.min_weight
+            above_max = constrained > self.max_weight
+
+            if not (below_min.any() or above_max.any()):
+                # No violations, converged
+                break
+
+            # Remove weights below minimum
+            removed_weight = constrained[below_min].sum()
+            constrained[below_min] = 0.0
+
+            # Cap weights above maximum
+            excess_weight = (constrained[above_max] - self.max_weight).sum()
+            constrained[above_max] = self.max_weight
+            removed_weight += excess_weight
+
+            # Redistribute removed/excess weight proportionally
+            # (proportional to remaining weights)
+            active = constrained > 0
+            if active.any():
+                active_weight = constrained[active].sum()
+                if active_weight > 0:
+                    # Redistribute proportionally to active positions
+                    redistribution = removed_weight * (
+                        constrained[active] / active_weight
+                    )
+                    constrained[active] += redistribution
+
+        # Final normalization to ensure sum = 1.0
+        total = constrained.sum()
+        if total > 0:
+            constrained = constrained / total
+
+        return constrained
+
+
+class LeverageOverlay(OverlayStrategy):
+    """
+    Apply leverage limits to portfolio.
+
+    This overlay ensures gross leverage (sum of absolute values) stays within
+    a maximum limit. Primarily useful when underlying strategy might produce
+    short positions (though most current strategies are long-only).
+
+    Example:
+        hrp = HRPStrategy(underlying=market)
+        deleveraged = LeverageOverlay(underlying=hrp, max_leverage=1.5)
+        # Limits gross leverage to 150% (e.g., 1.5x long, 0x short)
+    """
+
+    def __init__(self, underlying: ExecutableStrategy, max_leverage: float = 1.0):
+        """
+        Initialize leverage overlay.
+
+        Args:
+            underlying: Strategy to apply leverage limit to
+            max_leverage: Maximum gross leverage (default 1.0 = 100% long)
+                         2.0 allows 2x leverage, e.g., 150% long + 50% short
+        """
+        if max_leverage <= 0:
+            raise ValueError(f"max_leverage must be positive, got {max_leverage}")
+
+        super().__init__(underlying, name=f"Leverage ({max_leverage:.1f}x)")
+        self.max_leverage = max_leverage
+
+    def transform_weights(
+        self, weights: pd.Series, context: OverlayContext
+    ) -> pd.Series:
+        """
+        Apply leverage constraints.
+
+        Args:
+            weights: Original weights from underlying strategy
+            context: OverlayContext (unused for leverage)
+
+        Returns:
+            Deleveraged weights satisfying gross leverage limit
+        """
+        # Calculate gross leverage (sum of absolute values)
+        gross_leverage = weights.abs().sum()
+
+        if gross_leverage <= self.max_leverage:
+            # Already within limit
+            return weights
+
+        # Scale down all positions proportionally to limit
+        # This preserves relative weights while reducing leverage
+        scale = self.max_leverage / gross_leverage
+        deleveraged = weights * scale
+
+        return deleveraged

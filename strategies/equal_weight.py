@@ -5,10 +5,10 @@ Simple benchmark strategy that allocates equal weight to all assets.
 """
 
 import pandas as pd
-from .base import BaseStrategy
+from strategies.base import AllocationStrategy, ExecutableStrategy
 
 
-class EqualWeightStrategy(BaseStrategy):
+class EqualWeightStrategy(AllocationStrategy):
     """
     Equal weight portfolio strategy.
 
@@ -17,11 +17,14 @@ class EqualWeightStrategy(BaseStrategy):
 
     This serves as a simple baseline benchmark for more sophisticated
     strategies like HRP.
+
+    Args:
+        underlying: MarketStrategy or AllocationStrategy that defines the asset universe
     """
 
-    def __init__(self):
+    def __init__(self, underlying: ExecutableStrategy):
         """Initialize equal weight strategy."""
-        super().__init__(name="Equal Weight")
+        super().__init__(underlying, name="Equal Weight")
 
     def calculate_weights(self, prices: pd.DataFrame) -> pd.Series:
         """

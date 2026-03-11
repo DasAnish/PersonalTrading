@@ -436,36 +436,88 @@ bash scripts/start_dashboard.sh # macOS/Linux
 
 ---
 
+## Composable Strategy Architecture (NEW - March 2026)
+
+A major architectural refactoring that enables building complex strategies by composing simpler components.
+
+**Core Concept**: Strategies can wrap other strategies to create powerful compositions:
+```
+VolatilityTarget(HRP(UKETFsMarket()))
+```
+
+**Three-Tier System**:
+1. **Market Strategies** - Define which assets to trade (UKETFsMarket, USEquitiesMarket, CustomMarket)
+2. **Allocation Strategies** - Calculate weights (HRPStrategy, EqualWeightStrategy wrap a market)
+3. **Overlay Strategies** - Transform weights (VolatilityTargetOverlay, ConstraintOverlay wrap any strategy)
+
+**New Files**:
+- `strategies/base.py` - Added `ExecutableStrategy`, `MarketStrategy`, `AllocationStrategy`, `OverlayStrategy`
+- `strategies/models.py` - Data classes: `Instrument`, `MarketDefinition`, `OverlayContext`
+- `strategies/markets.py` - Market strategy implementations
+- `strategies/overlays.py` - Overlay strategies (Vol Target, Constraints, Leverage)
+- `COMPOSABLE_STRATEGIES.md` - Complete guide with examples
+
+**Key Overlays**:
+- **VolatilityTargetOverlay**: Scale weights to achieve target volatility (e.g., 12% annually)
+- **ConstraintOverlay**: Enforce min/max weight limits per position (e.g., 5%-40%)
+- **LeverageOverlay**: Apply gross leverage limits
+
+**Benefits**:
+- Modular and testable architecture
+- Reusable components (markets, allocations, overlays)
+- Easy to combine risk management with optimization
+- Chain multiple overlays: VT(LC(HRP(Market)))
+- Full backward compatibility with old API
+
+**Example Usage**:
+```python
+from strategies import HRPStrategy, VolatilityTargetOverlay, UKETFsMarket
+
+market = UKETFsMarket()
+hrp = HRPStrategy(underlying=market, linkage_method='ward')
+vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+
+weights = vol_target.calculate_weights(prices)
+```
+
+See `COMPOSABLE_STRATEGIES.md` for comprehensive guide.
+
+---
+
 ## Current Session Status
 
-**Session Date**: 2026-03-11
-**Status**: ✅ Production Ready - Pluggable strategy system implemented
-**Latest Refactoring**: Strategy registry and pluggable CLI arguments
+**Session Date**: 2026-03-11 (Updated)
+**Status**: ✅ Production Ready - Composable strategy architecture implemented
+**Latest Refactoring**: Major architectural refactoring to enable strategy composition
 
 **Completed Components**:
 - ✅ IB Wrapper + Market Data + Portfolio Management
 - ✅ HRP Strategy Implementation + Equal Weight Benchmark
 - ✅ Pluggable Strategy System (registry + factory pattern)
-- ✅ Backtesting Engine with flexible strategy support
+- ✅ **NEW**: Composable Strategy Architecture
+- ✅ Backtesting Engine with overlay support
 - ✅ Performance Analytics + Metrics Calculation
 - ✅ Data Caching with --refresh flag support
 - ✅ Interactive Web Dashboard with dynamic strategy labels
 - ✅ CLI argument system for strategy selection and parameters
-- ✅ Comprehensive documentation (README + DASHBOARD + CLAUDE)
+- ✅ Comprehensive documentation
 
-**Recent Changes** (This Session):
-- ✅ Created `strategies/__init__.py` with STRATEGY_REGISTRY and factory functions
-- ✅ Renamed `run_hrp_backtest.py` → `run_backtest.py` with generic CLI interface
-- ✅ Added `--strategy` and `--benchmark` command-line arguments
-- ✅ Support for strategy-specific parameters (e.g., `--hrp-linkage-method`)
-- ✅ Updated `serve_results.py` to load metadata and support dynamic strategy labels
-- ✅ Created `metadata.json` output file with strategy information
-- ✅ Updated documentation (CLAUDE.md) with new CLI usage examples
-- ✅ Maintained backward compatibility with deprecated `run_hrp_backtest.py` wrapper
+**Recent Changes** (This Session - Composable Architecture):
+- ✅ Implemented `ExecutableStrategy` base class with run() method
+- ✅ Created `MarketStrategy` for asset universe definitions
+- ✅ Refactored `HRPStrategy` and `EqualWeightStrategy` to use `AllocationStrategy`
+- ✅ Implemented `OverlayStrategy` base class with transform_weights()
+- ✅ Created market strategies: UKETFsMarket, USEquitiesMarket, CustomMarket, etc.
+- ✅ Created overlay strategies: VolatilityTargetOverlay, ConstraintOverlay, LeverageOverlay
+- ✅ Enhanced BacktestEngine with run_backtest_with_overlay() method
+- ✅ Updated strategies/__init__.py with new exports
+- ✅ Created composable_strategies_demo.py with 5 comprehensive examples
+- ✅ Created COMPOSABLE_STRATEGIES.md with complete user guide
 
 **Next Actions** (Optional):
-- [ ] Add more strategies (mean-variance, risk parity, momentum, etc.)
-- [ ] Implement parameter optimization/tuning
-- [ ] Support multi-strategy comparison (3+ strategies with dashboard refactor)
-- [ ] Deploy to production server
-- [ ] Add web interface for parameter configuration
+- [ ] Add market data fetching to BacktestEngine for async execution
+- [ ] Implement additional strategies (mean-variance, risk parity, momentum)
+- [ ] Parameter optimization/tuning system
+- [ ] Multi-strategy comparison (3+ strategies with dashboard refactor)
+- [ ] Live trading execution with overlay strategies
+- [ ] Custom overlay creation tutorial

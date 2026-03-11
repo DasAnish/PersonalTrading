@@ -58,5 +58,5 @@ config/local_config.yaml
 *.sqlite
 
 references/
-data/
+data/cache/
 results/

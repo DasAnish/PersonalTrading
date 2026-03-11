@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Interactive web dashboard for HRP backtest results.
+Interactive web dashboard for portfolio strategy backtest results.
+
+Supports multiple strategies with dynamic labels loaded from metadata.json.
 
 Run with: python scripts/serve_results.py
 Then visit: http://localhost:5000
@@ -21,13 +23,71 @@ RESULTS_DIR = BASE_DIR / "results"
 
 app = Flask(__name__, static_folder=None)
 
+# Global metadata (loaded at startup)
+METADATA = None
+
+
+def load_metadata():
+    """
+    Load metadata from metadata.json.
+
+    Returns metadata dict with strategy names and parameters.
+    Falls back to defaults if metadata.json doesn't exist.
+    """
+    metadata_path = RESULTS_DIR / 'metadata.json'
+
+    if metadata_path.exists():
+        try:
+            with open(metadata_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"   [!] Error loading metadata.json: {e}")
+            print(f"   [*] Using default metadata (HRP vs Equal Weight)")
+
+    # Default fallback for backward compatibility
+    return {
+        'primary_strategy': {
+            'name': 'hrp',
+            'display_name': 'Hierarchical Risk Parity',
+            'params': {'linkage_method': 'single'}
+        },
+        'benchmark_strategy': {
+            'name': 'equal_weight',
+            'display_name': 'Equal Weight',
+            'params': {}
+        },
+        'run_date': datetime.now().isoformat(),
+        'config': {}
+    }
+
+
+def get_file_mappings(metadata):
+    """
+    Get file prefix mappings from metadata.
+
+    Returns dict mapping display names to file prefixes.
+    """
+    return {
+        metadata['primary_strategy']['display_name']: "hrp",
+        metadata['benchmark_strategy']['display_name']: "ew"
+    }
+
 
 def load_results():
     """Load all backtest results from CSV files."""
+    global METADATA
     results = {}
 
     print(f"\n[*] Looking for results in: {RESULTS_DIR}")
     print(f"   Files available: {list(RESULTS_DIR.glob('*.csv'))}\n")
+
+    # Load metadata first
+    METADATA = load_metadata()
+    file_mappings = get_file_mappings(METADATA)
+
+    print(f"   [*] Metadata loaded:")
+    print(f"       Primary: {METADATA['primary_strategy']['display_name']}")
+    print(f"       Benchmark: {METADATA['benchmark_strategy']['display_name']}\n")
 
     # Load performance comparison
     perf_file = RESULTS_DIR / "performance_comparison.csv"
@@ -39,34 +99,29 @@ def load_results():
         print(f"   [-] Metrics file not found: {perf_file.name}")
 
     # Load portfolio histories
-    file_mappings = {
-        "Strategy": "hrp",
-        "Equal Weight": "ew"
-    }
-
-    for strategy, prefix in file_mappings.items():
-        key = strategy.lower().replace(" ", "_")
+    for strategy_display, prefix in file_mappings.items():
+        key = strategy_display.lower().replace(" ", "_")
         file_path = RESULTS_DIR / f"{prefix}_portfolio_history.csv"
 
         if file_path.exists():
-            print(f"   [+] Loaded {strategy} history from {file_path.name}")
+            print(f"   [+] Loaded {strategy_display} history from {file_path.name}")
             df = pd.read_csv(file_path)
             df["timestamp"] = pd.to_datetime(df["timestamp"].tolist())
             results[f"{key}_history"] = df
         else:
-            print(f"   [-] {strategy} history not found: {file_path.name}")
+            print(f"   [-] {strategy_display} history not found: {file_path.name}")
 
     # Load transactions
-    for strategy, prefix in file_mappings.items():
-        key = strategy.lower().replace(" ", "_")
+    for strategy_display, prefix in file_mappings.items():
+        key = strategy_display.lower().replace(" ", "_")
         file_path = RESULTS_DIR / f"{prefix}_transactions.csv"
 
         if file_path.exists():
-            print(f"   [+] Loaded {strategy} transactions from {file_path.name}")
+            print(f"   [+] Loaded {strategy_display} transactions from {file_path.name}")
             df = pd.read_csv(file_path)
             results[f"{key}_transactions"] = df
         else:
-            print(f"   [-] {strategy} transactions not found: {file_path.name}")
+            print(f"   [-] {strategy_display} transactions not found: {file_path.name}")
 
     print()
     return results
@@ -76,16 +131,22 @@ def get_portfolio_value_data(results):
     """Extract portfolio value time series."""
     data = {}
 
-    if "hrp_strategy_history" in results:
-        df = results["hrp_strategy_history"]
-        data["Strategy"] = {
+    primary_name = METADATA['primary_strategy']['display_name']
+    benchmark_name = METADATA['benchmark_strategy']['display_name']
+
+    primary_key = primary_name.lower().replace(" ", "_")
+    benchmark_key = benchmark_name.lower().replace(" ", "_")
+
+    if f"{primary_key}_history" in results:
+        df = results[f"{primary_key}_history"]
+        data[primary_name] = {
             "dates": df["timestamp"].dt.strftime("%Y-%m-%d").tolist(),
             "values": df["total_value"].tolist(),
         }
 
-    if "equal_weight_history" in results:
-        df = results["equal_weight_history"]
-        data["Equal Weight"] = {
+    if f"{benchmark_key}_history" in results:
+        df = results[f"{benchmark_key}_history"]
+        data[benchmark_name] = {
             "dates": df["timestamp"].dt.strftime("%Y-%m-%d").tolist(),
             "values": df["total_value"].tolist(),
         }
@@ -97,7 +158,13 @@ def get_drawdown_data(results):
     """Calculate and return drawdown data."""
     data = {}
 
-    for key, label in [("hrp_strategy_history", "Strategy"), ("equal_weight_history", "Equal Weight")]:
+    primary_name = METADATA['primary_strategy']['display_name']
+    benchmark_name = METADATA['benchmark_strategy']['display_name']
+
+    primary_key = primary_name.lower().replace(" ", "_")
+    benchmark_key = benchmark_name.lower().replace(" ", "_")
+
+    for key, label in [(f"{primary_key}_history", primary_name), (f"{benchmark_key}_history", benchmark_name)]:
         if key in results:
             df = results[key].copy()
             df["running_max"] = df["total_value"].cummax()
@@ -115,8 +182,11 @@ def get_weights_data(results):
     """Extract portfolio weights over time."""
     data = {}
 
-    if "hrp_strategy_history" in results:
-        df = results["hrp_strategy_history"].copy()
+    primary_name = METADATA['primary_strategy']['display_name']
+    primary_key = primary_name.lower().replace(" ", "_")
+
+    if f"{primary_key}_history" in results:
+        df = results[f"{primary_key}_history"].copy()
         df["timestamp"] = df["timestamp"].dt.strftime("%Y-%m-%d")
 
         # Calculate weights
@@ -130,7 +200,7 @@ def get_weights_data(results):
                     (df[value_col] / df["total_value"]) * 100
                 ).fillna(0).tolist()
 
-        data["Strategy"] = weights_data
+        data[primary_name] = weights_data
 
     return data
 
@@ -139,7 +209,13 @@ def get_attribution_data(results):
     """Calculate daily attribution: previous weights × asset returns."""
     data = {}
 
-    for key, label in [("hrp_strategy_history", "Strategy"), ("equal_weight_history", "Equal Weight")]:
+    primary_name = METADATA['primary_strategy']['display_name']
+    benchmark_name = METADATA['benchmark_strategy']['display_name']
+
+    primary_key = primary_name.lower().replace(" ", "_")
+    benchmark_key = benchmark_name.lower().replace(" ", "_")
+
+    for key, label in [(f"{primary_key}_history", primary_name), (f"{benchmark_key}_history", benchmark_name)]:
         if key in results:
             df = results[key].copy()
             df = df.reset_index(drop=True)
@@ -195,23 +271,29 @@ def get_transactions_data(results):
     """Extract transaction data."""
     data = {}
 
-    if "hrp_strategy_transactions" in results:
-        df = results["hrp_strategy_transactions"].copy()
-        # Rename columns if needed
-        if "cost" in df.columns and "transaction_cost" not in df.columns:
-            df["transaction_cost"] = df["cost"]
-        if "cost" in df.columns and "total_cost" not in df.columns:
-            df["total_cost"] = df["cost"] * df["quantity"] * df["price"]
-        data["Strategy"] = df.to_dict("records")
+    primary_name = METADATA['primary_strategy']['display_name']
+    benchmark_name = METADATA['benchmark_strategy']['display_name']
 
-    if "equal_weight_transactions" in results:
-        df = results["equal_weight_transactions"].copy()
+    primary_key = primary_name.lower().replace(" ", "_")
+    benchmark_key = benchmark_name.lower().replace(" ", "_")
+
+    if f"{primary_key}_transactions" in results:
+        df = results[f"{primary_key}_transactions"].copy()
         # Rename columns if needed
         if "cost" in df.columns and "transaction_cost" not in df.columns:
             df["transaction_cost"] = df["cost"]
         if "cost" in df.columns and "total_cost" not in df.columns:
             df["total_cost"] = df["cost"] * df["quantity"] * df["price"]
-        data["Equal Weight"] = df.to_dict("records")
+        data[primary_name] = df.to_dict("records")
+
+    if f"{benchmark_key}_transactions" in results:
+        df = results[f"{benchmark_key}_transactions"].copy()
+        # Rename columns if needed
+        if "cost" in df.columns and "transaction_cost" not in df.columns:
+            df["transaction_cost"] = df["cost"]
+        if "cost" in df.columns and "total_cost" not in df.columns:
+            df["total_cost"] = df["cost"] * df["quantity"] * df["price"]
+        data[benchmark_name] = df.to_dict("records")
 
     return data
 
@@ -1111,6 +1193,31 @@ def index():
     return render_template_string(html)
 
 
+def normalize_strategy_keys(data_dict):
+    """
+    Normalize strategy names in data dictionary for backward compatibility.
+
+    Converts display names back to generic "Strategy" and "Equal Weight" keys
+    for compatibility with existing JavaScript code.
+    """
+    if not data_dict or not METADATA:
+        return data_dict
+
+    primary_name = METADATA['primary_strategy']['display_name']
+    benchmark_name = METADATA['benchmark_strategy']['display_name']
+
+    normalized = {}
+    for key, value in data_dict.items():
+        if key == primary_name:
+            normalized['Strategy'] = value
+        elif key == benchmark_name:
+            normalized['Equal Weight'] = value
+        else:
+            normalized[key] = value
+
+    return normalized
+
+
 @app.route("/api/data")
 def api_data():
     """API endpoint to serve all dashboard data as JSON."""
@@ -1121,18 +1228,23 @@ def api_data():
         print(f"Loaded results keys: {list(results.keys())}")
 
         if not results:
-            return jsonify({"error": "No backtest results found. Run the backtest first: python scripts/run_hrp_backtest.py"}), 400
+            return jsonify({"error": "No backtest results found. Run the backtest first: python scripts/run_backtest.py"}), 400
 
-        return jsonify(
-            {
-                "metrics": get_metrics_table(results),
-                "portfolio_value": get_portfolio_value_data(results),
-                "drawdown": get_drawdown_data(results),
-                "weights": get_weights_data(results),
-                "attribution": get_attribution_data(results),
-                "transactions": get_transactions_data(results),
+        # Get data with dynamic labels
+        data = {
+            "metrics": get_metrics_table(results),
+            "portfolio_value": normalize_strategy_keys(get_portfolio_value_data(results)),
+            "drawdown": normalize_strategy_keys(get_drawdown_data(results)),
+            "weights": normalize_strategy_keys(get_weights_data(results)),
+            "attribution": normalize_strategy_keys(get_attribution_data(results)),
+            "transactions": normalize_strategy_keys(get_transactions_data(results)),
+            "metadata": {
+                "primary_strategy": METADATA['primary_strategy']['display_name'],
+                "benchmark_strategy": METADATA['benchmark_strategy']['display_name']
             }
-        )
+        }
+
+        return jsonify(data)
     except Exception as e:
         import traceback
         traceback.print_exc()

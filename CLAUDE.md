@@ -61,66 +61,89 @@ This system provides:
 - Paper and live trading support
 - Read-only mode available
 
+**Portfolio Optimization Strategies**
+- ✅ `strategies/base.py` - Abstract BaseStrategy class for all strategies
+- ✅ `strategies/hrp.py` - Hierarchical Risk Parity implementation
+- ✅ `strategies/equal_weight.py` - Equal-weight baseline benchmark
+- ✅ `strategies/__init__.py` - Strategy registry and factory pattern for pluggable strategies
+
+**Backtesting Framework**
+- ✅ `backtesting/engine.py` - Core backtesting simulation engine
+- ✅ `backtesting/portfolio_state.py` - Portfolio state tracking over time
+- ✅ `backtesting/transaction.py` - Transaction modeling with costs
+
+**Analytics & Visualization**
+- ✅ `analytics/metrics.py` - Performance metrics (Sharpe, drawdown, CAGR, volatility)
+- ✅ `analytics/visualizations.py` - Chart generation using matplotlib
+- ✅ `scripts/serve_results.py` - Interactive web dashboard (Flask + Chart.js)
+
+**Data Management**
+- ✅ `data/cache.py` - Historical data caching (parquet format)
+- ✅ `data/preprocessing.py` - Data alignment and cleaning
+
 ### What Doesn't Exist Yet
 
-- ❌ Trading strategies (HRP, mean-variance, etc.)
-- ❌ Backtesting framework
-- ❌ Performance analytics (Sharpe ratio, drawdown, etc.)
-- ❌ Visualization capabilities
-- ❌ Data caching/persistence layer
+- ❌ Additional strategies (mean-variance, risk parity, etc.)
 - ❌ Order execution simulation
 - ❌ Live trading strategy execution
+- ❌ Parameter optimization/tuning
+- ❌ Multi-strategy comparison (3+ strategies)
 
 ---
 
-## Current Plan: HRP Trading Strategy Implementation
+## Pluggable Strategy System
 
-### Goal
-Build a complete Hierarchical Risk Parity (HRP) trading strategy with backtesting capabilities for 4 UK ETFs.
+### Overview
 
-### Specifications
+The system now supports pluggable portfolio optimization strategies that can be easily tested and compared. Strategies inherit from `BaseStrategy` and implement the `calculate_weights()` method.
+
+### Available Strategies
+
+1. **Hierarchical Risk Parity (HRP)**
+   - Files: `strategies/hrp.py`
+   - Command: `python scripts/run_backtest.py --strategy hrp`
+   - Parameters: `--hrp-linkage-method` (single|complete|average|ward)
+
+2. **Equal Weight (Benchmark)**
+   - Files: `strategies/equal_weight.py`
+   - Command: `python scripts/run_backtest.py --strategy equal_weight`
+   - Parameters: None
+
+### Strategy Registry
+
+All strategies are registered in `strategies/__init__.py` using a pluggable registry pattern:
+
+```python
+STRATEGY_REGISTRY = {
+    'hrp': {'class': HRPStrategy, 'display_name': 'Hierarchical Risk Parity', ...},
+    'equal_weight': {'class': EqualWeightStrategy, 'display_name': 'Equal Weight', ...}
+}
+```
+
+New strategies can be added by:
+1. Creating a class that inherits from `BaseStrategy`
+2. Implementing `calculate_weights(prices)` method
+3. Registering in `STRATEGY_REGISTRY` with metadata
+
+### Backtesting Specifications
+
 - **Symbols**: VUSA, SSLN, SGLN, IWRD
 - **Market**: Exchange=SMART, Currency=GBP, SecType=STK
 - **Position Sizing**: Units = (Net Account Value × Weight) / Stock Price
 - **Backtesting**: Maximum available historical data
 - **Rebalancing**: Monthly (end of month)
 - **Transaction Costs**: 7.5 basis points per trade
-- **Benchmark**: Equal-weight portfolio
+- **Default Comparison**: Primary strategy vs Equal Weight benchmark
 - **Visualization**: Portfolio value, drawdown, benchmark comparison
 
-### Architecture Plan
+### Hierarchical Risk Parity (HRP) Algorithm
 
-**New Modules to Build**:
-
-1. **strategies/** - Portfolio optimization strategies
-   - `base.py` - Abstract BaseStrategy class
-   - `hrp.py` - Hierarchical Risk Parity implementation (port from reference notebook)
-   - `equal_weight.py` - Equal-weight benchmark
-
-2. **backtesting/** - Backtesting framework
-   - `engine.py` - Core backtesting simulation engine
-   - `portfolio_state.py` - Portfolio state tracking over time
-   - `transaction.py` - Transaction modeling with costs
-
-3. **analytics/** - Performance analytics
-   - `metrics.py` - Sharpe ratio, drawdown, CAGR, volatility calculations
-   - `visualizations.py` - Chart generation using matplotlib
-
-4. **data/** - Data management
-   - `cache.py` - Historical data caching (parquet format)
-   - `preprocessing.py` - Data alignment and cleaning
-
-5. **scripts/** - Runnable scripts
-   - `run_hrp_backtest.py` - Main backtest execution script
-
-### HRP Algorithm Overview
-
-**3-Stage Process** (from reference notebook):
+HRP is one of the available strategies. It uses a 3-stage process:
 
 1. **Tree Clustering**
    - Calculate correlation matrix from returns
    - Convert to distance matrix: `d = sqrt(0.5 * (1 - corr))`
-   - Hierarchical clustering using `scipy.cluster.hierarchy.linkage()` with 'single' linkage
+   - Hierarchical clustering using `scipy.cluster.hierarchy.linkage()` with configurable linkage method
 
 2. **Quasi-Diagonalization**
    - Reorganize covariance matrix so similar assets are together
@@ -132,24 +155,62 @@ Build a complete Hierarchical Risk Parity (HRP) trading strategy with backtestin
    - Iteratively bisect and allocate inversely to cluster variance
    - `get_rec_bipart()` returns final weights (sum to 1.0)
 
-### Implementation Sequence
+**Reference**: De Prado, M. L. (2016). "Building Diversified Portfolios that Outperform Out of Sample"
+
+### Implementation Status
 
 1. ✅ **Planning** - Comprehensive plan created
-2. ⏳ **Setup** - Create directory structure, update dependencies
-3. ⏳ **HRP Algorithm** - Port from reference notebook
-4. ⏳ **Backtesting Engine** - Build simulation framework
-5. ⏳ **Analytics** - Performance metrics and visualization
-6. ⏳ **Data Management** - Caching and preprocessing
-7. ⏳ **Integration** - End-to-end backtest script
-8. ⏳ **Validation** - Test with historical data
+2. ✅ **Setup** - Directory structure created, dependencies installed
+3. ✅ **HRP Algorithm** - Ported from reference notebook
+4. ✅ **Backtesting Engine** - Simulation framework implemented
+5. ✅ **Analytics** - Performance metrics and visualization complete
+6. ✅ **Data Management** - Caching and preprocessing implemented
+7. ✅ **Strategy Registry** - Pluggable strategy system implemented
+8. ✅ **Integration** - End-to-end backtest script with CLI arguments
+9. ✅ **Dashboard** - Interactive web results visualization
+10. ✅ **Validation** - Tested with historical UK ETF data
 
-**Estimated Time**: 12-18 hours total
+### Command-Line Interface
+
+**Generic Backtest Script**: `python scripts/run_backtest.py`
+
+Available arguments:
+```bash
+# Primary strategy selection
+--strategy {hrp|equal_weight}      # Default: hrp
+--benchmark {hrp|equal_weight}     # Default: equal_weight
+
+# Strategy-specific parameters
+--hrp-linkage-method {single|complete|average|ward}  # Default: single
+
+# Data options
+--refresh                          # Force fresh data from IB (skip cache)
+```
+
+**Examples**:
+```bash
+# Default: Test HRP vs Equal Weight using cache
+python scripts/run_backtest.py
+
+# Test HRP with ward linkage vs Equal Weight
+python scripts/run_backtest.py --strategy hrp --hrp-linkage-method ward
+
+# Compare Equal Weight against HRP
+python scripts/run_backtest.py --strategy equal_weight --benchmark hrp
+
+# Force fresh data from IB
+python scripts/run_backtest.py --refresh
+```
+
+**Backward Compatibility**:
+- Old script: `run_hrp_backtest.py` (deprecated, forwards to `run_backtest.py`)
+- Use `run_backtest.py` for all new backtests
 
 ### Key Implementation Details
 
 **GBP Currency Override**
 ```python
-# Must override default USD for UK ETFs
+# UK ETFs require GBP currency override (default is USD)
 df = await client.get_historical_bars(
     symbol='VUSA',
     currency='GBP',  # Override default USD
@@ -167,13 +228,20 @@ rebalance_dates = pd.date_range(start, end, freq='M')
 ```
 
 **Lookback Window**
-- Use 252 trading days (1 year) for HRP correlation calculation
+- Use 252 trading days (1 year) for correlation/covariance calculation
 - First rebalance occurs 1 year after data start
 
 **Transaction Costs**
 - 7.5 bps = 0.075% of trade value
 - Deducted from cash on each trade
 - Formula: `abs(quantity × price) × 0.00075`
+
+**Result Files**
+- Portfolio histories: `hrp_portfolio_history.csv`, `ew_portfolio_history.csv`
+- Transactions: `hrp_transactions.csv`, `ew_transactions.csv`
+- Metrics: `performance_comparison.csv`
+- Metadata: `metadata.json` (includes actual strategy names and parameters)
+- Charts: `performance_charts.png`
 
 ---
 
@@ -370,20 +438,34 @@ bash scripts/start_dashboard.sh # macOS/Linux
 
 ## Current Session Status
 
-**Session Date**: 2026-02-15
-**Status**: ✅ Production Ready - All features complete and documented
-**Latest Addition**: Interactive web dashboard for results visualization
+**Session Date**: 2026-03-11
+**Status**: ✅ Production Ready - Pluggable strategy system implemented
+**Latest Refactoring**: Strategy registry and pluggable CLI arguments
 
 **Completed Components**:
 - ✅ IB Wrapper + Market Data + Portfolio Management
-- ✅ HRP Strategy Implementation + Backtesting Engine
+- ✅ HRP Strategy Implementation + Equal Weight Benchmark
+- ✅ Pluggable Strategy System (registry + factory pattern)
+- ✅ Backtesting Engine with flexible strategy support
 - ✅ Performance Analytics + Metrics Calculation
 - ✅ Data Caching with --refresh flag support
-- ✅ Interactive Web Dashboard with responsive design
+- ✅ Interactive Web Dashboard with dynamic strategy labels
+- ✅ CLI argument system for strategy selection and parameters
 - ✅ Comprehensive documentation (README + DASHBOARD + CLAUDE)
 
+**Recent Changes** (This Session):
+- ✅ Created `strategies/__init__.py` with STRATEGY_REGISTRY and factory functions
+- ✅ Renamed `run_hrp_backtest.py` → `run_backtest.py` with generic CLI interface
+- ✅ Added `--strategy` and `--benchmark` command-line arguments
+- ✅ Support for strategy-specific parameters (e.g., `--hrp-linkage-method`)
+- ✅ Updated `serve_results.py` to load metadata and support dynamic strategy labels
+- ✅ Created `metadata.json` output file with strategy information
+- ✅ Updated documentation (CLAUDE.md) with new CLI usage examples
+- ✅ Maintained backward compatibility with deprecated `run_hrp_backtest.py` wrapper
+
 **Next Actions** (Optional):
+- [ ] Add more strategies (mean-variance, risk parity, momentum, etc.)
+- [ ] Implement parameter optimization/tuning
+- [ ] Support multi-strategy comparison (3+ strategies with dashboard refactor)
 - [ ] Deploy to production server
-- [ ] Add parameter tuning interface
-- [ ] Implement live trading integration
-- [ ] Add scenario analysis features
+- [ ] Add web interface for parameter configuration

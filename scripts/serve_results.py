@@ -168,23 +168,27 @@ def get_metrics_table(results):
     df = pd.DataFrame(results["metrics"])
     metrics = {}
 
-    for col in df.columns:
-        metrics[col] = {}
-        for idx in df.index:
+    # Transpose to have metrics as rows and strategies as columns
+    for idx in df.index:
+        metrics[idx] = {}
+        for col in df.columns:
             value = df.loc[idx, col]
             # Format nicely
             if isinstance(value, float):
                 # Handle NaN and inf values
                 if pd.isna(value) or np.isinf(value):
-                    metrics[col][idx] = "N/A"
+                    metrics[idx][col] = "N/A"
                 elif "Return" in idx or "CAGR" in idx or "Drawdown" in idx or "Volatility" in idx:
-                    metrics[col][idx] = f"{value:.2f}%"
-                elif "Ratio" in idx:
-                    metrics[col][idx] = f"{value:.3f}"
+                    metrics[idx][col] = f"{value:.2f}%"
+                elif "Ratio" in idx or "Turnover" in idx:
+                    if "Turnover" in idx:
+                        metrics[idx][col] = f"{value:.6f}"
+                    else:
+                        metrics[idx][col] = f"{value:.3f}"
                 else:
-                    metrics[col][idx] = f"{value:.2f}"
+                    metrics[idx][col] = f"{value:.2f}"
             else:
-                metrics[col][idx] = str(value)
+                metrics[idx][col] = str(value)
 
     return metrics
 
@@ -586,7 +590,7 @@ def index():
                 const grid = document.getElementById('metricsGrid');
                 grid.innerHTML = '';
 
-                const keyMetrics = ['Total Return (%)', 'Sharpe Ratio', 'Max Drawdown (%)', 'Volatility (%)'];
+                const keyMetrics = ['Total Return (%)', 'Sharpe Ratio', 'Max Drawdown (%)', 'Volatility (%)', 'Omega Ratio'];
                 for (const metric of keyMetrics) {
                     if (metrics[metric]) {
                         const card = document.createElement('div');

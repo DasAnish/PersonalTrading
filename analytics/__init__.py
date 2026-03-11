@@ -13,6 +13,8 @@ from .metrics import (
     calculate_sharpe_ratio,
     calculate_volatility,
     calculate_cagr,
+    calculate_omega_ratio,
+    calculate_returns_to_turnover_ratio,
     generate_metrics_summary
 )
 
@@ -30,6 +32,8 @@ __all__ = [
     'calculate_sharpe_ratio',
     'calculate_volatility',
     'calculate_cagr',
+    'calculate_omega_ratio',
+    'calculate_returns_to_turnover_ratio',
     'generate_metrics_summary',
     'plot_portfolio_comparison',
     'plot_transaction_analysis',

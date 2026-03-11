@@ -230,6 +230,8 @@ def plot_portfolio_comparison(
         'Sharpe Ratio',
         'Max Drawdown (%)',
         'Volatility (%)',
+        'Omega Ratio',
+        'Returns/Turnover',
         'Total Transactions',
         'Total Costs (£)',
         'Final Value (£)'
@@ -243,6 +245,8 @@ def plot_portfolio_comparison(
             f"{metrics.get('sharpe_ratio', 0):.3f}",
             f"{metrics.get('max_drawdown', 0):.2f}",
             f"{metrics.get('volatility', 0):.2f}",
+            f"{metrics.get('omega_ratio', 0):.3f}",
+            f"{metrics.get('returns_to_turnover', 0):.6f}",
             f"{metrics.get('total_transactions', 0):.0f}",
             f"{metrics.get('total_transaction_costs', 0):.2f}",
             f"{metrics.get('final_value', 0):.2f}"
@@ -387,6 +391,8 @@ def create_performance_table(results_dict: Dict[str, BacktestResults]) -> pd.Dat
             'Sharpe Ratio': f"{metrics.get('sharpe_ratio', 0):.3f}",
             'Max Drawdown (%)': f"{metrics.get('max_drawdown', 0):.2f}",
             'Volatility (%)': f"{metrics.get('volatility', 0):.2f}",
+            'Omega Ratio': f"{metrics.get('omega_ratio', 0):.3f}",
+            'Returns to Turnover': f"{metrics.get('returns_to_turnover', 0):.6f}",
             'Total Transactions': f"{metrics.get('total_transactions', 0):.0f}",
             'Total Costs (£)': f"{metrics.get('total_transaction_costs', 0):.2f}",
             'Final Value (£)': f"{metrics.get('final_value', 0):.2f}"

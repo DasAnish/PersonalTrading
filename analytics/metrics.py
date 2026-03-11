@@ -226,6 +226,93 @@ def calculate_cagr(values: pd.Series) -> float:
     return cagr
 
 
+def calculate_omega_ratio(
+    returns: pd.Series,
+    threshold: float = 0.0,
+    periods_per_year: int = 252
+) -> float:
+    """
+    Calculate Omega Ratio.
+
+    Omega Ratio is the probability-weighted ratio of gains to losses above/below a threshold.
+    Higher values indicate better risk-adjusted returns.
+
+    Args:
+        returns: Series of percentage returns
+        threshold: Return threshold (default 0.0, can also use risk-free rate)
+        periods_per_year: Number of periods per year (default 252 for daily)
+
+    Returns:
+        Omega Ratio (annualized)
+
+    Example:
+        >>> returns = pd.Series([0.01, 0.02, -0.01, 0.03])
+        >>> calculate_omega_ratio(returns)
+        2.5  # approximate
+    """
+    returns = returns.dropna()
+
+    if len(returns) == 0:
+        return 0.0
+
+    # Convert threshold to period threshold
+    period_threshold = threshold / periods_per_year
+
+    # Calculate excess returns above and below threshold
+    excess = returns - period_threshold
+
+    # Separate gains and losses
+    gains = excess[excess > 0].sum()
+    losses = -excess[excess < 0].sum()
+
+    if losses == 0:
+        return float('inf') if gains > 0 else 0.0
+
+    omega = gains / losses
+
+    return omega
+
+
+def calculate_returns_to_turnover_ratio(
+    total_return: float,
+    transactions: list,
+    prices_history: pd.DataFrame = None
+) -> float:
+    """
+    Calculate Returns to Turnover Ratio.
+
+    Measures how much return is generated per unit of trading activity.
+    Higher values indicate more efficient trading (more return per trade cost).
+
+    Args:
+        total_return: Total return as a decimal (e.g., 0.42 for 42%)
+        transactions: List of Transaction objects with quantity and price
+        prices_history: Optional price history for more accurate turnover calculation
+
+    Returns:
+        Returns to Turnover Ratio
+
+    Example:
+        >>> total_return = 0.42  # 42%
+        >>> transactions = [...]  # list of trades
+        >>> calculate_returns_to_turnover_ratio(total_return, transactions)
+        0.85  # approximate
+    """
+    if not transactions or len(transactions) == 0:
+        return 0.0
+
+    # Calculate total turnover (sum of absolute trade values)
+    total_turnover = sum(abs(t.quantity * t.price) for t in transactions)
+
+    if total_turnover == 0:
+        return 0.0
+
+    # Returns to Turnover Ratio = Total Return / Total Turnover
+    ratio = total_return / total_turnover if total_turnover > 0 else 0.0
+
+    return ratio
+
+
 def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, float]:
     """
     Generate comprehensive performance metrics summary.
@@ -242,6 +329,8 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
         - sharpe_ratio: Annualized Sharpe ratio
         - max_drawdown: Maximum drawdown
         - volatility: Annualized volatility
+        - omega_ratio: Omega Ratio (probability-weighted gain/loss ratio)
+        - returns_to_turnover: Returns to Turnover Ratio
         - total_transactions: Number of transactions executed
         - total_transaction_costs: Total costs paid
 
@@ -259,13 +348,18 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
     # Calculate returns
     returns = calculate_returns(values)
 
+    # Calculate total return as decimal (not percentage)
+    total_return_decimal = values.iloc[-1] / values.iloc[0] - 1
+
     # Calculate metrics
     metrics = {
-        'total_return': (values.iloc[-1] / values.iloc[0] - 1) * 100,  # Percentage
+        'total_return': total_return_decimal * 100,  # Percentage
         'cagr': calculate_cagr(values) * 100,  # Percentage
         'sharpe_ratio': calculate_sharpe_ratio(returns),
         'max_drawdown': calculate_max_drawdown(values) * 100,  # Percentage
         'volatility': calculate_volatility(returns) * 100,  # Percentage
+        'omega_ratio': calculate_omega_ratio(returns),
+        'returns_to_turnover': calculate_returns_to_turnover_ratio(total_return_decimal, transactions),
         'total_transactions': len(transactions),
         'total_transaction_costs': sum(t.total_cost for t in transactions),
         'final_value': values.iloc[-1],
@@ -319,5 +413,3 @@ def calculate_return_attribution(history: pd.DataFrame) -> pd.DataFrame:
             attribution[col] = attribution[col] - attribution[col].iloc[0]
 
     return attribution
-
-    return metrics

@@ -21,6 +21,114 @@ if TYPE_CHECKING:
     from backtesting.engine import BacktestEngine
 
 
+class VarianceTargetOverlay(OverlayStrategy):
+    """
+    Scale portfolio weights to achieve target variance level.
+
+    Similar to VolatilityTargetOverlay but targets variance instead of volatility.
+    Since variance scales linearly with time (vs volatility which scales with sqrt(time)),
+    the annualization is different: annualized_variance = daily_variance * 252
+
+    This overlay runs the underlying strategy first to get its portfolio value
+    timeseries, then calculates realized variance. At each rebalance, it
+    scales the allocation weights to achieve the target variance level.
+
+    Example:
+        market = UKETFsMarket()
+        hrp = HRPStrategy(underlying=market)
+        var_target = VarianceTargetOverlay(underlying=hrp, target_variance=0.02)
+        results = await var_target.run(engine, start_date, end_date)
+
+    The scaling works as follows:
+    1. Calculate realized variance from underlying portfolio returns
+    2. Calculate scale = target_variance / realized_variance
+    3. Scale weights: adjusted_weights = original_weights * scale
+    4. Remaining allocation goes to cash (cash weight = 1 - sum(scaled_weights))
+    5. Cap scaling to max 1.0 (no leverage)
+
+    Variance is useful because:
+    - It's additive over time (easier for portfolio optimization)
+    - Some prefer it for risk budgeting
+    - Smaller values than volatility for the same portfolio
+    """
+
+    def __init__(
+        self,
+        underlying: ExecutableStrategy,
+        target_variance: float = 0.02,
+        lookback_days: int = 252,
+    ):
+        """
+        Initialize variance target overlay.
+
+        Args:
+            underlying: Strategy to apply overlay to
+            target_variance: Target annualized variance (default 0.02 = 2%)
+                           Note: variance is vol^2, so 0.02 ≈ 14% volatility
+            lookback_days: Lookback window for variance calculation (default 252 trading days)
+        """
+        super().__init__(
+            underlying, name=f"Variance Target ({target_variance*100:.2f}%)"
+        )
+        self.target_variance = target_variance
+        self.lookback_days = lookback_days
+
+    def transform_weights(
+        self, weights: pd.Series, context: OverlayContext
+    ) -> pd.Series:
+        """
+        Scale weights to achieve target variance.
+
+        Args:
+            weights: Original weights from underlying strategy
+            context: OverlayContext with portfolio values and prices
+
+        Returns:
+            Scaled weights (sum may be < 1.0, with cash making up the difference)
+        """
+        portfolio_values = context.underlying_portfolio_values
+
+        # Need at least 2 data points to calculate returns
+        if len(portfolio_values) < 2:
+            return weights
+
+        # Get lookback window (at most all available data)
+        lookback_start = max(0, len(portfolio_values) - self.lookback_days)
+        recent_values = portfolio_values.iloc[lookback_start:]
+
+        if len(recent_values) < 30:
+            # Insufficient data for reliable variance estimate
+            return weights
+
+        # Calculate returns from portfolio values
+        returns = recent_values.pct_change().dropna()
+
+        if len(returns) < 2:
+            return weights
+
+        # Calculate realized variance (annualized)
+        # Note: variance scales linearly with time, so multiply by 252 (not sqrt(252))
+        realized_variance = returns.var() * 252
+
+        # Avoid division by zero
+        if realized_variance < 1e-8:
+            # No variance, return original weights
+            return weights
+
+        # Calculate scaling factor: target_variance / realized_variance
+        scale = self.target_variance / realized_variance
+
+        # Cap scaling to max 1.0 (no leverage)
+        # This allows scaling down to cash but not leveraging up
+        scale = min(scale, 1.0)
+        scale = max(scale, 0.0)
+
+        # Scale weights
+        scaled_weights = weights * scale
+
+        return scaled_weights
+
+
 class VolatilityTargetOverlay(OverlayStrategy):
     """
     Scale portfolio weights to achieve target volatility level.

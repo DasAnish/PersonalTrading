@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from strategies.markets import UKETFsMarket, USEquitiesMarket
 from strategies.hrp import HRPStrategy
 from strategies.equal_weight import EqualWeightStrategy
-from strategies.overlays import VolatilityTargetOverlay, ConstraintOverlay
+from strategies.overlays import VarianceTargetOverlay, VolatilityTargetOverlay, ConstraintOverlay
 from backtesting import BacktestEngine
 
 
@@ -66,6 +66,39 @@ def example_2_overlay_strategy():
     print(f"  Symbols: {vol_target.get_market_definition().symbols}")
 
     return vol_target
+
+
+def example_2b_variance_target_overlay():
+    """Example 2b: Variance Target Overlay (alternative to Vol Target)."""
+    print("\n" + "=" * 70)
+    print("EXAMPLE 2b: Variance Target Overlay")
+    print("=" * 70)
+
+    # Variance vs Volatility explanation
+    print("\nVariance vs Volatility:")
+    print("  - Variance: var(returns) × 252  (scales linearly)")
+    print("  - Volatility: std(returns) × √252  (scales with sqrt)")
+    print("  - Relationship: vol = √var")
+    print("\nExample: 12% volatility ≈ 0.0144 variance")
+    print("         15% volatility ≈ 0.0225 variance")
+
+    # Step 1: Create market
+    market = UKETFsMarket()
+
+    # Step 2: Create allocation strategy
+    hrp = HRPStrategy(underlying=market, linkage_method='ward')
+
+    # Step 3: Apply variance target (0.02 variance ≈ 14.1% volatility)
+    var_target = VarianceTargetOverlay(underlying=hrp, target_variance=0.02)
+
+    print(f"\nComposed Strategy: {var_target.name}")
+    print(f"  Layer 1 (Overlay): {var_target.name}")
+    print(f"  Layer 2 (Allocation): {hrp.name}")
+    print(f"  Layer 3 (Market): {market.name}")
+    print(f"  Symbols: {var_target.get_market_definition().symbols}")
+    print(f"\nTarget variance: 0.02 (equivalent to ~14.1% volatility)")
+
+    return var_target
 
 
 def example_3_multiple_overlays():
@@ -192,6 +225,7 @@ if __name__ == "__main__":
     # Run examples
     example_1_simple_allocation()
     example_2_overlay_strategy()
+    example_2b_variance_target_overlay()
     example_3_multiple_overlays()
     example_4_market_variants()
     example_5_weight_calculation()

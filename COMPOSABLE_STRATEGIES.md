@@ -66,6 +66,7 @@ ew = EqualWeightStrategy(underlying=market)
 
 Apply **dynamic adjustments** to weights. Built-in overlays:
 
+- **VarianceTargetOverlay**: Scale weights to achieve target variance (math-friendly alternative to vol targeting)
 - **VolatilityTargetOverlay**: Scale weights to achieve target volatility
 - **ConstraintOverlay**: Apply min/max weight limits per position
 - **LeverageOverlay**: Apply gross leverage limits
@@ -179,6 +180,54 @@ results_us = engine.run_backtest(hrp_us, us_prices, start, end)
 ```
 
 ## How Overlays Work
+
+### Variance Target Overlay
+
+Scales portfolio weights to achieve a target variance level.
+
+**Variance vs Volatility:**
+- **Variance**: Variance of returns × 252 (scales linearly with time)
+- **Volatility**: Standard deviation of returns × √252 (scales with sqrt of time)
+- **Relationship**: Volatility = √Variance
+
+Example: 15% volatility = 0.0225 variance
+
+**How it works:**
+1. **Calculate realized variance** from underlying strategy's returns
+   - Formula: `realized_var = returns.var() * 252` (annualized)
+   - Uses lookback window (default 252 days)
+
+2. **Calculate scaling factor**: `scale = target_variance / realized_variance`
+   - If realized_var = 0.04 and target = 0.02, scale = 0.50
+   - Scales DOWN when variance is high, scales UP when variance is low
+
+3. **Scale weights**: `scaled_weights = original_weights * scale`
+   - Maintains relative proportions while reducing risk
+   - No leverage (capped at scale = 1.0)
+
+4. **Remaining goes to cash**: `cash = 1 - sum(scaled_weights)`
+   - Variance targeting often results in cash allocation
+   - Can provide stability during high-variance periods
+
+**When to use:**
+- Risk budgeting and portfolio optimization (variance is additive)
+- When you prefer working with variance instead of volatility
+- More mathematical/formal portfolio approaches
+
+Example:
+```python
+from strategies import VarianceTargetOverlay, HRPStrategy, UKETFsMarket
+
+market = UKETFsMarket()
+hrp = HRPStrategy(underlying=market)
+var_target = VarianceTargetOverlay(
+    underlying=hrp,
+    target_variance=0.02,  # Targets 2% annual variance
+    lookback_days=252
+)
+
+weights = var_target.calculate_weights(prices)
+```
 
 ### Volatility Target Overlay
 

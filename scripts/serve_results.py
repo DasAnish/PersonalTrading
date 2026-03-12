@@ -2,7 +2,10 @@
 """
 Interactive web dashboard for portfolio strategy backtest results.
 
-Supports multiple strategies with dynamic labels loaded from metadata.json.
+Supports:
+1. Running from all-strategies backtest (with strategy picker)
+2. Single strategy vs benchmark comparison (legacy mode)
+3. Dynamic strategy selection and comparison
 
 Run with: python scripts/serve_results.py
 Then visit: http://localhost:5000
@@ -23,317 +26,191 @@ RESULTS_DIR = BASE_DIR / "results"
 
 app = Flask(__name__, static_folder=None)
 
-# Global metadata (loaded at startup)
-METADATA = None
+# Global data (loaded at startup)
+STRATEGIES_INDEX = None
+AVAILABLE_STRATEGIES = {}
 
 
-def load_metadata():
+def load_strategies_index():
     """
-    Load metadata from metadata.json.
+    Load the strategies index from all-strategies run.
 
-    Returns metadata dict with strategy names and parameters.
-    Falls back to defaults if metadata.json doesn't exist.
+    Returns dict with available strategies and their paths.
+    Falls back to legacy metadata.json if index doesn't exist.
     """
+    index_path = RESULTS_DIR / 'strategies_index.json'
+
+    if index_path.exists():
+        try:
+            with open(index_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"   [!] Error loading strategies_index.json: {e}")
+
+    # Fallback to legacy metadata.json for backward compatibility
     metadata_path = RESULTS_DIR / 'metadata.json'
-
     if metadata_path.exists():
         try:
             with open(metadata_path, 'r') as f:
-                return json.load(f)
+                metadata = json.load(f)
+                # Convert legacy format to index format
+                return {
+                    'run_date': datetime.now().isoformat(),
+                    'total_strategies': 2,
+                    'strategies': {},
+                    'config': metadata.get('config', {})
+                }
         except Exception as e:
             print(f"   [!] Error loading metadata.json: {e}")
-            print(f"   [*] Using default metadata (HRP vs Equal Weight)")
 
-    # Default fallback for backward compatibility
-    return {
-        'primary_strategy': {
-            'name': 'hrp',
-            'display_name': 'Hierarchical Risk Parity',
-            'params': {'linkage_method': 'single'}
-        },
-        'benchmark_strategy': {
-            'name': 'equal_weight',
-            'display_name': 'Equal Weight',
-            'params': {}
-        },
-        'run_date': datetime.now().isoformat(),
-        'config': {}
+    return None
+
+
+def load_strategy_data(strategy_key: str) -> dict:
+    """
+    Load all data for a specific strategy from its folder.
+
+    Args:
+        strategy_key: Strategy identifier (e.g., 'hrp_single')
+
+    Returns:
+        Dict with portfolio_history, transactions, weights_history, metrics, info
+    """
+    strategy_dir = RESULTS_DIR / 'strategies' / strategy_key
+
+    if not strategy_dir.exists():
+        return None
+
+    data = {
+        'key': strategy_key,
+        'portfolio_history': [],
+        'transactions': [],
+        'weights_history': [],
+        'metrics': {},
+        'info': {}
     }
 
-
-def get_file_mappings(metadata):
-    """
-    Get file prefix mappings from metadata.
-
-    Returns dict mapping display names to file prefixes.
-    """
-    return {
-        metadata['primary_strategy']['display_name']: "hrp",
-        metadata['benchmark_strategy']['display_name']: "ew"
-    }
-
-
-def load_results():
-    """Load all backtest results from CSV files."""
-    global METADATA
-    results = {}
-
-    print(f"\n[*] Looking for results in: {RESULTS_DIR}")
-    print(f"   Files available: {list(RESULTS_DIR.glob('*.csv'))}\n")
-
-    # Load metadata first
-    METADATA = load_metadata()
-    file_mappings = get_file_mappings(METADATA)
-
-    print(f"   [*] Metadata loaded:")
-    print(f"       Primary: {METADATA['primary_strategy']['display_name']}")
-    print(f"       Benchmark: {METADATA['benchmark_strategy']['display_name']}\n")
-
-    # Load performance comparison
-    perf_file = RESULTS_DIR / "performance_comparison.csv"
-    if perf_file.exists():
-        print(f"   [+] Loaded metrics from {perf_file.name}")
-        df = pd.read_csv(perf_file, index_col=0)
-        results["metrics"] = df.to_dict()
-    else:
-        print(f"   [-] Metrics file not found: {perf_file.name}")
-
-    # Load portfolio histories
-    for strategy_display, prefix in file_mappings.items():
-        key = strategy_display.lower().replace(" ", "_")
-        file_path = RESULTS_DIR / f"{prefix}_portfolio_history.csv"
-
-        if file_path.exists():
-            print(f"   [+] Loaded {strategy_display} history from {file_path.name}")
-            df = pd.read_csv(file_path)
-            df["timestamp"] = pd.to_datetime(df["timestamp"].tolist())
-            results[f"{key}_history"] = df
-        else:
-            print(f"   [-] {strategy_display} history not found: {file_path.name}")
+    # Load portfolio history
+    portfolio_path = strategy_dir / 'portfolio_history.json'
+    if portfolio_path.exists():
+        with open(portfolio_path, 'r') as f:
+            data['portfolio_history'] = json.load(f)
 
     # Load transactions
-    for strategy_display, prefix in file_mappings.items():
-        key = strategy_display.lower().replace(" ", "_")
-        file_path = RESULTS_DIR / f"{prefix}_transactions.csv"
+    transactions_path = strategy_dir / 'transactions.json'
+    if transactions_path.exists():
+        with open(transactions_path, 'r') as f:
+            data['transactions'] = json.load(f)
 
-        if file_path.exists():
-            print(f"   [+] Loaded {strategy_display} transactions from {file_path.name}")
-            df = pd.read_csv(file_path)
-            results[f"{key}_transactions"] = df
-        else:
-            print(f"   [-] {strategy_display} transactions not found: {file_path.name}")
+    # Load weights history
+    weights_path = strategy_dir / 'weights_history.json'
+    if weights_path.exists():
+        with open(weights_path, 'r') as f:
+            data['weights_history'] = json.load(f)
 
-    print()
-    return results
+    # Load metrics
+    metrics_path = strategy_dir / 'metrics.json'
+    if metrics_path.exists():
+        with open(metrics_path, 'r') as f:
+            data['metrics'] = json.load(f)
 
-
-def get_portfolio_value_data(results):
-    """Extract portfolio value time series."""
-    data = {}
-
-    primary_name = METADATA['primary_strategy']['display_name']
-    benchmark_name = METADATA['benchmark_strategy']['display_name']
-
-    primary_key = primary_name.lower().replace(" ", "_")
-    benchmark_key = benchmark_name.lower().replace(" ", "_")
-
-    if f"{primary_key}_history" in results:
-        df = results[f"{primary_key}_history"]
-        data[primary_name] = {
-            "dates": df["timestamp"].dt.strftime("%Y-%m-%d").tolist(),
-            "values": df["total_value"].tolist(),
-        }
-
-    if f"{benchmark_key}_history" in results:
-        df = results[f"{benchmark_key}_history"]
-        data[benchmark_name] = {
-            "dates": df["timestamp"].dt.strftime("%Y-%m-%d").tolist(),
-            "values": df["total_value"].tolist(),
-        }
+    # Load info
+    info_path = strategy_dir / 'info.json'
+    if info_path.exists():
+        with open(info_path, 'r') as f:
+            data['info'] = json.load(f)
 
     return data
 
 
-def get_drawdown_data(results):
-    """Calculate and return drawdown data."""
-    data = {}
-
-    primary_name = METADATA['primary_strategy']['display_name']
-    benchmark_name = METADATA['benchmark_strategy']['display_name']
-
-    primary_key = primary_name.lower().replace(" ", "_")
-    benchmark_key = benchmark_name.lower().replace(" ", "_")
-
-    for key, label in [(f"{primary_key}_history", primary_name), (f"{benchmark_key}_history", benchmark_name)]:
-        if key in results:
-            df = results[key].copy()
-            df["running_max"] = df["total_value"].cummax()
-            df["drawdown"] = ((df["total_value"] - df["running_max"]) / df["running_max"]) * 100
-
-            data[label] = {
-                "dates": df["timestamp"].dt.strftime("%Y-%m-%d").tolist(),
-                "drawdown": df["drawdown"].tolist(),
-            }
-
-    return data
-
-
-def get_weights_data(results):
-    """Extract portfolio weights over time."""
-    data = {}
-
-    primary_name = METADATA['primary_strategy']['display_name']
-    primary_key = primary_name.lower().replace(" ", "_")
-
-    if f"{primary_key}_history" in results:
-        df = results[f"{primary_key}_history"].copy()
-        df["timestamp"] = df["timestamp"].dt.strftime("%Y-%m-%d")
-
-        # Calculate weights
-        symbols = [col.replace("_qty", "") for col in df.columns if col.endswith("_qty")]
-        weights_data = {"dates": df["timestamp"].tolist()}
-
-        for symbol in symbols:
-            value_col = f"{symbol}_value"
-            if value_col in df.columns:
-                weights_data[symbol] = (
-                    (df[value_col] / df["total_value"]) * 100
-                ).fillna(0).tolist()
-
-        data[primary_name] = weights_data
-
-    return data
-
-
-def get_attribution_data(results):
-    """Calculate daily attribution: previous weights × asset returns."""
-    data = {}
-
-    primary_name = METADATA['primary_strategy']['display_name']
-    benchmark_name = METADATA['benchmark_strategy']['display_name']
-
-    primary_key = primary_name.lower().replace(" ", "_")
-    benchmark_key = benchmark_name.lower().replace(" ", "_")
-
-    for key, label in [(f"{primary_key}_history", primary_name), (f"{benchmark_key}_history", benchmark_name)]:
-        if key in results:
-            df = results[key].copy()
-            df = df.reset_index(drop=True)
-
-            # Get symbols
-            symbols = [col.replace("_qty", "") for col in df.columns if col.endswith("_qty")]
-
-            attribution_data = {"dates": [], "symbols": symbols}
-
-            # Initialize attribution lists for each symbol
-            for symbol in symbols:
-                attribution_data[symbol] = []
-
-            # Calculate daily attribution for each day
-            for i in range(1, len(df)):
-                prev_row = df.iloc[i - 1]
-                curr_row = df.iloc[i]
-
-                # Calculate previous day's weights
-                prev_total = prev_row["total_value"]
-                if prev_total <= 0:
-                    continue
-
-                attribution_data["dates"].append(curr_row["timestamp"].strftime("%Y-%m-%d"))
-
-                for symbol in symbols:
-                    prev_value_col = f"{symbol}_value"
-                    curr_value_col = f"{symbol}_value"
-
-                    if prev_value_col in df.columns and curr_value_col in df.columns:
-                        prev_value = prev_row[prev_value_col]
-                        curr_value = curr_row[curr_value_col]
-
-                        # Handle missing values
-                        if pd.isna(prev_value) or pd.isna(curr_value) or prev_value == 0:
-                            daily_attribution = 0
-                        else:
-                            # Weight at T-1
-                            weight_t_minus_1 = (prev_value / prev_total) * 100
-                            # Return from T-1 to T
-                            asset_return = ((curr_value - prev_value) / prev_value) * 100
-                            # Attribution = weight * return
-                            daily_attribution = (weight_t_minus_1 / 100) * asset_return
-
-                        attribution_data[symbol].append(daily_attribution)
-
-            data[label] = attribution_data
-
-    return data
-
-
-def get_transactions_data(results):
-    """Extract transaction data."""
-    data = {}
-
-    primary_name = METADATA['primary_strategy']['display_name']
-    benchmark_name = METADATA['benchmark_strategy']['display_name']
-
-    primary_key = primary_name.lower().replace(" ", "_")
-    benchmark_key = benchmark_name.lower().replace(" ", "_")
-
-    if f"{primary_key}_transactions" in results:
-        df = results[f"{primary_key}_transactions"].copy()
-        # Rename columns if needed
-        if "cost" in df.columns and "transaction_cost" not in df.columns:
-            df["transaction_cost"] = df["cost"]
-        if "cost" in df.columns and "total_cost" not in df.columns:
-            df["total_cost"] = df["cost"] * df["quantity"] * df["price"]
-        data[primary_name] = df.to_dict("records")
-
-    if f"{benchmark_key}_transactions" in results:
-        df = results[f"{benchmark_key}_transactions"].copy()
-        # Rename columns if needed
-        if "cost" in df.columns and "transaction_cost" not in df.columns:
-            df["transaction_cost"] = df["cost"]
-        if "cost" in df.columns and "total_cost" not in df.columns:
-            df["total_cost"] = df["cost"] * df["quantity"] * df["price"]
-        data[benchmark_name] = df.to_dict("records")
-
-    return data
-
-
-def get_metrics_table(results):
-    """Format metrics for display."""
-    if "metrics" not in results:
+def get_portfolio_value_data(strategy_data: dict, strategy_name: str = None) -> dict:
+    """Extract portfolio value time series from strategy data."""
+    if not strategy_data or not strategy_data.get('portfolio_history'):
         return {}
 
-    df = pd.DataFrame(results["metrics"])
-    metrics = {}
+    name = strategy_name or strategy_data.get('key', 'Strategy')
+    df_dict = pd.DataFrame(strategy_data['portfolio_history']).to_dict()
 
-    # Transpose to have metrics as rows and strategies as columns
-    for idx in df.index:
-        metrics[idx] = {}
-        for col in df.columns:
-            value = df.loc[idx, col]
-            # Format nicely
-            if isinstance(value, float):
-                # Handle NaN and inf values
-                if pd.isna(value) or np.isinf(value):
-                    metrics[idx][col] = "N/A"
-                elif "Return" in idx or "CAGR" in idx or "Drawdown" in idx or "Volatility" in idx:
-                    metrics[idx][col] = f"{value:.2f}%"
-                elif "Ratio" in idx or "Turnover" in idx:
-                    if "Turnover" in idx:
-                        metrics[idx][col] = f"{value:.6f}"
-                    else:
-                        metrics[idx][col] = f"{value:.3f}"
-                else:
-                    metrics[idx][col] = f"{value:.2f}"
-            else:
-                metrics[idx][col] = str(value)
+    return {
+        name: {
+            'dates': [entry.get('date', entry.get('timestamp', '')) for entry in strategy_data['portfolio_history']],
+            'values': [entry.get('total_value', 0) for entry in strategy_data['portfolio_history']]
+        }
+    }
 
-    return metrics
+
+def get_drawdown_data(strategy_data: dict, strategy_name: str = None) -> dict:
+    """Calculate drawdown from portfolio history."""
+    if not strategy_data or not strategy_data.get('portfolio_history'):
+        return {}
+
+    name = strategy_name or strategy_data.get('key', 'Strategy')
+    portfolio = strategy_data['portfolio_history']
+
+    if not portfolio:
+        return {}
+
+    values = [entry.get('total_value', 0) for entry in portfolio]
+    dates = [entry.get('date', entry.get('timestamp', '')) for entry in portfolio]
+
+    if not values:
+        return {}
+
+    # Calculate drawdown
+    values_array = np.array(values)
+    running_max = np.maximum.accumulate(values_array)
+    drawdown = ((values_array - running_max) / running_max) * 100
+
+    return {
+        name: {
+            'dates': dates,
+            'drawdown': drawdown.tolist()
+        }
+    }
+
+
+def get_weights_data(strategy_data: dict, strategy_name: str = None) -> dict:
+    """Extract portfolio weights over time."""
+    if not strategy_data or not strategy_data.get('weights_history'):
+        return {}
+
+    name = strategy_name or strategy_data.get('key', 'Strategy')
+
+    weights_list = strategy_data['weights_history']
+    if not weights_list:
+        return {}
+
+    # Convert to format expected by frontend
+    weights_data = {
+        'dates': [entry.get('date', entry.get('timestamp', '')) for entry in weights_list]
+    }
+
+    # Extract all symbols from first entry
+    first_entry = weights_list[0] if weights_list else {}
+    symbols = [k for k in first_entry.keys() if k not in ['date', 'timestamp']]
+
+    # Add symbol data
+    for symbol in symbols:
+        weights_data[symbol] = [entry.get(symbol, 0) for entry in weights_list]
+
+    return {name: weights_data}
+
+
+def get_transactions_data(strategy_data: dict, strategy_name: str = None) -> dict:
+    """Extract transaction data."""
+    if not strategy_data or not strategy_data.get('transactions'):
+        return {}
+
+    name = strategy_name or strategy_data.get('key', 'Strategy')
+    return {name: strategy_data['transactions']}
 
 
 @app.route("/")
 def index():
     """Serve the main dashboard page."""
+    # Check if we have all-strategies results
+    has_all_strategies = (RESULTS_DIR / 'strategies_index.json').exists()
+
     html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -380,6 +257,74 @@ def index():
             .header p {
                 font-size: 1.1em;
                 opacity: 0.9;
+            }
+
+            .controls {
+                background: #f5f5f5;
+                padding: 20px 30px;
+                border-bottom: 2px solid #e0e0e0;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                align-items: center;
+            }
+
+            .control-group {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .control-group label {
+                font-weight: 600;
+                color: #333;
+                font-size: 0.9em;
+            }
+
+            .control-group select {
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                font-size: 1em;
+                background: white;
+                cursor: pointer;
+                transition: border-color 0.3s;
+            }
+
+            .control-group select:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            .view-mode-buttons {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                grid-column: 1 / -1;
+            }
+
+            .view-mode-btn {
+                padding: 10px 20px;
+                border: 2px solid #667eea;
+                background: white;
+                color: #667eea;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+
+            .view-mode-btn.active {
+                background: #667eea;
+                color: white;
+            }
+
+            .view-mode-btn:hover {
+                background: #f0f4ff;
+            }
+
+            .view-mode-btn.active:hover {
+                background: #667eea;
             }
 
             .tabs {
@@ -548,47 +493,6 @@ def index():
                 margin-bottom: 20px;
             }
 
-            .comparison-charts {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-
-            .comparison-chart-container {
-                position: relative;
-                height: 250px;
-                background: #f9f9f9;
-                padding: 15px;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-
-            .view-toggle-btn {
-                padding: 10px 20px;
-                margin-right: 10px;
-                border: 2px solid #667eea;
-                background: white;
-                color: #667eea;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: 600;
-                transition: all 0.3s ease;
-            }
-
-            .view-toggle-btn:hover {
-                background: #f0f4ff;
-            }
-
-            .view-toggle-btn.active {
-                background: #667eea;
-                color: white;
-            }
-
-            .attribution-container {
-                margin-top: 20px;
-            }
-
             @media (max-width: 768px) {
                 .header h1 {
                     font-size: 1.8em;
@@ -611,8 +515,8 @@ def index():
                     height: 300px;
                 }
 
-                .attribution-container {
-                    grid-template-columns: 1fr !important;
+                .controls {
+                    grid-template-columns: 1fr;
                 }
             }
         </style>
@@ -624,12 +528,30 @@ def index():
                 <p>Interactive visualization of portfolio optimization results</p>
             </div>
 
+            <div class="controls" id="controls">
+                <div class="control-group">
+                    <label for="strategySelect">Strategy 1:</label>
+                    <select id="strategySelect" onchange="handleStrategyChange()">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="control-group" id="strategy2Container" style="display: none;">
+                    <label for="strategy2Select">Strategy 2 (Comparison):</label>
+                    <select id="strategy2Select" onchange="handleStrategyChange()">
+                        <option value="">None (View single strategy)</option>
+                    </select>
+                </div>
+                <div class="view-mode-buttons">
+                    <button class="view-mode-btn active" onclick="setViewMode('single')">Single View</button>
+                    <button class="view-mode-btn" onclick="setViewMode('comparison')">Comparison</button>
+                </div>
+            </div>
+
             <div class="tabs">
                 <button class="tab-button active" onclick="showTab('overview')">Overview</button>
                 <button class="tab-button" onclick="showTab('portfolio')">Portfolio Value</button>
                 <button class="tab-button" onclick="showTab('drawdown')">Drawdown</button>
                 <button class="tab-button" onclick="showTab('weights')">Weights</button>
-                <button class="tab-button" onclick="showTab('attribution')">Attribution</button>
                 <button class="tab-button" onclick="showTab('transactions')">Transactions</button>
             </div>
 
@@ -639,10 +561,9 @@ def index():
                     <h2>Performance Metrics</h2>
                     <table class="metrics-table" id="metricsTable">
                         <thead>
-                            <tr>
+                            <tr id="metricsHeaderRow">
                                 <th>Metric</th>
-                                <th>Strategy</th>
-                                <th>Equal Weight</th>
+                                <th id="headerCol1">Strategy</th>
                             </tr>
                         </thead>
                         <tbody id="metricsBody">
@@ -650,7 +571,7 @@ def index():
                         </tbody>
                     </table>
 
-                    <h2 style="margin-top: 40px;">Key Metrics Comparison</h2>
+                    <h2 style="margin-top: 40px;">Key Metrics</h2>
                     <div class="metrics-grid" id="metricsGrid"></div>
                 </div>
 
@@ -672,72 +593,27 @@ def index():
 
                 <!-- Weights Tab -->
                 <div id="weights" class="tab-panel">
-                    <h2>Strategy Portfolio Weights Over Time</h2>
-                    <div style="margin-bottom: 20px;">
-                        <button onclick="toggleWeightsMode('cumulative')" id="weightsModeCumulative" class="view-toggle-btn active">Cumulative View</button>
-                        <button onclick="toggleWeightsMode('individual')" id="weightsModIndividual" class="view-toggle-btn">Individual Assets</button>
-                    </div>
+                    <h2>Portfolio Weights Over Time</h2>
                     <div class="chart-container">
                         <canvas id="weightsChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Attribution Tab -->
-                <div id="attribution" class="tab-panel">
-                    <h2>Daily Attribution Analysis</h2>
-                    <p style="margin-bottom: 20px; color: #666;">Daily attribution calculated as: T-1 portfolio weight × asset return (T-1 to T)</p>
-                    <div class="attribution-container">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div>
-                                <h3>Strategy Attribution</h3>
-                                <div class="chart-container" style="margin-top: 10px;">
-                                    <canvas id="attributionStrategyChart"></canvas>
-                                </div>
-                            </div>
-                            <div>
-                                <h3>Equal Weight Attribution</h3>
-                                <div class="chart-container" style="margin-top: 10px;">
-                                    <canvas id="attributionEWChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
                 <!-- Transactions Tab -->
                 <div id="transactions" class="tab-panel">
                     <h2>Transaction History</h2>
-                    <h3 style="margin-top: 30px; margin-bottom: 15px;">Strategy Transactions</h3>
-                    <table class="transactions-table" id="strategyTransactionsTable">
+                    <table class="transactions-table" id="transactionsTable">
                         <thead>
                             <tr>
                                 <th>Date</th>
                                 <th>Symbol</th>
                                 <th>Quantity</th>
                                 <th>Price</th>
-                                <th>Total</th>
                                 <th>Cost</th>
                             </tr>
                         </thead>
-                        <tbody id="strategyTransactionsBody">
-                            <tr><td colspan="6">No transactions</td></tr>
-                        </tbody>
-                    </table>
-
-                    <h3 style="margin-top: 30px; margin-bottom: 15px;">Equal Weight Transactions</h3>
-                    <table class="transactions-table" id="ewTransactionsTable">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Symbol</th>
-                                <th>Quantity</th>
-                                <th>Price</th>
-                                <th>Total</th>
-                                <th>Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ewTransactionsBody">
-                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        <tbody id="transactionsBody">
+                            <tr><td colspan="5">No transactions</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -746,88 +622,136 @@ def index():
 
         <script>
             let charts = {};
-            let weightsMode = 'cumulative';
-            let weightsData = null;
+            let currentViewMode = 'single';
+            let availableStrategies = [];
+            let loadedData = {};
 
-            async function loadData() {
+            async function initializeDashboard() {
                 try {
-                    const response = await fetch('/api/data');
-                    const data = await response.json();
+                    // Get available strategies
+                    const response = await fetch('/api/strategies');
+                    availableStrategies = await response.json();
 
-                    weightsData = data.weights;
-                    displayMetrics(data.metrics);
-                    displayPortfolioChart(data.portfolio_value);
-                    displayDrawdownChart(data.drawdown);
-                    displayWeightsChart(data.weights);
-                    displayAttributionCharts(data.attribution);
-                    displayTransactions(data.transactions);
+                    // Populate dropdowns
+                    const select1 = document.getElementById('strategySelect');
+                    const select2 = document.getElementById('strategy2Select');
+
+                    const optionsHtml = availableStrategies.map(s =>
+                        `<option value="${s}">${s}</option>`
+                    ).join('');
+
+                    select1.innerHTML = optionsHtml;
+                    select2.innerHTML = '<option value="">None (View single strategy)</option>' + optionsHtml;
+
+                    // Show strategy 2 selector if we have multiple strategies
+                    if (availableStrategies.length > 1) {
+                        document.getElementById('strategy2Container').style.display = 'block';
+                    }
+
+                    // Load first strategy
+                    if (availableStrategies.length > 0) {
+                        await handleStrategyChange();
+                    }
                 } catch (error) {
-                    console.error('Error loading data:', error);
-                    document.querySelector('.error') || alert('Error loading data');
+                    console.error('Error initializing dashboard:', error);
+                    document.querySelector('.content').innerHTML =
+                        '<div class="error">Error loading strategies. Make sure to run: python scripts/run_backtest.py --all</div>';
                 }
             }
 
-            function displayMetrics(metrics) {
+            async function handleStrategyChange() {
+                const strategy1 = document.getElementById('strategySelect').value;
+                const strategy2 = document.getElementById('strategy2Select').value;
+
+                if (!strategy1) return;
+
+                // Load strategy data
+                if (!loadedData[strategy1]) {
+                    await loadStrategyData(strategy1);
+                }
+                if (strategy2 && !loadedData[strategy2]) {
+                    await loadStrategyData(strategy2);
+                }
+
+                // Update dashboard
+                updateDashboard(strategy1, strategy2);
+            }
+
+            async function loadStrategyData(strategyKey) {
+                try {
+                    const response = await fetch(`/api/strategy/${strategyKey}`);
+                    const data = await response.json();
+                    loadedData[strategyKey] = data;
+                } catch (error) {
+                    console.error(`Error loading strategy ${strategyKey}:`, error);
+                }
+            }
+
+            function updateDashboard(strategy1, strategy2) {
+                const data1 = loadedData[strategy1];
+                if (!data1) return;
+
+                const data2 = strategy2 ? loadedData[strategy2] : null;
+
+                // Update metrics table header
+                const headerRow = document.getElementById('metricsHeaderRow');
+                if (data2) {
+                    headerRow.innerHTML = `<th>Metric</th><th>${strategy1}</th><th>${strategy2}</th>`;
+                } else {
+                    headerRow.innerHTML = `<th>Metric</th><th>${strategy1}</th>`;
+                }
+
+                // Update content
+                displayMetrics(data1, data2, strategy1, strategy2);
+                displayPortfolioChart(data1, data2, strategy1, strategy2);
+                displayDrawdownChart(data1, data2, strategy1, strategy2);
+                displayWeightsChart(data1, strategy1);
+                displayTransactions(data1);
+            }
+
+            function displayMetrics(data1, data2, name1, name2) {
                 const tbody = document.getElementById('metricsBody');
                 tbody.innerHTML = '';
 
-                for (const [metric, values] of Object.entries(metrics)) {
+                const metrics1 = data1.metrics || {};
+                const metrics2 = data2 ? (data2.metrics || {}) : null;
+
+                const metricKeys = Object.keys(metrics1);
+                for (const key of metricKeys) {
                     const row = document.createElement('tr');
-                    const strategyValue = values['Strategy'] || 'N/A';
-                    const ewValue = values['Equal Weight'] || 'N/A';
-
-                    row.innerHTML = `
-                        <td><strong>${metric}</strong></td>
-                        <td class="${isPositive(strategyValue) ? 'positive' : 'negative'}">${strategyValue}</td>
-                        <td class="${isPositive(ewValue) ? 'positive' : 'negative'}">${ewValue}</td>
-                    `;
-                    tbody.appendChild(row);
-                }
-
-                // Display key metrics as cards
-                const grid = document.getElementById('metricsGrid');
-                grid.innerHTML = '';
-
-                const keyMetrics = ['Total Return (%)', 'Sharpe Ratio', 'Max Drawdown (%)', 'Volatility (%)', 'Omega Ratio'];
-                for (const metric of keyMetrics) {
-                    if (metrics[metric]) {
-                        const card = document.createElement('div');
-                        card.className = 'metric-card';
-                        card.innerHTML = `
-                            <h3>${metric}</h3>
-                            <div class="value" style="color: #4ade80;">Strategy: ${metrics[metric]['Strategy']}</div>
-                            <div class="value" style="color: #f87171; margin-top: 10px;">EW: ${metrics[metric]['Equal Weight']}</div>
-                        `;
-                        grid.appendChild(card);
+                    let html = `<td><strong>${key}</strong></td><td>${metrics1[key]}</td>`;
+                    if (metrics2) {
+                        html += `<td>${metrics2[key]}</td>`;
                     }
+                    row.innerHTML = html;
+                    tbody.appendChild(row);
                 }
             }
 
-            function displayPortfolioChart(data) {
+            function displayPortfolioChart(data1, data2, name1, name2) {
                 const ctx = document.getElementById('portfolioChart').getContext('2d');
-
                 if (charts.portfolio) charts.portfolio.destroy();
 
-                const datasets = [];
+                const portfolioData1 = data1.portfolio_history || [];
+                const dates = portfolioData1.map(p => p.date || p.timestamp).slice(0, 100); // Limit points for performance
+                const values1 = portfolioData1.map(p => p.total_value).slice(0, 100);
 
-                // Add Strategy data if available
-                if (data.Strategy && data.Strategy.values && data.Strategy.values.length > 0) {
-                    datasets.push({
-                        label: 'Strategy',
-                        data: data.Strategy.values,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4,
-                        pointRadius: 0,
-                        borderWidth: 2,
-                    });
-                }
+                const datasets = [{
+                    label: name1,
+                    data: values1,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                }];
 
-                // Add Equal Weight data if available
-                if (data['Equal Weight'] && data['Equal Weight'].values && data['Equal Weight'].values.length > 0) {
+                if (data2) {
+                    const portfolioData2 = data2.portfolio_history || [];
+                    const values2 = portfolioData2.map(p => p.total_value).slice(0, 100);
                     datasets.push({
-                        label: 'Equal Weight',
-                        data: data['Equal Weight'].values,
+                        label: name2,
+                        data: values2,
                         borderColor: '#f59e0b',
                         backgroundColor: 'rgba(245, 158, 11, 0.1)',
                         tension: 0.4,
@@ -838,54 +762,54 @@ def index():
 
                 charts.portfolio = new Chart(ctx, {
                     type: 'line',
-                    data: {
-                        labels: data.Strategy ? data.Strategy.dates : (data['Equal Weight'] ? data['Equal Weight'].dates : []),
-                        datasets: datasets
-                    },
+                    data: { labels: dates, datasets: datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                            }
-                        }
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: { y: { beginAtZero: false } }
                     }
                 });
             }
 
-            function displayDrawdownChart(data) {
+            function displayDrawdownChart(data1, data2, name1, name2) {
                 const ctx = document.getElementById('drawdownChart').getContext('2d');
-
                 if (charts.drawdown) charts.drawdown.destroy();
 
-                const datasets = [];
+                const portfolio1 = (data1.portfolio_history || []).slice(0, 100);
+                const dates = portfolio1.map(p => p.date || p.timestamp);
 
-                // Add Strategy data if available
-                if (data.Strategy && data.Strategy.drawdown && data.Strategy.drawdown.length > 0) {
-                    datasets.push({
-                        label: 'Strategy',
-                        data: data.Strategy.drawdown,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                        tension: 0.4,
-                        pointRadius: 0,
-                        borderWidth: 2,
-                        fill: true,
-                    });
-                }
+                // Calculate drawdown
+                const values1 = portfolio1.map(p => p.total_value);
+                const runningMax1 = values1.reduce((acc, val) => {
+                    acc.push(acc.length === 0 ? val : Math.max(acc[acc.length - 1], val));
+                    return acc;
+                }, []);
+                const drawdown1 = values1.map((val, i) => ((val - runningMax1[i]) / runningMax1[i]) * 100);
 
-                // Add Equal Weight data if available
-                if (data['Equal Weight'] && data['Equal Weight'].drawdown && data['Equal Weight'].drawdown.length > 0) {
+                const datasets = [{
+                    label: name1,
+                    data: drawdown1,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    tension: 0.4,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    fill: true,
+                }];
+
+                if (data2) {
+                    const portfolio2 = (data2.portfolio_history || []).slice(0, 100);
+                    const values2 = portfolio2.map(p => p.total_value);
+                    const runningMax2 = values2.reduce((acc, val) => {
+                        acc.push(acc.length === 0 ? val : Math.max(acc[acc.length - 1], val));
+                        return acc;
+                    }, []);
+                    const drawdown2 = values2.map((val, i) => ((val - runningMax2[i]) / runningMax2[i]) * 100);
+
                     datasets.push({
-                        label: 'Equal Weight',
-                        data: data['Equal Weight'].drawdown,
+                        label: name2,
+                        data: drawdown2,
                         borderColor: '#f59e0b',
                         backgroundColor: 'rgba(245, 158, 11, 0.2)',
                         tension: 0.4,
@@ -897,294 +821,106 @@ def index():
 
                 charts.drawdown = new Chart(ctx, {
                     type: 'line',
-                    data: {
-                        labels: data.Strategy ? data.Strategy.dates : (data['Equal Weight'] ? data['Equal Weight'].dates : []),
-                        datasets: datasets
-                    },
+                    data: { labels: dates, datasets: datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                            }
-                        },
-                        scales: {
-                            y: {
-                                max: 0,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                }
-                            }
-                        }
+                        scales: { y: { max: 0, ticks: { callback: v => v + '%' } } },
+                        plugins: { legend: { display: true, position: 'top' } }
                     }
                 });
             }
 
-            function displayWeightsChart(data) {
-                if (!data.Strategy || !data.Strategy.dates || data.Strategy.dates.length === 0) {
+            function displayWeightsChart(data, name) {
+                const weightsData = data.weights_history || [];
+                if (!weightsData || weightsData.length === 0) {
                     document.getElementById('weightsChart').parentElement.innerHTML = '<p>Weights data not available</p>';
                     return;
                 }
 
-                renderWeightsChart(data);
-            }
-
-            function renderWeightsChart(data) {
                 const ctx = document.getElementById('weightsChart').getContext('2d');
-
                 if (charts.weights) charts.weights.destroy();
 
-                // Extract symbols (skip dates)
-                const symbols = Object.keys(data.Strategy).filter(k => k !== 'dates');
+                const dates = weightsData.map(w => w.date || w.timestamp);
+                const firstEntry = weightsData[0] || {};
+                const symbols = Object.keys(firstEntry).filter(k => k !== 'date' && k !== 'timestamp');
                 const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
 
                 const datasets = symbols.map((symbol, idx) => ({
                     label: symbol,
-                    data: data.Strategy[symbol] || [],
+                    data: weightsData.map(w => w[symbol] || 0),
                     backgroundColor: colors[idx % colors.length],
                     borderColor: colors[idx % colors.length],
                     pointRadius: 0,
-                    borderWidth: weightsMode === 'individual' ? 2 : 0,
-                    fill: weightsMode === 'cumulative',
+                    borderWidth: 0,
+                    fill: true,
                     tension: 0.2
                 }));
 
-                if (datasets.length === 0) {
-                    document.getElementById('weightsChart').parentElement.innerHTML = '<p>No weights data available</p>';
-                    return;
-                }
-
                 charts.weights = new Chart(ctx, {
                     type: 'line',
-                    data: {
-                        labels: data.Strategy.dates,
-                        datasets: datasets
-                    },
+                    data: { labels: dates, datasets: datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
                             y: {
-                                stacked: weightsMode === 'cumulative',
+                                stacked: true,
                                 max: 100,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                }
+                                ticks: { callback: v => v + '%' }
                             }
                         },
-                        plugins: {
-                            filler: {
-                                propagate: true
-                            },
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        }
+                        plugins: { legend: { display: true, position: 'top' } }
                     }
                 });
             }
 
-            function toggleWeightsMode(mode) {
-                weightsMode = mode;
-
-                // Update button states
-                document.getElementById('weightsModeCumulative').classList.remove('active');
-                document.getElementById('weightsModIndividual').classList.remove('active');
-
-                if (mode === 'cumulative') {
-                    document.getElementById('weightsModeCumulative').classList.add('active');
-                } else {
-                    document.getElementById('weightsModIndividual').classList.add('active');
-                }
-
-                // Re-render chart
-                if (weightsData) {
-                    renderWeightsChart(weightsData);
-                }
-            }
-
-            function displayAttributionCharts(data) {
-                if (!data) return;
-
-                // Display Strategy Attribution
-                if (data.Strategy && data.Strategy.dates && data.Strategy.dates.length > 0) {
-                    const strategyCtx = document.getElementById('attributionStrategyChart').getContext('2d');
-                    if (charts.attributionStrategy) charts.attributionStrategy.destroy();
-
-                    const symbols = data.Strategy.symbols || [];
-                    const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
-                    const datasets = symbols.map((symbol, idx) => ({
-                        label: symbol,
-                        data: data.Strategy[symbol] || [],
-                        borderColor: colors[idx % colors.length],
-                        backgroundColor: colors[idx % colors.length],
-                        pointRadius: 0,
-                        borderWidth: 1,
-                        tension: 0.2
-                    }));
-
-                    charts.attributionStrategy = new Chart(strategyCtx, {
-                        type: 'line',
-                        data: {
-                            labels: data.Strategy.dates,
-                            datasets: datasets
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    ticks: {
-                                        callback: function(value) {
-                                            return value.toFixed(2) + '%';
-                                        }
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top'
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // Display Equal Weight Attribution
-                if (data['Equal Weight'] && data['Equal Weight'].dates && data['Equal Weight'].dates.length > 0) {
-                    const ewCtx = document.getElementById('attributionEWChart').getContext('2d');
-                    if (charts.attributionEW) charts.attributionEW.destroy();
-
-                    const symbols = data['Equal Weight'].symbols || [];
-                    const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
-                    const datasets = symbols.map((symbol, idx) => ({
-                        label: symbol,
-                        data: data['Equal Weight'][symbol] || [],
-                        borderColor: colors[idx % colors.length],
-                        backgroundColor: colors[idx % colors.length],
-                        pointRadius: 0,
-                        borderWidth: 1,
-                        tension: 0.2
-                    }));
-
-                    charts.attributionEW = new Chart(ewCtx, {
-                        type: 'line',
-                        data: {
-                            labels: data['Equal Weight'].dates,
-                            datasets: datasets
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    ticks: {
-                                        callback: function(value) {
-                                            return value.toFixed(2) + '%';
-                                        }
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top'
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-
             function displayTransactions(data) {
-                // Strategy Transactions
-                const strategyBody = document.getElementById('strategyTransactionsBody');
-                strategyBody.innerHTML = '';
-                if (data.Strategy && data.Strategy.length > 0) {
-                    data.Strategy.forEach(tx => {
-                        const row = document.createElement('tr');
-                        const quantity = tx.quantity || 0;
-                        const price = tx.price || 0;
-                        const tradeValue = Math.abs(quantity * price);
-                        const cost = tx.transaction_cost || tx.cost || 0;
+                const tbody = document.getElementById('transactionsBody');
+                tbody.innerHTML = '';
 
-                        row.innerHTML = `
-                            <td>${tx.timestamp}</td>
-                            <td>${tx.symbol}</td>
-                            <td>${quantity.toFixed(0)}</td>
-                            <td>£${price.toFixed(2)}</td>
-                            <td>£${tradeValue.toFixed(2)}</td>
-                            <td>£${cost.toFixed(4)}</td>
-                        `;
-                        strategyBody.appendChild(row);
-                    });
-                } else {
-                    strategyBody.innerHTML = '<tr><td colspan="6">No transactions</td></tr>';
+                const transactions = data.transactions || [];
+                if (transactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">No transactions</td></tr>';
+                    return;
                 }
 
-                // Equal Weight Transactions
-                const ewBody = document.getElementById('ewTransactionsBody');
-                ewBody.innerHTML = '';
-                if (data['Equal Weight'] && data['Equal Weight'].length > 0) {
-                    data['Equal Weight'].forEach(tx => {
-                        const row = document.createElement('tr');
-                        const quantity = tx.quantity || 0;
-                        const price = tx.price || 0;
-                        const tradeValue = Math.abs(quantity * price);
-                        const cost = tx.transaction_cost || tx.cost || 0;
-
-                        row.innerHTML = `
-                            <td>${tx.timestamp}</td>
-                            <td>${tx.symbol}</td>
-                            <td>${quantity.toFixed(0)}</td>
-                            <td>£${price.toFixed(2)}</td>
-                            <td>£${tradeValue.toFixed(2)}</td>
-                            <td>£${cost.toFixed(4)}</td>
-                        `;
-                        ewBody.appendChild(row);
-                    });
-                } else {
-                    ewBody.innerHTML = '<tr><td colspan="6">No transactions</td></tr>';
-                }
+                transactions.slice(0, 50).forEach(tx => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${tx.date || tx.timestamp}</td>
+                        <td>${tx.symbol}</td>
+                        <td>${tx.quantity}</td>
+                        <td>£${parseFloat(tx.price).toFixed(2)}</td>
+                        <td>£${parseFloat(tx.cost).toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
             }
 
             function showTab(tabName) {
-                // Hide all panels
-                document.querySelectorAll('.tab-panel').forEach(panel => {
-                    panel.classList.remove('active');
-                });
-
-                // Remove active class from all buttons
-                document.querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-
-                // Show selected panel
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
                 document.getElementById(tabName).classList.add('active');
-
-                // Add active class to clicked button
                 event.target.classList.add('active');
             }
 
-            function isPositive(value) {
-                if (typeof value === 'string') {
-                    if (value === 'N/A' || value === 'nan') return false;
-                    const num = parseFloat(value);
-                    return !isNaN(num) && num > 0;
+            function setViewMode(mode) {
+                currentViewMode = mode;
+                const buttons = document.querySelectorAll('.view-mode-btn');
+                buttons.forEach(b => b.classList.remove('active'));
+                event.target.classList.add('active');
+
+                if (mode === 'comparison') {
+                    document.getElementById('strategy2Container').style.display = 'block';
+                } else {
+                    document.getElementById('strategy2Select').value = '';
                 }
-                return typeof value === 'number' && !isNaN(value) && value > 0;
+                handleStrategyChange();
             }
 
-            // Load data on page load
-            document.addEventListener('DOMContentLoaded', loadData);
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', initializeDashboard);
         </script>
     </body>
     </html>
@@ -1193,62 +929,35 @@ def index():
     return render_template_string(html)
 
 
-def normalize_strategy_keys(data_dict):
-    """
-    Normalize strategy names in data dictionary for backward compatibility.
+@app.route("/api/strategies")
+def api_strategies():
+    """API endpoint to get list of available strategies."""
+    global STRATEGIES_INDEX
 
-    Converts display names back to generic "Strategy" and "Equal Weight" keys
-    for compatibility with existing JavaScript code.
-    """
-    if not data_dict or not METADATA:
-        return data_dict
+    if STRATEGIES_INDEX is None:
+        STRATEGIES_INDEX = load_strategies_index()
 
-    primary_name = METADATA['primary_strategy']['display_name']
-    benchmark_name = METADATA['benchmark_strategy']['display_name']
+    if STRATEGIES_INDEX and 'strategies' in STRATEGIES_INDEX:
+        return jsonify(list(STRATEGIES_INDEX['strategies'].keys()))
 
-    normalized = {}
-    for key, value in data_dict.items():
-        if key == primary_name:
-            normalized['Strategy'] = value
-        elif key == benchmark_name:
-            normalized['Equal Weight'] = value
-        else:
-            normalized[key] = value
+    # Fallback: check for strategy folders
+    strategies_dir = RESULTS_DIR / 'strategies'
+    if strategies_dir.exists():
+        strategies = [d.name for d in strategies_dir.iterdir() if d.is_dir()]
+        return jsonify(sorted(strategies))
 
-    return normalized
+    return jsonify([])
 
 
-@app.route("/api/data")
-def api_data():
-    """API endpoint to serve all dashboard data as JSON."""
-    try:
-        results = load_results()
+@app.route("/api/strategy/<strategy_key>")
+def api_strategy(strategy_key: str):
+    """API endpoint to get data for a specific strategy."""
+    data = load_strategy_data(strategy_key)
 
-        # Debug: Log what was loaded
-        print(f"Loaded results keys: {list(results.keys())}")
+    if not data:
+        return jsonify({"error": f"Strategy {strategy_key} not found"}), 404
 
-        if not results:
-            return jsonify({"error": "No backtest results found. Run the backtest first: python scripts/run_backtest.py"}), 400
-
-        # Get data with dynamic labels
-        data = {
-            "metrics": get_metrics_table(results),
-            "portfolio_value": normalize_strategy_keys(get_portfolio_value_data(results)),
-            "drawdown": normalize_strategy_keys(get_drawdown_data(results)),
-            "weights": normalize_strategy_keys(get_weights_data(results)),
-            "attribution": normalize_strategy_keys(get_attribution_data(results)),
-            "transactions": normalize_strategy_keys(get_transactions_data(results)),
-            "metadata": {
-                "primary_strategy": METADATA['primary_strategy']['display_name'],
-                "benchmark_strategy": METADATA['benchmark_strategy']['display_name']
-            }
-        }
-
-        return jsonify(data)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Error loading data: {str(e)}"}), 500
+    return jsonify(data)
 
 
 if __name__ == "__main__":

@@ -3,15 +3,18 @@ Main script to run portfolio strategy backtests on UK ETFs.
 
 This script:
 1. Fetches historical data for UK ETFs (VUSA, SSLN, SGLN, IWRD)
-2. Runs specified strategy and benchmark comparison
-3. Generates performance metrics and visualizations
-4. Saves results to CSV, PNG, and metadata JSON files
+2. Runs ALL available strategies in backtests
+3. Generates comprehensive results in structured JSON format
+4. Outputs data suitable for frontend consumption (strategy picker + comparison mode)
 
-Usage:
-    python run_backtest.py                           # Default: HRP vs Equal Weight
-    python run_backtest.py --refresh                 # Force fresh data from IB
-    python run_backtest.py --strategy hrp --hrp-linkage-method ward
-    python run_backtest.py --strategy equal_weight --benchmark hrp
+Usage (Run all strategies):
+    python run_backtest.py --all                     # Run all available strategies
+    python run_backtest.py --all --refresh           # Force fresh data from IB
+
+Usage (Legacy - single strategy vs benchmark):
+    python run_backtest.py --strategy hrp --benchmark equal_weight
+    python run_backtest.py --strategy trend_following --benchmark hrp_ward
+    python run_backtest.py --use-definitions --strategy trend_following
 """
 
 import asyncio
@@ -158,6 +161,196 @@ def extract_strategy_params(args, strategy_name: str) -> dict:
     return params
 
 
+def get_all_available_strategies(use_definitions: bool = True) -> dict:
+    """
+    Get all available strategies from strategy definitions.
+
+    Args:
+        use_definitions: If True, load from YAML definitions; else from registry
+
+    Returns:
+        Dict mapping strategy_key to (strategy_object, strategy_info)
+    """
+    import pandas as pd
+
+    if use_definitions:
+        loader = StrategyLoader()
+        available = {}
+
+        # Get all allocations and composed strategies
+        allocations = loader.list_strategies('allocation')
+        composed = loader.list_strategies('composed')
+
+        for strategy_key in list(allocations.keys()) + list(composed.keys()):
+            try:
+                strategy = loader.build_strategy(strategy_key)
+                definition = loader.load_definition(strategy_key)
+                info = {
+                    'key': strategy_key,
+                    'type': definition.get('type'),
+                    'class': definition.get('class'),
+                    'description': definition.get('description', ''),
+                    'parameters': definition.get('parameters', {}),
+                }
+                available[strategy_key] = (strategy, info)
+            except Exception as e:
+                logger.warning(f"Could not load strategy {strategy_key}: {e}")
+
+        return available
+    else:
+        # Use registry
+        available = {}
+        for strategy_key, config in STRATEGY_REGISTRY.items():
+            if strategy_key not in ['hrp', 'equal_weight', 'trend_following']:
+                continue  # Only include main allocation strategies
+            try:
+                strategy = create_strategy(strategy_key)
+                info = {
+                    'key': strategy_key,
+                    'type': 'allocation',
+                    'class': config['display_name'],
+                    'description': '',
+                    'parameters': {},
+                }
+                available[strategy_key] = (strategy, info)
+            except Exception as e:
+                logger.warning(f"Could not create strategy {strategy_key}: {e}")
+
+        return available
+
+
+def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) -> dict:
+    """
+    Serialize backtest results to JSON-compatible format.
+
+    Args:
+        results: BacktestResults object
+        strategy_key: Strategy identifier
+        strategy_info: Strategy metadata
+
+    Returns:
+        Dictionary with all results data
+    """
+    import pandas as pd
+
+    # Convert portfolio history to list of dicts
+    portfolio_history = []
+    if hasattr(results.portfolio_history, 'to_dict'):
+        for idx, row in results.portfolio_history.iterrows():
+            entry = row.to_dict() if hasattr(row, 'to_dict') else dict(row)
+            entry['date'] = idx.isoformat() if hasattr(idx, 'isoformat') else str(idx)
+            portfolio_history.append(entry)
+
+    # Convert transactions to list of dicts
+    transactions = []
+    for t in results.transactions:
+        transactions.append({
+            'date': t.timestamp.isoformat() if hasattr(t.timestamp, 'isoformat') else str(t.timestamp),
+            'symbol': t.symbol,
+            'quantity': float(t.quantity),
+            'price': float(t.price),
+            'cost': float(t.total_cost)
+        })
+
+    # Extract weights history if available
+    weights_history = []
+    if hasattr(results, 'weights_history') and results.weights_history is not None:
+        for idx, row in results.weights_history.iterrows():
+            entry = row.to_dict() if hasattr(row, 'to_dict') else dict(row)
+            entry['date'] = idx.isoformat() if hasattr(idx, 'isoformat') else str(idx)
+            weights_history.append(entry)
+
+    # Calculate metrics
+    import numpy as np
+    portfolio_values = results.portfolio_history['total_value'].values
+    returns = np.diff(portfolio_values) / portfolio_values[:-1]
+
+    total_return = (portfolio_values[-1] - portfolio_values[0]) / portfolio_values[0]
+    volatility = np.std(returns) * np.sqrt(252) if len(returns) > 0 else 0
+    sharpe_ratio = (np.mean(returns) * 252) / volatility if volatility > 0 else 0
+
+    cumulative = (1 + returns).cumprod()
+    running_max = np.maximum.accumulate(cumulative)
+    drawdown = (cumulative - running_max) / running_max
+    max_drawdown = np.min(drawdown) if len(drawdown) > 0 else 0
+
+    return {
+        'key': strategy_key,
+        'info': strategy_info,
+        'metrics': {
+            'total_return': float(total_return),
+            'volatility': float(volatility),
+            'sharpe_ratio': float(sharpe_ratio),
+            'max_drawdown': float(max_drawdown),
+            'final_value': float(results.final_value),
+            'total_transactions': len(results.transactions),
+            'rebalances': len(results.portfolio_history),
+        },
+        'portfolio_history': portfolio_history,
+        'transactions': transactions,
+        'weights_history': weights_history,
+    }
+
+
+async def run_all_strategies(args, prices, backtest_start, backtest_end):
+    """
+    Run all available strategies and generate comprehensive results.
+
+    Args:
+        args: Parsed command-line arguments
+        prices: Aligned price DataFrame
+        backtest_start: Start date for backtest
+        backtest_end: End date for backtest
+
+    Returns:
+        Dictionary with all strategy results
+    """
+    logger.info("\n" + "=" * 60)
+    logger.info("RUNNING ALL AVAILABLE STRATEGIES")
+    logger.info("=" * 60)
+
+    # Get all available strategies
+    available_strategies = get_all_available_strategies(use_definitions=True)
+    logger.info(f"Found {len(available_strategies)} available strategies")
+
+    # Initialize backtest engine
+    engine = BacktestEngine(
+        initial_capital=INITIAL_CAPITAL,
+        transaction_cost_bps=TRANSACTION_COST_BPS,
+        rebalance_frequency=REBALANCE_FREQUENCY,
+        lookback_days=LOOKBACK_DAYS
+    )
+
+    all_results = {}
+
+    # Run each strategy
+    for strategy_key, (strategy, strategy_info) in available_strategies.items():
+        try:
+            logger.info(f"\nRunning {strategy_key}...")
+
+            # Run backtest
+            results = engine.run_backtest(
+                strategy=strategy,
+                historical_data=prices,
+                start_date=backtest_start,
+                end_date=backtest_end
+            )
+
+            # Serialize results
+            serialized = serialize_backtest_results(results, strategy_key, strategy_info)
+            all_results[strategy_key] = serialized
+
+            logger.info(f"  ✓ Final value: £{results.final_value:,.2f}")
+            logger.info(f"  ✓ Rebalances: {len(results.portfolio_history)}")
+            logger.info(f"  ✓ Transactions: {len(results.transactions)}")
+
+        except Exception as e:
+            logger.error(f"  ✗ Failed to run {strategy_key}: {e}")
+            continue
+
+    return all_results
+
+
 async def main(args):
     """
     Main execution function.
@@ -165,8 +358,15 @@ async def main(args):
     Args:
         args: Parsed command-line arguments
     """
-    # Load strategies (from YAML definitions or registry)
-    if args.use_definitions:
+    # Check if running all strategies
+    if args.all:
+        logger.info("Mode: Running ALL available strategies")
+        args.use_definitions = True  # Force definitions mode for all strategy run
+        primary_strategy = None
+        benchmark_strategy = None
+        strategy_display = None
+        benchmark_display = None
+    elif args.use_definitions:
         logger.info("Loading strategies from YAML definitions...")
         loader = StrategyLoader()
 
@@ -213,8 +413,11 @@ async def main(args):
     print("\n" + "=" * 60)
     print("PORTFOLIO STRATEGY BACKTEST")
     print("=" * 60)
-    print(f"Primary Strategy: {strategy_display}")
-    print(f"Benchmark: {benchmark_display}")
+    if args.all:
+        print("Mode: Running ALL available strategies")
+    else:
+        print(f"Primary Strategy: {strategy_display}")
+        print(f"Benchmark: {benchmark_display}")
     print(f"Symbols: {', '.join(SYMBOLS)}")
     print(f"Currency: {CURRENCY}")
     print(f"Initial Capital: £{INITIAL_CAPITAL:,.2f}")
@@ -225,7 +428,9 @@ async def main(args):
         print("Data Mode: FRESH FROM IB (cache skipped)")
     else:
         print("Data Mode: Using cache if available (faster)")
-    if args.use_definitions:
+    if args.all:
+        print("Strategy Mode: YAML Definitions (All)")
+    elif args.use_definitions:
         print("Strategy Mode: YAML Definitions")
     else:
         print("Strategy Mode: Registry-based")
@@ -301,182 +506,271 @@ async def main(args):
         backtest_start = prices.index[LOOKBACK_DAYS]
         backtest_end = prices.index[-1]
 
-    # Initialize strategies
-    logger.info("\n" + "=" * 60)
-    logger.info("RUNNING BACKTESTS")
-    logger.info("=" * 60)
+    # Run backtests
+    if args.all:
+        # Run all available strategies
+        all_strategy_results = await run_all_strategies(args, prices, backtest_start, backtest_end)
 
+        # Save individual results to separate files
+        logger.info("\n" + "=" * 60)
+        logger.info("SAVING INDIVIDUAL STRATEGY RESULTS")
+        logger.info("=" * 60)
 
-    # Initialize backtest engine
-    engine = BacktestEngine(
-        initial_capital=INITIAL_CAPITAL,
-        transaction_cost_bps=TRANSACTION_COST_BPS,
-        rebalance_frequency=REBALANCE_FREQUENCY,
-        lookback_days=LOOKBACK_DAYS
-    )
+        # Create subdirectories for organization
+        strategies_dir = RESULTS_DIR / 'strategies'
+        strategies_dir.mkdir(exist_ok=True)
 
-    # Run primary strategy backtest
-    logger.info(f"\nRunning {strategy_display} backtest...")
-    primary_results = engine.run_backtest(
-        strategy=primary_strategy,
-        historical_data=prices,
-        start_date=backtest_start,
-        end_date=backtest_end
-    )
+        strategy_index = {}
 
-    # Generate metrics
-    generate_metrics_summary(primary_results)
-    logger.info(f"✓ {strategy_display} backtest complete")
-    logger.info(f"  - Rebalances: {len(primary_results.portfolio_history)}")
-    logger.info(f"  - Transactions: {len(primary_results.transactions)}")
-    logger.info(f"  - Final value: £{primary_results.final_value:,.2f}")
+        for strategy_key, result_data in all_strategy_results.items():
+            # Create directory for this strategy
+            strategy_dir = strategies_dir / strategy_key
+            strategy_dir.mkdir(exist_ok=True)
 
-    # Run benchmark strategy backtest
-    logger.info(f"\nRunning {benchmark_display} backtest...")
-    benchmark_results = engine.run_backtest(
-        strategy=benchmark_strategy,
-        historical_data=prices,
-        start_date=backtest_start,
-        end_date=backtest_end
-    )
+            # Save portfolio history as JSON
+            import pandas as pd
+            portfolio_history = result_data['portfolio_history']
+            portfolio_json_path = strategy_dir / 'portfolio_history.json'
+            with open(portfolio_json_path, 'w') as f:
+                json.dump(portfolio_history, f, indent=2)
 
-    # Generate metrics
-    generate_metrics_summary(benchmark_results)
-    logger.info(f"✓ {benchmark_display} backtest complete")
-    logger.info(f"  - Rebalances: {len(benchmark_results.portfolio_history)}")
-    logger.info(f"  - Transactions: {len(benchmark_results.transactions)}")
-    logger.info(f"  - Final value: £{benchmark_results.final_value:,.2f}")
+            # Save transactions
+            transactions_json_path = strategy_dir / 'transactions.json'
+            with open(transactions_json_path, 'w') as f:
+                json.dump(result_data['transactions'], f, indent=2)
 
-    # Performance Summary
-    logger.info("\n" + "=" * 60)
-    logger.info("PERFORMANCE SUMMARY")
-    logger.info("=" * 60)
+            # Save weights history
+            weights_json_path = strategy_dir / 'weights_history.json'
+            with open(weights_json_path, 'w') as f:
+                json.dump(result_data['weights_history'], f, indent=2)
 
-    results_dict = {
-        strategy_display: primary_results,
-        benchmark_display: benchmark_results
-    }
+            # Save metrics
+            metrics_json_path = strategy_dir / 'metrics.json'
+            with open(metrics_json_path, 'w') as f:
+                json.dump(result_data['metrics'], f, indent=2)
 
-    # Create performance table
-    perf_table = create_performance_table(results_dict)
-    print("\n" + str(perf_table))
+            # Save strategy info
+            info_json_path = strategy_dir / 'info.json'
+            with open(info_json_path, 'w') as f:
+                json.dump(result_data['info'], f, indent=2)
 
-    # Save results
-    logger.info("\n" + "=" * 60)
-    logger.info("SAVING RESULTS")
-    logger.info("=" * 60)
+            logger.info(f"✓ Saved results for {strategy_key} to {strategy_dir}")
 
-    # Save portfolio histories (use fixed prefixes for dashboard compatibility)
-    primary_history_path = RESULTS_DIR / 'hrp_portfolio_history.csv'
-    primary_results.portfolio_history.to_csv(primary_history_path)
-    logger.info(f"✓ {strategy_display} portfolio history saved to: {primary_history_path}")
-
-    benchmark_history_path = RESULTS_DIR / 'ew_portfolio_history.csv'
-    benchmark_results.portfolio_history.to_csv(benchmark_history_path)
-    logger.info(f"✓ {benchmark_display} portfolio history saved to: {benchmark_history_path}")
-
-    # Save transactions
-    import pandas as pd
-
-    primary_tx_df = pd.DataFrame([
-        {
-            'timestamp': t.timestamp,
-            'symbol': t.symbol,
-            'quantity': t.quantity,
-            'price': t.price,
-            'cost': t.total_cost
-        }
-        for t in primary_results.transactions
-    ])
-    primary_tx_path = RESULTS_DIR / 'hrp_transactions.csv'
-    primary_tx_df.to_csv(primary_tx_path, index=False)
-    logger.info(f"✓ {strategy_display} transactions saved to: {primary_tx_path}")
-
-    benchmark_tx_df = pd.DataFrame([
-        {
-            'timestamp': t.timestamp,
-            'symbol': t.symbol,
-            'quantity': t.quantity,
-            'price': t.price,
-            'cost': t.total_cost
-        }
-        for t in benchmark_results.transactions
-    ])
-    benchmark_tx_path = RESULTS_DIR / 'ew_transactions.csv'
-    benchmark_tx_df.to_csv(benchmark_tx_path, index=False)
-    logger.info(f"✓ {benchmark_display} transactions saved to: {benchmark_tx_path}")
-
-    # Save performance metrics
-    perf_table_path = RESULTS_DIR / 'performance_comparison.csv'
-    perf_table.to_csv(perf_table_path)
-    logger.info(f"✓ Performance table saved to: {perf_table_path}")
-
-    # Save metadata for dashboard
-    if args.use_definitions:
-        if args.composed_strategy:
-            primary_info = {
-                'name': args.composed_strategy,
-                'display_name': strategy_display,
-                'type': 'composed',
-                'params': None
+            # Add to index
+            strategy_index[strategy_key] = {
+                'path': str(strategy_dir.relative_to(RESULTS_DIR)),
+                'metrics': result_data['metrics'],
+                'info': result_data['info']
             }
-            benchmark_info = None
+
+        # Save master index
+        index_path = RESULTS_DIR / 'strategies_index.json'
+        index_data = {
+            'run_date': datetime.now().isoformat(),
+            'total_strategies': len(strategy_index),
+            'strategies': strategy_index,
+            'config': {
+                'symbols': SYMBOLS,
+                'currency': CURRENCY,
+                'initial_capital': INITIAL_CAPITAL,
+                'transaction_cost_bps': TRANSACTION_COST_BPS,
+                'rebalance_frequency': REBALANCE_FREQUENCY,
+                'lookback_days': LOOKBACK_DAYS
+            }
+        }
+        with open(index_path, 'w') as f:
+            json.dump(index_data, f, indent=2)
+        logger.info(f"✓ Strategies index saved to: {index_path}")
+
+        # Print summary
+        logger.info("\n" + "=" * 60)
+        logger.info("BACKTEST SUMMARY")
+        logger.info("=" * 60)
+        for strategy_key, result_data in sorted(all_strategy_results.items()):
+            metrics = result_data['metrics']
+            logger.info(f"\n{strategy_key}:")
+            logger.info(f"  Final Value: £{metrics['final_value']:,.2f}")
+            logger.info(f"  Total Return: {metrics['total_return']:.2%}")
+            logger.info(f"  Volatility: {metrics['volatility']:.2%}")
+            logger.info(f"  Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
+            logger.info(f"  Max Drawdown: {metrics['max_drawdown']:.2%}")
+
+    else:
+        # Legacy mode: Run single strategy vs benchmark
+        logger.info("\n" + "=" * 60)
+        logger.info("RUNNING BACKTESTS")
+        logger.info("=" * 60)
+
+        # Initialize backtest engine
+        engine = BacktestEngine(
+            initial_capital=INITIAL_CAPITAL,
+            transaction_cost_bps=TRANSACTION_COST_BPS,
+            rebalance_frequency=REBALANCE_FREQUENCY,
+            lookback_days=LOOKBACK_DAYS
+        )
+
+        # Run primary strategy backtest
+        logger.info(f"\nRunning {strategy_display} backtest...")
+        primary_results = engine.run_backtest(
+            strategy=primary_strategy,
+            historical_data=prices,
+            start_date=backtest_start,
+            end_date=backtest_end
+        )
+
+        # Generate metrics
+        generate_metrics_summary(primary_results)
+        logger.info(f"✓ {strategy_display} backtest complete")
+        logger.info(f"  - Rebalances: {len(primary_results.portfolio_history)}")
+        logger.info(f"  - Transactions: {len(primary_results.transactions)}")
+        logger.info(f"  - Final value: £{primary_results.final_value:,.2f}")
+
+        # Run benchmark strategy backtest
+        logger.info(f"\nRunning {benchmark_display} backtest...")
+        benchmark_results = engine.run_backtest(
+            strategy=benchmark_strategy,
+            historical_data=prices,
+            start_date=backtest_start,
+            end_date=backtest_end
+        )
+
+        # Generate metrics
+        generate_metrics_summary(benchmark_results)
+        logger.info(f"✓ {benchmark_display} backtest complete")
+        logger.info(f"  - Rebalances: {len(benchmark_results.portfolio_history)}")
+        logger.info(f"  - Transactions: {len(benchmark_results.transactions)}")
+        logger.info(f"  - Final value: £{benchmark_results.final_value:,.2f}")
+
+        # Performance Summary
+        logger.info("\n" + "=" * 60)
+        logger.info("PERFORMANCE SUMMARY")
+        logger.info("=" * 60)
+
+        results_dict = {
+            strategy_display: primary_results,
+            benchmark_display: benchmark_results
+        }
+
+        # Create performance table
+        perf_table = create_performance_table(results_dict)
+        print("\n" + str(perf_table))
+
+        # Save results
+        logger.info("\n" + "=" * 60)
+        logger.info("SAVING RESULTS")
+        logger.info("=" * 60)
+
+        # Save portfolio histories (use fixed prefixes for dashboard compatibility)
+        primary_history_path = RESULTS_DIR / 'hrp_portfolio_history.csv'
+        primary_results.portfolio_history.to_csv(primary_history_path)
+        logger.info(f"✓ {strategy_display} portfolio history saved to: {primary_history_path}")
+
+        benchmark_history_path = RESULTS_DIR / 'ew_portfolio_history.csv'
+        benchmark_results.portfolio_history.to_csv(benchmark_history_path)
+        logger.info(f"✓ {benchmark_display} portfolio history saved to: {benchmark_history_path}")
+
+        # Save transactions
+        import pandas as pd
+
+        primary_tx_df = pd.DataFrame([
+            {
+                'timestamp': t.timestamp,
+                'symbol': t.symbol,
+                'quantity': t.quantity,
+                'price': t.price,
+                'cost': t.total_cost
+            }
+            for t in primary_results.transactions
+        ])
+        primary_tx_path = RESULTS_DIR / 'hrp_transactions.csv'
+        primary_tx_df.to_csv(primary_tx_path, index=False)
+        logger.info(f"✓ {strategy_display} transactions saved to: {primary_tx_path}")
+
+        benchmark_tx_df = pd.DataFrame([
+            {
+                'timestamp': t.timestamp,
+                'symbol': t.symbol,
+                'quantity': t.quantity,
+                'price': t.price,
+                'cost': t.total_cost
+            }
+            for t in benchmark_results.transactions
+        ])
+        benchmark_tx_path = RESULTS_DIR / 'ew_transactions.csv'
+        benchmark_tx_df.to_csv(benchmark_tx_path, index=False)
+        logger.info(f"✓ {benchmark_display} transactions saved to: {benchmark_tx_path}")
+
+        # Save performance metrics
+        perf_table_path = RESULTS_DIR / 'performance_comparison.csv'
+        perf_table.to_csv(perf_table_path)
+        logger.info(f"✓ Performance table saved to: {perf_table_path}")
+
+        # Save metadata for dashboard
+        if args.use_definitions:
+            if args.composed_strategy:
+                primary_info = {
+                    'name': args.composed_strategy,
+                    'display_name': strategy_display,
+                    'type': 'composed',
+                    'params': None
+                }
+                benchmark_info = None
+            else:
+                primary_info = {
+                    'name': args.strategy,
+                    'display_name': strategy_display,
+                    'type': 'definition',
+                    'params': None
+                }
+                benchmark_info = {
+                    'name': args.benchmark,
+                    'display_name': benchmark_display,
+                    'type': 'definition',
+                    'params': None
+                }
         else:
+            strategy_params = extract_strategy_params(args, args.strategy)
+            benchmark_params = extract_strategy_params(args, args.benchmark)
             primary_info = {
                 'name': args.strategy,
                 'display_name': strategy_display,
-                'type': 'definition',
-                'params': None
+                'type': 'registry',
+                'params': strategy_params
             }
             benchmark_info = {
                 'name': args.benchmark,
                 'display_name': benchmark_display,
-                'type': 'definition',
-                'params': None
+                'type': 'registry',
+                'params': benchmark_params
             }
-    else:
-        strategy_params = extract_strategy_params(args, args.strategy)
-        benchmark_params = extract_strategy_params(args, args.benchmark)
-        primary_info = {
-            'name': args.strategy,
-            'display_name': strategy_display,
-            'type': 'registry',
-            'params': strategy_params
-        }
-        benchmark_info = {
-            'name': args.benchmark,
-            'display_name': benchmark_display,
-            'type': 'registry',
-            'params': benchmark_params
+
+        metadata = {
+            'primary_strategy': primary_info,
+            'benchmark_strategy': benchmark_info,
+            'run_date': datetime.now().isoformat(),
+            'strategy_mode': 'definitions' if args.use_definitions else 'registry',
+            'config': {
+                'symbols': SYMBOLS,
+                'currency': CURRENCY,
+                'initial_capital': INITIAL_CAPITAL,
+                'transaction_cost_bps': TRANSACTION_COST_BPS,
+                'rebalance_frequency': REBALANCE_FREQUENCY,
+                'lookback_days': LOOKBACK_DAYS
+            }
         }
 
-    metadata = {
-        'primary_strategy': primary_info,
-        'benchmark_strategy': benchmark_info,
-        'run_date': datetime.now().isoformat(),
-        'strategy_mode': 'definitions' if args.use_definitions else 'registry',
-        'config': {
-            'symbols': SYMBOLS,
-            'currency': CURRENCY,
-            'initial_capital': INITIAL_CAPITAL,
-            'transaction_cost_bps': TRANSACTION_COST_BPS,
-            'rebalance_frequency': REBALANCE_FREQUENCY,
-            'lookback_days': LOOKBACK_DAYS
-        }
-    }
+        metadata_path = RESULTS_DIR / 'metadata.json'
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        logger.info(f"✓ Metadata saved to: {metadata_path}")
 
-    metadata_path = RESULTS_DIR / 'metadata.json'
-    with open(metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
-    logger.info(f"✓ Metadata saved to: {metadata_path}")
-
-    # Create and save visualization
-    logger.info("\nGenerating performance charts...")
-    fig = plot_portfolio_comparison(
-        results_dict,
-        save_path=str(RESULTS_DIR / 'performance_charts.png')
-    )
-    logger.info(f"✓ Performance charts saved to: {RESULTS_DIR / 'performance_charts.png'}")
+        # Create and save visualization
+        logger.info("\nGenerating performance charts...")
+        fig = plot_portfolio_comparison(
+            results_dict,
+            save_path=str(RESULTS_DIR / 'performance_charts.png')
+        )
+        logger.info(f"✓ Performance charts saved to: {RESULTS_DIR / 'performance_charts.png'}")
 
     logger.info("\n" + "=" * 60)
     logger.info("BACKTEST COMPLETE")
@@ -490,21 +784,27 @@ if __name__ == "__main__":
         description="Run portfolio strategy backtest on UK ETFs",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples (Registry-based - Traditional):
-  python run_backtest.py                                    # Default: HRP vs Equal Weight
-  python run_backtest.py --refresh                          # Force fresh data from IB
-  python run_backtest.py --strategy hrp --hrp-linkage-method ward
-  python run_backtest.py --strategy equal_weight --benchmark hrp
+Examples (Run ALL Strategies - RECOMMENDED):
+  python run_backtest.py --all                              # Run all strategies, separate result files
+  python run_backtest.py --all --refresh                    # Force fresh data from IB
 
-Examples (YAML Definitions - Recommended):
+Examples (Single Strategy vs Benchmark - Traditional):
   python run_backtest.py --use-definitions --strategy trend_following --benchmark hrp_ward
   python run_backtest.py --use-definitions --composed-strategy trend_with_vol_12
-  python run_backtest.py --use-definitions --strategy hrp_single --benchmark equal_weight
-  python run_backtest.py --use-definitions --composed-strategy hrp_with_constraints
+  python run_backtest.py --strategy hrp --benchmark equal_weight
+  python run_backtest.py --strategy equal_weight --benchmark hrp --refresh
 
 List Available Strategies:
   python -c "from strategies.strategy_loader import StrategyLoader; loader = StrategyLoader(); loader.list_strategies()"
         """
+    )
+
+    # Mode selection
+    parser.add_argument(
+        '--all',
+        action='store_true',
+        help='Run ALL available strategies from strategy definitions and output separate results files. '
+             'This is the recommended mode for comprehensive analysis.'
     )
 
     # Strategy loading mode
@@ -566,11 +866,13 @@ List Available Strategies:
     args = parser.parse_args()
 
     # Validation
-    if args.composed_strategy is None and args.strategy == args.benchmark:
-        parser.error("Strategy and benchmark must be different (unless using --composed-strategy)")
+    if not args.all:
+        # Only validate these if not running all strategies
+        if args.composed_strategy is None and args.strategy == args.benchmark:
+            parser.error("Strategy and benchmark must be different (unless using --composed-strategy)")
 
-    if args.composed_strategy and not args.use_definitions:
-        parser.error("--composed-strategy requires --use-definitions")
+        if args.composed_strategy and not args.use_definitions:
+            parser.error("--composed-strategy requires --use-definitions")
 
     # Run the async main function
     asyncio.run(main(args))

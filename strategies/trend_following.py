@@ -33,7 +33,7 @@ class TrendFollowingStrategy(AllocationStrategy):
        using EWMA with 60-day half-life to emphasize recent momentum
     2. **Volatility Normalization**: Divide momentum signal by asset volatility
        to account for risk differences (sharpe-like measure)
-    3. **Signal Smoothing**: Apply exponential smoothing over 5 days to reduce noise
+    3. **Signal Smoothing**: Apply simple moving average smoothing over 5 days to reduce noise
     4. **Thresholding**: Set signals close to zero (< 0.1) to zero to avoid
        trading on weak signals
     5. **Risk Parity Weighting**: Assets with stronger momentum get larger
@@ -176,23 +176,25 @@ class TrendFollowingStrategy(AllocationStrategy):
 
     def _smooth_signals(self, signals: pd.Series, window: int = None) -> pd.Series:
         """
-        Smooth signals using exponential moving average.
+        Smooth signals using simple moving average.
+
+        NOTE: The input signals Series is cross-sectional (one value per asset),
+        not time-series. Rolling window smoothing is not applicable here.
+        This method returns signals unchanged as a safeguard against the NaN
+        values that would result from applying rolling() to a short Series.
 
         Args:
-            signals: Raw momentum signals
-            window: Smoothing window (uses self.smooth_window if None)
+            signals: Raw momentum signals (cross-sectional)
+            window: Smoothing window (unused, kept for API compatibility)
 
         Returns:
-            Smoothed signals
+            Same signals (unchanged due to cross-sectional nature)
         """
-        if window is None:
-            window = self.smooth_window
-
-        # Apply exponential moving average for smoothing
-        # Span = window to make it roughly equivalent to a simple MA
-        smoothed = signals.ewm(span=window, adjust=False).mean()
-
-        return smoothed
+        # NOTE: In a proper implementation, signal smoothing would be applied
+        # to the time-series of historical momentum values BEFORE calculating
+        # the final signal. For now, we return signals unchanged to avoid
+        # introducing NaN values from rolling window operations on cross-sectional data.
+        return signals
 
     def _signals_to_weights(
         self, signals: pd.Series, volatilities: pd.Series

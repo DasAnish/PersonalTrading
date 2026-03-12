@@ -96,7 +96,13 @@ def create_strategy(strategy_name: str, **kwargs) -> BaseStrategy:
     config = STRATEGY_REGISTRY[strategy_name]
     strategy_class = config['class']
 
-    return strategy_class(**kwargs)
+    # Special handling for AllocationStrategy subclasses that require an underlying market
+    if strategy_name in ['trend_following', 'hrp', 'equal_weight']:
+        # These allocation strategies need an underlying market
+        underlying_market = UKETFsMarket()
+        return strategy_class(underlying=underlying_market, **kwargs)
+    else:
+        return strategy_class(**kwargs)
 
 
 def get_available_strategies() -> List[str]:

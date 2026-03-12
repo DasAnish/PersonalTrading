@@ -103,15 +103,29 @@ class BacktestEngine:
         if historical_data.empty:
             raise ValueError("Historical data is empty")
 
+        # Detect strategy's required lookback (if strategy specifies one, use it)
+        lookback_days = self.lookback_days
+        if hasattr(strategy, 'lookback_days'):
+            lookback_days = strategy.lookback_days
+            logger.info(f"Using strategy's lookback_days: {lookback_days}")
+
+        # Account for additional lookback requirements (e.g., smooth_window in TrendFollowingStrategy)
+        additional_days = 0
+        if hasattr(strategy, 'smooth_window'):
+            additional_days = strategy.smooth_window
+            logger.info(f"Strategy requires additional {additional_days} days for smoothing")
+
+        total_lookback = lookback_days + additional_days
+
         # Set default date range
         if start_date is None:
             # Start after we have enough lookback data
-            if len(historical_data) <= self.lookback_days:
+            if len(historical_data) <= total_lookback:
                 raise ValueError(
-                    f"Insufficient data. Need at least {self.lookback_days} days "
+                    f"Insufficient data. Need at least {total_lookback} days "
                     f"before backtest start. Have {len(historical_data)} days total."
                 )
-            start_date = historical_data.index[self.lookback_days]
+            start_date = historical_data.index[total_lookback]
 
         if end_date is None:
             end_date = historical_data.index[-1]
@@ -158,11 +172,11 @@ class BacktestEngine:
         # Run backtest
         for rebalance_date in rebalance_dates:
             try:
-                # Get lookback window for strategy calculation
+                # Get lookback window for strategy calculation (including any additional buffer)
                 lookback_data = self._get_lookback_data(
                     historical_data,
                     rebalance_date,
-                    self.lookback_days
+                    total_lookback
                 )
 
                 if lookback_data.empty or len(lookback_data) < 30:
@@ -274,14 +288,28 @@ class BacktestEngine:
         if historical_data.empty:
             raise ValueError("Historical data is empty")
 
+        # Detect strategy's required lookback (if strategy specifies one, use it)
+        lookback_days = self.lookback_days
+        if hasattr(underlying_strategy, 'lookback_days'):
+            lookback_days = underlying_strategy.lookback_days
+            logger.info(f"Using strategy's lookback_days: {lookback_days}")
+
+        # Account for additional lookback requirements (e.g., smooth_window in TrendFollowingStrategy)
+        additional_days = 0
+        if hasattr(underlying_strategy, 'smooth_window'):
+            additional_days = underlying_strategy.smooth_window
+            logger.info(f"Strategy requires additional {additional_days} days for smoothing")
+
+        total_lookback = lookback_days + additional_days
+
         # Set default date range
         if start_date is None:
-            if len(historical_data) <= self.lookback_days:
+            if len(historical_data) <= total_lookback:
                 raise ValueError(
-                    f"Insufficient data. Need at least {self.lookback_days} days "
+                    f"Insufficient data. Need at least {total_lookback} days "
                     f"before backtest start. Have {len(historical_data)} days total."
                 )
-            start_date = historical_data.index[self.lookback_days]
+            start_date = historical_data.index[total_lookback]
 
         if end_date is None:
             end_date = historical_data.index[-1]
@@ -331,11 +359,11 @@ class BacktestEngine:
         # Run backtest with overlay
         for rebalance_date in rebalance_dates:
             try:
-                # Get lookback window for strategy calculation
+                # Get lookback window for strategy calculation (including any additional buffer)
                 lookback_data = self._get_lookback_data(
                     historical_data,
                     rebalance_date,
-                    self.lookback_days
+                    total_lookback
                 )
 
                 if lookback_data.empty or len(lookback_data) < 30:
@@ -356,7 +384,7 @@ class BacktestEngine:
                     current_date=rebalance_date,
                     prices=current_prices,
                     underlying_portfolio_values=underlying_portfolio_values,
-                    lookback_window=self.lookback_days
+                    lookback_window=total_lookback
                 )
 
                 # Transform weights using overlay

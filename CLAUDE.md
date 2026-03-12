@@ -228,37 +228,124 @@ weights = trend.calculate_weights(prices_df)
 
 **Generic Backtest Script**: `python scripts/run_backtest.py`
 
-Available arguments:
+**Two Modes of Operation**:
+
+#### Mode 1: Registry-Based (Traditional - Backward Compatible)
+
+Uses built-in strategy registry:
+
 ```bash
-# Primary strategy selection
---strategy {hrp|equal_weight}      # Default: hrp
---benchmark {hrp|equal_weight}     # Default: equal_weight
-
-# Strategy-specific parameters
+# Available arguments
+--strategy {hrp|equal_weight|trend_following}    # Default: hrp
+--benchmark {hrp|equal_weight|trend_following}   # Default: equal_weight
 --hrp-linkage-method {single|complete|average|ward}  # Default: single
-
-# Data options
---refresh                          # Force fresh data from IB (skip cache)
+--trend-following-lookback-days INT              # Default: 504
+--trend-following-half-life-days INT             # Default: 60
+--refresh                                        # Force fresh data from IB
 ```
 
 **Examples**:
 ```bash
-# Default: Test HRP vs Equal Weight using cache
+# Default: Test HRP vs Equal Weight
 python scripts/run_backtest.py
 
-# Test HRP with ward linkage vs Equal Weight
+# Test HRP with ward linkage
 python scripts/run_backtest.py --strategy hrp --hrp-linkage-method ward
 
-# Compare Equal Weight against HRP
-python scripts/run_backtest.py --strategy equal_weight --benchmark hrp
+# Test Trend Following vs HRP
+python scripts/run_backtest.py --strategy trend_following --benchmark hrp
 
 # Force fresh data from IB
 python scripts/run_backtest.py --refresh
 ```
 
+#### Mode 2: YAML Definitions (Recommended)
+
+Loads strategies from configuration files in `strategy_definitions/`. No code changes needed to create new strategies.
+
+```bash
+# Enable definitions mode
+--use-definitions
+
+# Strategy selection (keys from YAML files)
+--strategy {uk_etfs|hrp_single|hrp_ward|trend_following|equal_weight|...}
+--benchmark {uk_etfs|hrp_single|hrp_ward|trend_following|equal_weight|...}
+
+# Use pre-composed multi-layer strategies
+--composed-strategy {trend_with_vol_12|hrp_with_constraints|trend_constrained_vol_target|...}
+```
+
+**Examples**:
+```bash
+# Simple comparison: Trend Following vs HRP Ward
+python scripts/run_backtest.py --use-definitions \
+  --strategy trend_following \
+  --benchmark hrp_ward
+
+# Use pre-composed strategy
+python scripts/run_backtest.py --use-definitions \
+  --composed-strategy trend_with_vol_12
+
+# Different allocations with custom overlays
+python scripts/run_backtest.py --use-definitions \
+  --strategy hrp_single \
+  --benchmark equal_weight
+```
+
+**Why Use YAML Definitions?**
+- ✓ No code changes needed
+- ✓ Version control friendly
+- ✓ Composable multi-layer strategies
+- ✓ Easy strategy sharing
+- ✓ Clear parameter documentation
+
+**Creating Custom Strategies**:
+
+1. Create YAML file in `strategy_definitions/` subdirectory
+2. Define parameters in YAML format
+3. Use immediately with `--use-definitions`
+
+See [strategy_definitions/CUSTOM_STRATEGIES.md](strategy_definitions/CUSTOM_STRATEGIES.md) for complete guide.
+
+Example custom strategy file: `strategy_definitions/allocations/my_momentum.yaml`
+```yaml
+type: allocation
+class: TrendFollowingStrategy
+market: uk_etfs
+description: Custom momentum strategy with aggressive parameters
+
+parameters:
+  lookback_days: 252
+  half_life_days: 30
+  smooth_window: 3
+  signal_threshold: 0.15
+```
+
+Usage:
+```bash
+python scripts/run_backtest.py --use-definitions \
+  --strategy my_momentum \
+  --benchmark hrp_ward
+```
+
+**Available Pre-Defined Strategies**:
+
+Markets: `uk_etfs`, `us_equities`
+Allocations: `hrp_single`, `hrp_ward`, `trend_following`, `equal_weight`
+Overlays: `vol_target_12pct`, `vol_target_15pct`, `constraints_5_40`, `constraints_10_30`, `leverage_1x`
+Composed: `trend_with_vol_12`, `hrp_with_constraints`, `trend_constrained_vol_target`
+
+List all:
+```bash
+python -c "from strategies.strategy_loader import StrategyLoader; \
+  loader = StrategyLoader(); \
+  print('Allocations:', list(loader.list_strategies('allocation').keys()))"
+```
+
 **Backward Compatibility**:
 - Old script: `run_hrp_backtest.py` (deprecated, forwards to `run_backtest.py`)
-- Use `run_backtest.py` for all new backtests
+- All existing registry-based commands work unchanged
+- New YAML definitions are opt-in with `--use-definitions` flag
 
 ### Key Implementation Details
 
@@ -568,16 +655,24 @@ See `COMPOSABLE_STRATEGIES.md` for comprehensive guide.
 - ✅ Created composable_strategies_demo.py with 5 comprehensive examples
 - ✅ Created COMPOSABLE_STRATEGIES.md with complete user guide
 
-**Recent Changes** (This Session - Trend Following Implementation):
+**Recent Changes** (This Session - Strategy Definitions System):
+- ✅ Created YAML-based strategy definitions system
+- ✅ Implemented `StrategyLoader` class for loading and building strategies
+- ✅ Created 16 pre-built strategy definition files (markets, allocations, overlays, composed)
+- ✅ Key-based strategy referencing for composable architecture
+- ✅ Integration with `run_backtest.py` via `--use-definitions` flag
+- ✅ Backward compatible with traditional registry-based approach
+- ✅ Full documentation: `strategy_definitions/README.md`
+- ✅ Custom strategy guide: `strategy_definitions/CUSTOM_STRATEGIES.md` (650+ lines)
+- ✅ 13 pre-configured strategy combinations ready to use
+- ✅ No-code strategy creation via YAML files
+
+**Previous Session Changes** (Trend Following Implementation):
 - ✅ Implemented `TrendFollowingStrategy` with EWMA momentum calculation
 - ✅ 2-year lookback with 60-day EWMA half-life for momentum weighting
-- ✅ Volatility normalization and signal smoothing (5-day exponential average)
+- ✅ Volatility normalization and signal smoothing
 - ✅ Weak signal thresholding to eliminate marginal trades
 - ✅ Risk parity allocation based on momentum strength
-- ✅ Long-only portfolio with cash drag on weak signals
-- ✅ Registered strategy in STRATEGY_REGISTRY
-- ✅ Added composable demo example (example_2c_trend_following)
-- ✅ Comprehensive documentation in CLAUDE.md
 
 **Next Actions** (Optional):
 - [ ] Add market data fetching to BacktestEngine for async execution

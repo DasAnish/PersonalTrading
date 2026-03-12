@@ -92,9 +92,15 @@ class VarianceTargetStrategy(OverlayStrategy):
         if len(portfolio_values) < 2:
             return weights
 
-        # Get lookback window (at most all available data)
-        lookback_start = max(0, len(portfolio_values) - self.lookback_days)
-        recent_values = portfolio_values.iloc[lookback_start:]
+        # Filter to dates on or before current_date (important for overlay backtest)
+        values_up_to_date = portfolio_values[portfolio_values.index <= context.current_date]
+
+        if len(values_up_to_date) < 2:
+            return weights
+
+        # Get lookback window (at most all available data up to current date)
+        lookback_start = max(0, len(values_up_to_date) - self.lookback_days)
+        recent_values = values_up_to_date.iloc[lookback_start:]
 
         if len(recent_values) < 30:
             # Insufficient data for reliable variance estimate
@@ -195,9 +201,15 @@ class VolatilityTargetStrategy(OverlayStrategy):
         if len(portfolio_values) < 2:
             return weights
 
-        # Get lookback window (at most all available data)
-        lookback_start = max(0, len(portfolio_values) - self.lookback_days)
-        recent_values = portfolio_values.iloc[lookback_start:]
+        # Filter to dates on or before current_date (important for overlay backtest)
+        values_up_to_date = portfolio_values[portfolio_values.index <= context.current_date]
+
+        if len(values_up_to_date) < 2:
+            return weights
+
+        # Get lookback window (at most all available data up to current date)
+        lookback_start = max(0, len(values_up_to_date) - self.lookback_days)
+        recent_values = values_up_to_date.iloc[lookback_start:]
 
         if len(recent_values) < 30:
             # Insufficient data for reliable volatility estimate
@@ -303,30 +315,36 @@ class ConstraintStrategy(OverlayStrategy):
                 # No violations, converged
                 break
 
-            # Remove weights below minimum
+            # Step 1: Remove weights below minimum
             removed_weight = constrained[below_min].sum()
             constrained[below_min] = 0.0
 
-            # Cap weights above maximum
+            # Step 2: Cap weights above maximum (collect excess)
             excess_weight = (constrained[above_max] - self.max_weight).sum()
             constrained[above_max] = self.max_weight
             removed_weight += excess_weight
 
-            # Redistribute removed/excess weight proportionally
-            # (proportional to remaining weights)
-            active = constrained > 0
-            if active.any():
-                active_weight = constrained[active].sum()
-                if active_weight > 0:
-                    # Redistribute proportionally to active positions
-                    redistribution = removed_weight * (
-                        constrained[active] / active_weight
-                    )
+            # Step 3: Redistribute removed/excess weight to positions that can accept it
+            # Only redistribute to positions that:
+            # - Are currently above 0
+            # - Haven't hit their maximum after capping
+            active = (constrained > 0) & (constrained < self.max_weight)
+
+            if active.any() and removed_weight > 1e-10:
+                # Calculate how much each active position can accept
+                active_capacity = self.max_weight - constrained[active]
+                total_capacity = active_capacity.sum()
+
+                if total_capacity > 0:
+                    # Distribute removed weight proportionally to available capacity
+                    redistribution = removed_weight * (active_capacity / total_capacity)
+                    # Don't exceed max_weight for any position
+                    redistribution = redistribution.clip(upper=active_capacity)
                     constrained[active] += redistribution
 
-        # Final normalization to ensure sum = 1.0
+        # Final normalization to ensure sum = 1.0 (handle rounding errors)
         total = constrained.sum()
-        if total > 0:
+        if total > 1e-10:
             constrained = constrained / total
 
         return constrained

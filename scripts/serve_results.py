@@ -751,7 +751,7 @@ def index():
                 displayMetrics(data1, data2, strategy1, strategy2);
                 displayPortfolioChart(data1, data2, strategy1, strategy2);
                 displayDrawdownChart(data1, data2, strategy1, strategy2);
-                displayWeightsChart(data1, strategy1);
+                displayWeightsChart(data1, data2, strategy1, strategy2);
                 displayTransactions(data1);
             }
 
@@ -893,8 +893,8 @@ def index():
                 });
             }
 
-            function displayWeightsChart(data, name) {
-                const weightsData = data.weights_history || [];
+            function displayWeightsChart(data1, data2, name1, name2) {
+                const weightsData = (data1 && data1.weights_history) || [];
                 if (!weightsData || weightsData.length === 0) {
                     document.getElementById('weightsChart').parentElement.innerHTML = '<p>Weights data not available</p>';
                     return;
@@ -903,21 +903,32 @@ def index():
                 const ctx = document.getElementById('weightsChart').getContext('2d');
                 if (charts.weights) charts.weights.destroy();
 
-                const dates = weightsData.map(w => w.date || w.timestamp);
+                const dates = weightsData.map(w => w.date || w.timestamp).slice(0, 100);
                 const firstEntry = weightsData[0] || {};
                 const symbols = Object.keys(firstEntry).filter(k => k !== 'date' && k !== 'timestamp');
-                const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899'];
+                const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899', '#10b981', '#f97316'];
 
-                const datasets = symbols.map((symbol, idx) => ({
-                    label: symbol,
-                    data: weightsData.map(w => w[symbol] || 0),
-                    backgroundColor: colors[idx % colors.length],
-                    borderColor: colors[idx % colors.length],
-                    pointRadius: 0,
-                    borderWidth: 0,
-                    fill: true,
-                    tension: 0.2
-                }));
+                const datasets = symbols.map((symbol, idx) => {
+                    const values = weightsData.map(w => {
+                        const val = w[symbol] || 0;
+                        // Convert decimal to percentage if needed (0.5 -> 50)
+                        return val > 1 ? val : val * 100;
+                    }).slice(0, 100);
+
+                    return {
+                        label: symbol,
+                        data: values,
+                        backgroundColor: colors[idx % colors.length],
+                        borderColor: colors[idx % colors.length],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                        fill: true,
+                        tension: 0.3,
+                        segment: {
+                            borderDash: []
+                        }
+                    };
+                });
 
                 charts.weights = new Chart(ctx, {
                     type: 'line',
@@ -928,11 +939,16 @@ def index():
                         scales: {
                             y: {
                                 stacked: true,
+                                beginAtZero: true,
+                                min: 0,
                                 max: 100,
-                                ticks: { callback: v => v + '%' }
+                                ticks: { callback: v => v.toFixed(0) + '%' }
                             }
                         },
-                        plugins: { legend: { display: true, position: 'top' } }
+                        plugins: {
+                            filler: { propagate: true },
+                            legend: { display: true, position: 'top' }
+                        }
                     }
                 });
             }

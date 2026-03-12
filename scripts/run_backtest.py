@@ -308,6 +308,9 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
     """
     Run all available strategies and generate comprehensive results.
 
+    Handles both allocation strategies (which have calculate_weights) and
+    composed/overlay strategies (which need run_backtest_with_overlay).
+
     Args:
         args: Parsed command-line arguments
         prices: Aligned price DataFrame
@@ -317,6 +320,8 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
     Returns:
         Dictionary with all strategy results
     """
+    from strategies.base import OverlayStrategy, AllocationStrategy
+
     logger.info("\n" + "=" * 60)
     logger.info("RUNNING ALL AVAILABLE STRATEGIES")
     logger.info("=" * 60)
@@ -334,33 +339,121 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
     )
 
     all_results = {}
+    # Cache underlying results so overlays sharing the same underlying don't re-run it
+    underlying_results_cache = {}
 
     # Run each strategy
     for strategy_key, (strategy, strategy_info) in available_strategies.items():
         try:
             logger.info(f"\nRunning {strategy_key}...")
 
-            # Run backtest
-            results = engine.run_backtest(
-                strategy=strategy,
-                historical_data=prices,
-                start_date=backtest_start,
-                end_date=backtest_end
-            )
+            if isinstance(strategy, OverlayStrategy):
+                # Overlay/composed strategy: need to run underlying first, then apply overlay
+                # Walk down the overlay chain to find the innermost allocation strategy
+                underlying = strategy.underlying
+                while isinstance(underlying, OverlayStrategy):
+                    underlying = underlying.underlying
+
+                if not isinstance(underlying, AllocationStrategy):
+                    logger.error(f"  Cannot find allocation strategy under overlay {strategy_key}")
+                    continue
+
+                # Run or retrieve underlying allocation results
+                underlying_id = id(underlying)
+                if underlying_id not in underlying_results_cache:
+                    underlying_results_cache[underlying_id] = engine.run_backtest(
+                        strategy=underlying,
+                        historical_data=prices,
+                        start_date=backtest_start,
+                        end_date=backtest_end
+                    )
+
+                underlying_results = underlying_results_cache[underlying_id]
+
+                # Run backtest with overlay transformations
+                results = engine.run_backtest_with_overlay(
+                    underlying_strategy=underlying,
+                    overlay_strategy=strategy,
+                    historical_data=prices,
+                    underlying_results=underlying_results,
+                    start_date=backtest_start,
+                    end_date=backtest_end
+                )
+            else:
+                # Regular allocation strategy: run directly
+                results = engine.run_backtest(
+                    strategy=strategy,
+                    historical_data=prices,
+                    start_date=backtest_start,
+                    end_date=backtest_end
+                )
 
             # Serialize results
             serialized = serialize_backtest_results(results, strategy_key, strategy_info)
             all_results[strategy_key] = serialized
 
-            logger.info(f"  ✓ Final value: £{results.final_value:,.2f}")
-            logger.info(f"  ✓ Rebalances: {len(results.portfolio_history)}")
-            logger.info(f"  ✓ Transactions: {len(results.transactions)}")
+            logger.info(f"  Final value: {results.final_value:,.2f}")
+            logger.info(f"  Rebalances: {len(results.portfolio_history)}")
+            logger.info(f"  Transactions: {len(results.transactions)}")
 
         except Exception as e:
-            logger.error(f"  ✗ Failed to run {strategy_key}: {e}")
+            logger.error(f"  Failed to run {strategy_key}: {e}")
+            import traceback
+            traceback.print_exc()
             continue
 
     return all_results
+
+
+def _run_strategy(engine, strategy, prices, backtest_start, backtest_end):
+    """
+    Run a single strategy, handling both allocation and overlay types.
+
+    For overlay/composed strategies, this runs the underlying allocation first,
+    then applies overlay transformations via run_backtest_with_overlay.
+
+    Args:
+        engine: BacktestEngine instance
+        strategy: Strategy to run (AllocationStrategy or OverlayStrategy)
+        prices: Aligned price DataFrame
+        backtest_start: Start date
+        backtest_end: End date
+
+    Returns:
+        BacktestResults
+    """
+    from strategies.base import OverlayStrategy, AllocationStrategy
+
+    if isinstance(strategy, OverlayStrategy):
+        # Walk down to find the innermost allocation strategy
+        underlying = strategy.underlying
+        while isinstance(underlying, OverlayStrategy):
+            underlying = underlying.underlying
+
+        # Run underlying allocation first
+        underlying_results = engine.run_backtest(
+            strategy=underlying,
+            historical_data=prices,
+            start_date=backtest_start,
+            end_date=backtest_end
+        )
+
+        # Run with overlay transformations
+        return engine.run_backtest_with_overlay(
+            underlying_strategy=underlying,
+            overlay_strategy=strategy,
+            historical_data=prices,
+            underlying_results=underlying_results,
+            start_date=backtest_start,
+            end_date=backtest_end
+        )
+    else:
+        return engine.run_backtest(
+            strategy=strategy,
+            historical_data=prices,
+            start_date=backtest_start,
+            end_date=backtest_end
+        )
 
 
 async def main(args):
@@ -623,27 +716,21 @@ async def main(args):
 
         # Run primary strategy backtest
         logger.info(f"\nRunning {strategy_display} backtest...")
-        primary_results = engine.run_backtest(
-            strategy=primary_strategy,
-            historical_data=prices,
-            start_date=backtest_start,
-            end_date=backtest_end
+        primary_results = _run_strategy(
+            engine, primary_strategy, prices, backtest_start, backtest_end
         )
 
         # Generate metrics
         generate_metrics_summary(primary_results)
-        logger.info(f"✓ {strategy_display} backtest complete")
+        logger.info(f"  {strategy_display} backtest complete")
         logger.info(f"  - Rebalances: {len(primary_results.portfolio_history)}")
         logger.info(f"  - Transactions: {len(primary_results.transactions)}")
-        logger.info(f"  - Final value: £{primary_results.final_value:,.2f}")
+        logger.info(f"  - Final value: {primary_results.final_value:,.2f}")
 
         # Run benchmark strategy backtest
         logger.info(f"\nRunning {benchmark_display} backtest...")
-        benchmark_results = engine.run_backtest(
-            strategy=benchmark_strategy,
-            historical_data=prices,
-            start_date=backtest_start,
-            end_date=backtest_end
+        benchmark_results = _run_strategy(
+            engine, benchmark_strategy, prices, backtest_start, backtest_end
         )
 
         # Generate metrics

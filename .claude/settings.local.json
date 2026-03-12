@@ -9,7 +9,8 @@
       "Bash(pip install:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(find:*)"
     ]
   }
 }

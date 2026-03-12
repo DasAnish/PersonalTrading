@@ -342,10 +342,72 @@ python -c "from strategies.strategy_loader import StrategyLoader; \
   print('Allocations:', list(loader.list_strategies('allocation').keys()))"
 ```
 
+#### Mode 3: All Strategies (NEW - March 2026)
+
+Runs all available strategies in a single command and outputs separate result files for each strategy.
+
+```bash
+# Run all strategies with separate result files
+--all                 # Automatically loads all strategies from YAML definitions
+
+# Optional flags
+--refresh            # Force fresh data from IB (skips cache)
+```
+
+**Examples**:
+```bash
+# Run all available strategies and generate separate results
+python scripts/run_backtest.py --all
+
+# Force fresh data from Interactive Brokers
+python scripts/run_backtest.py --all --refresh
+```
+
+**Output Structure**:
+```
+results/
+├── strategies_index.json          # Master index with all strategies
+└── strategies/
+    ├── hrp_single/
+    │   ├── portfolio_history.json
+    │   ├── transactions.json
+    │   ├── weights_history.json
+    │   ├── metrics.json
+    │   └── info.json
+    ├── hrp_ward/
+    │   └── ... (same structure)
+    ├── trend_following/
+    │   └── ... (same structure)
+    ├── equal_weight/
+    │   └── ... (same structure)
+    └── ... (all other strategies)
+```
+
+**Using with Dashboard**:
+```bash
+# Run all strategies
+python scripts/run_backtest.py --all
+
+# In another terminal, start the dashboard
+python scripts/serve_results.py
+
+# Open http://localhost:5000
+# Dashboard automatically discovers all strategies from results/strategies_index.json
+# Use dropdowns to select and compare any two strategies
+```
+
+**Why Use --all Mode?**
+- ✓ Comprehensive testing of all strategies in one run
+- ✓ Organized results in separate files for each strategy
+- ✓ Dynamic strategy picker in dashboard (no need to rerun for each comparison)
+- ✓ Separate JSON files enable efficient data loading on demand
+- ✓ Master index enables strategy discovery and metadata
+
 **Backward Compatibility**:
 - Old script: `run_hrp_backtest.py` (deprecated, forwards to `run_backtest.py`)
 - All existing registry-based commands work unchanged
-- New YAML definitions are opt-in with `--use-definitions` flag
+- Legacy --use-definitions mode still supported
+- New --all mode is opt-in
 
 ### Key Implementation Details
 
@@ -528,52 +590,115 @@ PersonalTrading/
 
 ---
 
-## Web Dashboard (NEW - Feb 2026)
+## Web Dashboard (UPDATED - March 2026)
 
-### Interactive Results Visualization
+### Interactive Results Visualization with Strategy Comparison
 
 **File**: `scripts/serve_results.py`
 
-**Purpose**: User-friendly web interface for viewing backtest results
+**Purpose**: User-friendly web interface for viewing and comparing backtest results
 
 **Features**:
-- Portfolio value comparison chart (HRP vs Equal Weight)
-- Drawdown analysis with underwater plot
-- Portfolio weights visualization (stacked area chart)
-- Transaction history with full details
-- Performance metrics comparison table
-- Responsive design (desktop, tablet, mobile)
-- Interactive charts powered by Chart.js
+- **Strategy Picker**: Dropdown menu to select which strategy to view
+- **Comparison Mode**: Select two strategies to compare metrics side-by-side
+- **View Mode Toggle**: Switch between single strategy view and comparison mode
+- **Dynamic Chart Rendering**: Portfolio value, drawdown, weights, transactions
+- **On-Demand Loading**: Strategies load only when selected for performance
+- **Responsive Design**: Works on desktop, tablet, and mobile
+- **Interactive Charts**: Powered by Chart.js with zoom and hover details
 
 **Usage**:
 ```bash
-# Start dashboard
+# Step 1: Run all available strategies
+python scripts/run_backtest.py --all              # Generates separate result files
+python scripts/run_backtest.py --all --refresh    # Force fresh data from IB
+
+# Step 2: Start the dashboard server
 python scripts/serve_results.py
 
-# Or use startup scripts
-scripts/start_dashboard.bat    # Windows
-bash scripts/start_dashboard.sh # macOS/Linux
+# Step 3: Open browser to http://localhost:5000
+# - Select Strategy 1 from dropdown
+# - Click "Comparison" button to enable Strategy 2 selector
+# - Select Strategy 2 to compare side-by-side
+# - View metrics, charts, and transactions with dynamic updates
+```
 
-# Then open browser: http://localhost:5000
+**Result Structure** (from `--all` mode):
+```
+results/
+├── strategies_index.json          # Master index with all strategies
+└── strategies/
+    ├── hrp_single/
+    │   ├── portfolio_history.json  # Portfolio values over time
+    │   ├── transactions.json       # All trades/rebalances
+    │   ├── weights_history.json    # Asset allocation over time
+    │   ├── metrics.json            # Performance metrics (return, vol, sharpe, etc)
+    │   └── info.json               # Strategy metadata (type, class, params)
+    ├── trend_following/
+    │   └── ... (same structure)
+    ├── equal_weight/
+    │   └── ... (same structure)
+    └── ...
 ```
 
 **API Endpoints**:
-- `GET /` - Main dashboard page (HTML)
-- `GET /api/data` - Raw JSON data for all metrics, charts, and transactions
+- `GET /` - Main dashboard with HTML/CSS/JS and strategy pickers
+- `GET /api/strategies` - Returns JSON list of available strategy keys
+- `GET /api/strategy/<strategy_key>` - Returns JSON with all data for strategy
 
-**Data Flow**:
-1. Backtest generates CSV files in `results/` directory
-2. Dashboard loads CSVs and serves as JSON
-3. Frontend renders interactive visualizations
-4. User explores results via browser tabs
+**Example API Responses**:
+```bash
+# Get list of strategies
+curl http://localhost:5000/api/strategies
+# Returns: ["hrp_single", "hrp_ward", "trend_following", "equal_weight", ...]
+
+# Get data for specific strategy
+curl http://localhost:5000/api/strategy/hrp_single
+# Returns: {
+#   "key": "hrp_single",
+#   "portfolio_history": [...],
+#   "transactions": [...],
+#   "weights_history": [...],
+#   "metrics": {
+#     "total_return": 0.45,
+#     "volatility": 0.12,
+#     "sharpe_ratio": 0.67,
+#     ...
+#   },
+#   "info": {...}
+# }
+```
+
+**Dashboard Tabs**:
+1. **Overview** - Performance metrics table and key metrics cards
+2. **Portfolio Value** - Line chart showing portfolio value over time
+3. **Drawdown** - Drawdown analysis (underwater plot)
+4. **Weights** - Stacked area chart of asset allocation
+5. **Transactions** - Table of all trades/rebalances
 
 **Technology Stack**:
 - Backend: Flask (Python)
 - Frontend: HTML5 + CSS3 + Vanilla JavaScript
 - Charting: Chart.js 3.9.1
-- Styling: Responsive CSS Grid + Flexbox
+- Styling: CSS Grid + Flexbox (responsive)
+- Data Format: JSON (separate files per strategy)
+- Data Loading: Async fetch API with caching
 
-**Documentation**: See [DASHBOARD.md](DASHBOARD.md) for complete user guide
+**Key JavaScript Functions**:
+- `initializeDashboard()` - Load strategy list and populate dropdowns
+- `handleStrategyChange()` - Load selected strategy data on demand
+- `updateDashboard()` - Refresh all tabs and charts
+- `displayMetrics()` - Render metrics table
+- `displayPortfolioChart()` - Render portfolio value chart
+- `displayDrawdownChart()` - Render drawdown chart
+- `displayWeightsChart()` - Render weights stacked area chart
+- `displayTransactions()` - Render transaction table
+
+**Performance Optimizations**:
+- Lazy loading: Only fetch strategy data when selected
+- Chart limit: Limit data points to 100 for responsive rendering
+- Caching: Store loaded strategy data in JavaScript memory
+- On-demand: Comparison mode only loads second strategy if selected
 
 ---
 
@@ -627,23 +752,37 @@ See `COMPOSABLE_STRATEGIES.md` for comprehensive guide.
 
 ## Current Session Status
 
-**Session Date**: 2026-03-11 (Updated)
-**Status**: ✅ Production Ready - Composable strategy architecture implemented
-**Latest Refactoring**: Major architectural refactoring to enable strategy composition
+**Session Date**: 2026-03-12 (Updated)
+**Status**: ✅ Production Ready - All-strategies mode with dynamic comparison dashboard
+**Latest Feature**: All-strategies execution with separate result files and dynamic strategy picker
 
 **Completed Components**:
 - ✅ IB Wrapper + Market Data + Portfolio Management
 - ✅ HRP Strategy Implementation + Equal Weight Benchmark
 - ✅ Pluggable Strategy System (registry + factory pattern)
-- ✅ **NEW**: Composable Strategy Architecture
+- ✅ Composable Strategy Architecture (Markets, Allocations, Overlays)
 - ✅ Backtesting Engine with overlay support
 - ✅ Performance Analytics + Metrics Calculation
 - ✅ Data Caching with --refresh flag support
-- ✅ Interactive Web Dashboard with dynamic strategy labels
+- ✅ **NEW**: All-Strategies Execution Mode
+- ✅ **UPDATED**: Interactive Web Dashboard with Strategy Picker
 - ✅ CLI argument system for strategy selection and parameters
 - ✅ Comprehensive documentation
 
-**Recent Changes** (This Session - Composable Architecture):
+**Recent Changes** (This Session - All-Strategies Mode):
+- ✅ Implemented `--all` flag in run_backtest.py to run all available strategies
+- ✅ Separate result files for each strategy in `results/strategies/<key>/`
+- ✅ Master index file `strategies_index.json` with all strategy metadata
+- ✅ Structured JSON output: portfolio_history.json, transactions.json, weights_history.json, metrics.json, info.json
+- ✅ Updated serve_results.py with strategy picker dropdown
+- ✅ Implemented comparison mode to compare any two strategies
+- ✅ View mode toggle: Single View vs Comparison Mode
+- ✅ Dynamic dashboard that loads selected strategy data on demand
+- ✅ All tabs support comparison (Overview, Portfolio Value, Drawdown, Weights, Transactions)
+- ✅ JSON API endpoints: /api/strategies and /api/strategy/<key>
+- ✅ Frontend caching of loaded strategy data for performance
+
+**Previous Session Changes** (Composable Architecture):
 - ✅ Implemented `ExecutableStrategy` base class with run() method
 - ✅ Created `MarketStrategy` for asset universe definitions
 - ✅ Refactored `HRPStrategy` and `EqualWeightStrategy` to use `AllocationStrategy`

@@ -626,6 +626,52 @@ def index():
             let availableStrategies = [];
             let loadedData = {};
 
+            // Format currency values with £ and comma separators
+            function formatCurrency(value) {
+                if (value === null || value === undefined) return '—';
+                const num = parseFloat(value);
+                if (isNaN(num)) return '—';
+                return '£' + num.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            // Format metric values with appropriate formatting based on type
+            function formatMetric(key, value) {
+                if (value === null || value === undefined) return '—';
+
+                // Currency-related metrics
+                if (key.toLowerCase().includes('value') || key.toLowerCase().includes('cost') ||
+                    key.toLowerCase().includes('capital') || key.toLowerCase() === 'final_value') {
+                    return formatCurrency(value);
+                }
+
+                // Percentage-related metrics (displayed as percentage)
+                if (key.toLowerCase().includes('return') || key.toLowerCase().includes('volatility') ||
+                    key.toLowerCase().includes('drawdown') || key.toLowerCase().includes('sharpe')) {
+                    const num = parseFloat(value);
+                    if (isNaN(num)) return value;
+
+                    // If it's a ratio (between -1 and 1, excluding sharpe), multiply by 100
+                    if ((key.toLowerCase().includes('return') ||
+                         key.toLowerCase().includes('volatility') ||
+                         key.toLowerCase().includes('drawdown')) &&
+                        num >= -1 && num <= 1) {
+                        return (num * 100).toFixed(2) + '%';
+                    }
+                    // For sharpe ratio and similar, just show decimal
+                    return num.toFixed(2);
+                }
+
+                // Transaction count metrics
+                if (key.toLowerCase().includes('transaction') || key.toLowerCase().includes('rebalance') ||
+                    key.toLowerCase().includes('count')) {
+                    return Math.round(parseFloat(value));
+                }
+
+                // Default formatting
+                const num = parseFloat(value);
+                return isNaN(num) ? value : num.toFixed(2);
+            }
+
             async function initializeDashboard() {
                 try {
                     // Get available strategies
@@ -719,9 +765,11 @@ def index():
                 const metricKeys = Object.keys(metrics1);
                 for (const key of metricKeys) {
                     const row = document.createElement('tr');
-                    let html = `<td><strong>${key}</strong></td><td>${metrics1[key]}</td>`;
+                    const value1 = formatMetric(key, metrics1[key]);
+                    let html = `<td><strong>${key}</strong></td><td>${value1}</td>`;
                     if (metrics2) {
-                        html += `<td>${metrics2[key]}</td>`;
+                        const value2 = formatMetric(key, metrics2[key]);
+                        html += `<td>${value2}</td>`;
                     }
                     row.innerHTML = html;
                     tbody.appendChild(row);
@@ -766,8 +814,22 @@ def index():
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { display: true, position: 'top' } },
-                        scales: { y: { beginAtZero: false } }
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: { callback: v => formatCurrency(v) }
+                            }
+                        }
                     }
                 });
             }
@@ -891,8 +953,8 @@ def index():
                         <td>${tx.date || tx.timestamp}</td>
                         <td>${tx.symbol}</td>
                         <td>${tx.quantity}</td>
-                        <td>£${parseFloat(tx.price).toFixed(2)}</td>
-                        <td>£${parseFloat(tx.cost).toFixed(2)}</td>
+                        <td>${formatCurrency(tx.price)}</td>
+                        <td>${formatCurrency(tx.cost)}</td>
                     `;
                     tbody.appendChild(row);
                 });

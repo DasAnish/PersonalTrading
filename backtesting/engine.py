@@ -1,8 +1,16 @@
 """
-Backtesting engine for portfolio strategies.
+Backtesting engine for portfolio strategies (refactored for new architecture).
 
-This module provides the core backtesting simulation engine that runs
-portfolio strategies on historical data.
+This module provides the core backtesting simulation engine that works with
+the new unified Strategy interface. The engine:
+- Works with any Strategy (assets, allocations, overlays, meta-portfolios)
+- Delegates data management to MarketData singleton
+- Focuses purely on portfolio simulation and trade execution
+
+Key change from old architecture:
+- Strategies no longer receive raw DataFrames
+- Engine gets StrategyContext from singleton for each date
+- No lookback window calculations in engine (singleton handles this)
 """
 
 from dataclasses import dataclass, field
@@ -11,7 +19,7 @@ from typing import List, Dict
 import pandas as pd
 import logging
 
-from strategies.base import BaseStrategy
+from strategies.core import Strategy, StrategyContext
 from .portfolio_state import PortfolioState
 from .transaction import Transaction
 
@@ -44,21 +52,50 @@ class BacktestResults:
 
 class BacktestEngine:
     """
-    Backtesting simulation engine.
+    Backtesting simulation engine for new composable strategy architecture.
 
-    Simulates portfolio strategy execution over historical data with:
+    Simulates portfolio strategy execution with:
     - Monthly (or custom frequency) rebalancing
     - Transaction costs
     - Portfolio state tracking
-    - Performance metrics calculation
+    - Support for any Strategy type (assets, allocations, overlays, meta-portfolios)
+
+    Data management is delegated to MarketDataService singleton, keeping the
+    engine focused on pure portfolio simulation.
+
+    Example:
+        from datetime import datetime
+        from data import get_market_data
+        from strategies import AssetStrategy, HRPStrategy
+        from ib_wrapper.client import IBClient
+
+        # Initialize
+        async with IBClient(...) as client:
+            mds = get_market_data()
+            mds.configure(client, 'data/cache')
+
+            engine = BacktestEngine(initial_capital=10000)
+
+            # Create and run strategy
+            assets = [
+                AssetStrategy('VUSA', currency='GBP'),
+                AssetStrategy('SSLN', currency='GBP'),
+            ]
+            strategy = HRPStrategy(underlying=assets)
+
+            results = engine.run_backtest(
+                strategy=strategy,
+                start_date=datetime(2020, 1, 1),
+                end_date=datetime(2024, 1, 1),
+                refresh=False
+            )
     """
 
     def __init__(
         self,
         initial_capital: float,
         transaction_cost_bps: float = 7.5,
-        rebalance_frequency: str = 'monthly',
-        lookback_days: int = 252
+        rebalance_frequency: str = 'monthly'
     ):
         """
         Initialize backtest engine.
@@ -66,78 +103,70 @@ class BacktestEngine:
         Args:
             initial_capital: Starting capital in currency units
             transaction_cost_bps: Transaction cost in basis points (default 7.5 bps)
-            rebalance_frequency: How often to rebalance ('monthly', 'weekly', 'quarterly')
-            lookback_days: Number of days of data to use for strategy calculation (default 252 = 1 year)
+            rebalance_frequency: How often to rebalance ('monthly', 'weekly', 'quarterly', 'daily')
         """
         self.initial_capital = initial_capital
         self.transaction_cost_bps = transaction_cost_bps
         self.rebalance_frequency = rebalance_frequency
-        self.lookback_days = lookback_days
 
-    def run_backtest(
+    async def run_backtest(
         self,
-        strategy: BaseStrategy,
-        historical_data: pd.DataFrame,
-        start_date: datetime = None,
-        end_date: datetime = None
+        strategy: Strategy,
+        start_date: datetime,
+        end_date: datetime,
+        refresh: bool = False
     ) -> BacktestResults:
         """
-        Run backtest simulation.
+        Run backtest simulation for any strategy (async).
+
+        Data fetching and lookback window management are handled by
+        the MarketData singleton based on strategy's DataRequirements.
 
         Args:
-            strategy: Strategy instance implementing BaseStrategy
-            historical_data: DataFrame with columns=symbols, index=dates, values=prices
-                           Must have sufficient history for lookback_days before start_date
-            start_date: Start date for backtest (default: first valid date after lookback)
-            end_date: End date for backtest (default: last date in data)
+            strategy: Any Strategy instance (asset, allocation, overlay, meta-portfolio)
+            start_date: Start date for backtest period
+            end_date: End date for backtest period
+            refresh: If True, force fresh data fetch from IB (skip cache)
 
         Returns:
             BacktestResults with portfolio history, transactions, and metrics
 
         Raises:
             ValueError: If insufficient data or invalid date range
+            RuntimeError: If MarketData singleton not configured
         """
+        from data import get_market_data
+
         logger.info(f"Starting backtest for strategy: {strategy.name}")
 
-        # Validate input
-        if historical_data.empty:
-            raise ValueError("Historical data is empty")
+        # Get MarketData singleton
+        mds = get_market_data()
 
-        # Detect strategy's required lookback (if strategy specifies one, use it)
-        lookback_days = self.lookback_days
-        if hasattr(strategy, 'lookback_days'):
-            lookback_days = strategy.lookback_days
-            logger.info(f"Using strategy's lookback_days: {lookback_days}")
+        # Fetch data based on strategy's requirements
+        # Singleton handles all lookback calculations
+        requirements = strategy.get_data_requirements()
+        all_data = await mds.fetch_data(
+            requirements=requirements,
+            start_date=start_date,
+            end_date=end_date,
+            refresh=refresh
+        )
 
-        # Account for additional lookback requirements (e.g., smooth_window in TrendFollowingStrategy)
-        additional_days = 0
-        if hasattr(strategy, 'smooth_window'):
-            additional_days = strategy.smooth_window
-            logger.info(f"Strategy requires additional {additional_days} days for smoothing")
+        if all_data.empty:
+            raise ValueError("No data available for backtest")
 
-        total_lookback = lookback_days + additional_days
+        logger.info(
+            f"Fetched {len(all_data)} trading days for {len(all_data.columns)} symbols"
+        )
 
-        # Set default date range
-        if start_date is None:
-            # Start after we have enough lookback data
-            if len(historical_data) <= total_lookback:
-                raise ValueError(
-                    f"Insufficient data. Need at least {total_lookback} days "
-                    f"before backtest start. Have {len(historical_data)} days total."
-                )
-            start_date = historical_data.index[total_lookback]
-
-        if end_date is None:
-            end_date = historical_data.index[-1]
-
-        # Filter data to backtest period
-        backtest_data = historical_data[
-            (historical_data.index >= start_date) &
-            (historical_data.index <= end_date)
+        # Filter to backtest period
+        backtest_data = all_data[
+            (all_data.index >= start_date) &
+            (all_data.index <= end_date)
         ]
 
         if backtest_data.empty:
-            raise ValueError(f"No data in date range {start_date} to {end_date}")
+            raise ValueError(f"No data in backtest period {start_date} to {end_date}")
 
         logger.info(
             f"Backtest period: {start_date.date()} to {end_date.date()} "
@@ -172,21 +201,16 @@ class BacktestEngine:
         # Run backtest
         for rebalance_date in rebalance_dates:
             try:
-                # Get lookback window for strategy calculation (including any additional buffer)
-                lookback_data = self._get_lookback_data(
-                    historical_data,
-                    rebalance_date,
-                    total_lookback
+                # Get strategy context for this date (singleton handles lookback slicing)
+                context = mds.get_context_for_date(
+                    all_data=all_data,
+                    current_date=rebalance_date,
+                    lookback_days=requirements.lookback_days
                 )
 
-                if lookback_data.empty or len(lookback_data) < 30:
-                    logger.warning(
-                        f"Insufficient lookback data at {rebalance_date.date()}, skipping"
-                    )
-                    continue
-
-                # Calculate strategy weights
-                weights = strategy.calculate_weights(lookback_data)
+                # Strategy calculates weights from context
+                # Context has pre-sliced data, strategy never sees full history
+                weights = strategy.calculate_weights(context)
 
                 # Record weights at this rebalance date
                 weight_record = {'timestamp': rebalance_date}
@@ -230,7 +254,6 @@ class BacktestEngine:
             weights_df = pd.DataFrame(weights_history)
             weights_df.set_index('timestamp', inplace=True)
         else:
-            # Empty DataFrame with proper structure if no rebalances
             weights_df = pd.DataFrame()
 
         # Calculate final value
@@ -255,204 +278,6 @@ class BacktestEngine:
 
         return results
 
-    def run_backtest_with_overlay(
-        self,
-        underlying_strategy: 'BaseStrategy',
-        overlay_strategy: 'BaseStrategy',
-        historical_data: pd.DataFrame,
-        underlying_results: BacktestResults,
-        start_date: datetime = None,
-        end_date: datetime = None
-    ) -> BacktestResults:
-        """
-        Run backtest with overlay strategy transformations.
-
-        This method runs the backtest where at each rebalance, weights from the
-        underlying strategy are transformed by the overlay strategy. This enables
-        overlays like volatility targeting on top of any allocation strategy.
-
-        Args:
-            underlying_strategy: Base allocation strategy (e.g., HRP)
-            overlay_strategy: Overlay strategy that transforms weights
-            historical_data: DataFrame with columns=symbols, index=dates, values=prices
-            underlying_results: Results from running underlying strategy
-            start_date: Start date for backtest (default: first valid date after lookback)
-            end_date: End date for backtest (default: last date in data)
-
-        Returns:
-            BacktestResults with overlay-transformed portfolio history
-        """
-        logger.info(f"Starting overlay backtest: {overlay_strategy.name} > {underlying_strategy.name}")
-
-        # Validate input
-        if historical_data.empty:
-            raise ValueError("Historical data is empty")
-
-        # Detect strategy's required lookback (if strategy specifies one, use it)
-        lookback_days = self.lookback_days
-        if hasattr(underlying_strategy, 'lookback_days'):
-            lookback_days = underlying_strategy.lookback_days
-            logger.info(f"Using strategy's lookback_days: {lookback_days}")
-
-        # Account for additional lookback requirements (e.g., smooth_window in TrendFollowingStrategy)
-        additional_days = 0
-        if hasattr(underlying_strategy, 'smooth_window'):
-            additional_days = underlying_strategy.smooth_window
-            logger.info(f"Strategy requires additional {additional_days} days for smoothing")
-
-        total_lookback = lookback_days + additional_days
-
-        # Set default date range
-        if start_date is None:
-            if len(historical_data) <= total_lookback:
-                raise ValueError(
-                    f"Insufficient data. Need at least {total_lookback} days "
-                    f"before backtest start. Have {len(historical_data)} days total."
-                )
-            start_date = historical_data.index[total_lookback]
-
-        if end_date is None:
-            end_date = historical_data.index[-1]
-
-        # Filter data to backtest period
-        backtest_data = historical_data[
-            (historical_data.index >= start_date) &
-            (historical_data.index <= end_date)
-        ]
-
-        if backtest_data.empty:
-            raise ValueError(f"No data in date range {start_date} to {end_date}")
-
-        logger.info(
-            f"Backtest period: {start_date.date()} to {end_date.date()} "
-            f"({len(backtest_data)} days)"
-        )
-
-        # Generate rebalance dates
-        rebalance_dates = self._generate_rebalance_dates(
-            start_date,
-            end_date,
-            backtest_data.index
-        )
-
-        logger.info(f"Will rebalance {len(rebalance_dates)} times with overlay")
-
-        # Get underlying portfolio values for overlay context
-        underlying_portfolio_values = underlying_results.portfolio_history['total_value']
-
-        # Initialize portfolio state
-        portfolio = PortfolioState(
-            timestamp=start_date,
-            cash=self.initial_capital,
-            positions={},
-            prices={}
-        )
-
-        # Track history
-        portfolio_history = []
-        weights_history = []
-        all_transactions = []
-
-        # Record initial state
-        portfolio_history.append(self._record_state(portfolio, backtest_data.loc[start_date]))
-
-        # Run backtest with overlay
-        for rebalance_date in rebalance_dates:
-            try:
-                # Get lookback window for strategy calculation (including any additional buffer)
-                lookback_data = self._get_lookback_data(
-                    historical_data,
-                    rebalance_date,
-                    total_lookback
-                )
-
-                if lookback_data.empty or len(lookback_data) < 30:
-                    logger.warning(
-                        f"Insufficient lookback data at {rebalance_date.date()}, skipping"
-                    )
-                    continue
-
-                # Calculate underlying strategy weights
-                underlying_weights = underlying_strategy.calculate_weights(lookback_data)
-
-                # Get current prices for overlay context
-                current_prices = backtest_data.loc[rebalance_date]
-
-                # Create overlay context with underlying portfolio values
-                from strategies.models import OverlayContext
-                context = OverlayContext(
-                    current_date=rebalance_date,
-                    prices=current_prices,
-                    underlying_portfolio_values=underlying_portfolio_values,
-                    lookback_window=total_lookback
-                )
-
-                # Transform weights using overlay
-                overlay_weights = overlay_strategy.transform_weights(underlying_weights, context)
-
-                # Record weights at this rebalance date
-                weight_record = {'timestamp': rebalance_date}
-                weight_record.update(overlay_weights.to_dict())
-                weights_history.append(weight_record)
-
-                # Update portfolio timestamp
-                portfolio.timestamp = rebalance_date
-
-                # Execute rebalance with transformed weights
-                transactions = portfolio.execute_rebalance(
-                    target_weights=overlay_weights,
-                    prices=current_prices,
-                    transaction_cost_bps=self.transaction_cost_bps
-                )
-
-                all_transactions.extend(transactions)
-
-                # Record state after rebalance
-                portfolio_history.append(self._record_state(portfolio, current_prices))
-
-                logger.debug(
-                    f"Rebalanced at {rebalance_date.date()}: "
-                    f"value={portfolio.total_value():.2f}, "
-                    f"transactions={len(transactions)}"
-                )
-
-            except Exception as e:
-                logger.error(f"Error at rebalance date {rebalance_date.date()}: {e}")
-                continue
-
-        # Convert history to DataFrame
-        history_df = pd.DataFrame(portfolio_history)
-        history_df.set_index('timestamp', inplace=True)
-
-        # Convert weights history to DataFrame
-        if weights_history:
-            weights_df = pd.DataFrame(weights_history)
-            weights_df.set_index('timestamp', inplace=True)
-        else:
-            weights_df = pd.DataFrame()
-
-        # Calculate final value
-        final_value = portfolio.total_value()
-
-        logger.info(
-            f"Overlay backtest complete: "
-            f"Initial={self.initial_capital:.2f}, "
-            f"Final={final_value:.2f}, "
-            f"Return={(final_value/self.initial_capital - 1)*100:.2f}%"
-        )
-
-        # Create results object
-        results = BacktestResults(
-            strategy_name=f"{overlay_strategy.name} > {underlying_strategy.name}",
-            portfolio_history=history_df,
-            weights_history=weights_df,
-            transactions=all_transactions,
-            initial_capital=self.initial_capital,
-            final_value=final_value
-        )
-
-        return results
-
     def _generate_rebalance_dates(
         self,
         start_date: datetime,
@@ -468,7 +293,7 @@ class BacktestEngine:
             available_dates: Available trading dates in data
 
         Returns:
-            List of rebalance dates
+            List of rebalance dates aligned to trading days
         """
         # Map frequency to pandas offset
         freq_map = {
@@ -478,7 +303,7 @@ class BacktestEngine:
             'daily': 'D'
         }
 
-        freq = freq_map.get(self.rebalance_frequency.lower(), 'M')
+        freq = freq_map.get(self.rebalance_frequency.lower(), 'ME')
 
         # Generate candidate dates
         candidate_dates = pd.date_range(
@@ -496,36 +321,6 @@ class BacktestEngine:
                 rebalance_dates.append(future_dates[0])
 
         return rebalance_dates
-
-    def _get_lookback_data(
-        self,
-        data: pd.DataFrame,
-        rebalance_date: datetime,
-        lookback_days: int
-    ) -> pd.DataFrame:
-        """
-        Get lookback window of data for strategy calculation.
-
-        Args:
-            data: Full historical data
-            rebalance_date: Current rebalance date
-            lookback_days: Number of days to look back
-
-        Returns:
-            DataFrame with lookback_days of data ending at rebalance_date
-        """
-        # Get all dates up to and including rebalance date
-        available_dates = data.index[data.index <= rebalance_date]
-
-        if len(available_dates) < lookback_days:
-            # Not enough history - return what we have
-            return data.loc[:rebalance_date]
-
-        # Get last lookback_days of data
-        start_idx = len(available_dates) - lookback_days
-        start_date = available_dates[start_idx]
-
-        return data.loc[start_date:rebalance_date]
 
     def _record_state(
         self,

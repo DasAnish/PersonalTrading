@@ -20,6 +20,7 @@ from .base import BaseStrategy, ExecutableStrategy, MarketStrategy, AllocationSt
 from .models import Instrument, MarketDefinition, OverlayContext
 from .hrp import HRPStrategy
 from .equal_weight import EqualWeightStrategy
+from .trend_following import TrendFollowingStrategy
 from .markets import UKETFsMarket, USEquitiesMarket, CustomMarket, EuropeanEquitiesMarket, BondsMarket, CommunitiesMarket
 from .overlays import VarianceTargetStrategy, VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
 
@@ -42,6 +43,27 @@ STRATEGY_REGISTRY = {
         'class': EqualWeightStrategy,
         'display_name': 'Equal Weight',
         'params': {}
+    },
+    'trend_following': {
+        'class': TrendFollowingStrategy,
+        'display_name': 'Trend Following',
+        'params': {
+            'lookback_days': {
+                'type': int,
+                'default': 504,
+                'help': 'Historical window for momentum calculation (default 504 = 2 years)'
+            },
+            'half_life_days': {
+                'type': int,
+                'default': 60,
+                'help': 'EWMA decay parameter (default 60 days)'
+            },
+            'signal_threshold': {
+                'type': float,
+                'default': 0.1,
+                'help': 'Minimum signal magnitude to include in portfolio'
+            }
+        }
     }
 }
 
@@ -128,6 +150,7 @@ __all__ = [
     # Strategies
     'HRPStrategy',
     'EqualWeightStrategy',
+    'TrendFollowingStrategy',
     # Market strategies
     'UKETFsMarket',
     'USEquitiesMarket',

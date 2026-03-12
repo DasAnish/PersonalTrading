@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from strategies.markets import UKETFsMarket, USEquitiesMarket
 from strategies.hrp import HRPStrategy
 from strategies.equal_weight import EqualWeightStrategy
+from strategies.trend_following import TrendFollowingStrategy
 from strategies.overlays import VarianceTargetStrategy, VolatilityTargetStrategy, ConstraintStrategy
 from backtesting import BacktestEngine
 
@@ -99,6 +100,41 @@ def example_2b_variance_target_overlay():
     print(f"\nTarget variance: 0.02 (equivalent to ~14.1% volatility)")
 
     return var_target
+
+
+def example_2c_trend_following():
+    """Example 2c: Trend Following strategy with momentum signals."""
+    print("\n" + "=" * 70)
+    print("EXAMPLE 2c: Trend Following Strategy")
+    print("=" * 70)
+
+    # Create market
+    market = UKETFsMarket()
+
+    # Create trend following strategy
+    trend = TrendFollowingStrategy(
+        underlying=market,
+        lookback_days=504,  # 2 years
+        half_life_days=60,  # EWMA half-life
+        smooth_window=5,
+        signal_threshold=0.1  # Threshold for weak signals
+    )
+
+    print(f"\nStrategy: {trend.name}")
+    print(f"  Market: {trend.get_market_definition().name}")
+    print(f"  Symbols: {trend.get_market_definition().symbols}")
+    print(f"\nMomentum Signal Calculation:")
+    print(f"  - Lookback: {trend.lookback_days} days (2 years)")
+    print(f"  - EWMA Half-life: {trend.half_life_days} days")
+    print(f"  - Signal Smoothing: {trend.smooth_window} days")
+    print(f"  - Weak Signal Threshold: {trend.signal_threshold}")
+    print(f"\nWeight Allocation:")
+    print(f"  - Method: Risk Parity on Momentum Signals")
+    print(f"  - Assets with stronger momentum get larger allocations")
+    print(f"  - Allocation inversely weighted by volatility")
+    print(f"  - Long-only (cash drag when signals weak)")
+
+    return trend
 
 
 def example_3_multiple_overlays():
@@ -226,6 +262,7 @@ if __name__ == "__main__":
     example_1_simple_allocation()
     example_2_overlay_strategy()
     example_2b_variance_target_overlay()
+    example_2c_trend_following()
     example_3_multiple_overlays()
     example_4_market_variants()
     example_5_weight_calculation()
@@ -241,7 +278,9 @@ The new composable architecture enables:
    - Define which assets to trade and how to fetch them
 
 2. Allocation Strategies
-   - HRPStrategy, EqualWeightStrategy
+   - HRPStrategy: Hierarchical Risk Parity optimization
+   - EqualWeightStrategy: Simple 1/N benchmark
+   - TrendFollowingStrategy: Momentum-based allocation with signal smoothing
    - Calculate portfolio weights from prices
    - Wrap a market definition
 

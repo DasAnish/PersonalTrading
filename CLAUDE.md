@@ -104,7 +104,13 @@ The system now supports pluggable portfolio optimization strategies that can be 
    - Command: `python scripts/run_backtest.py --strategy hrp`
    - Parameters: `--hrp-linkage-method` (single|complete|average|ward)
 
-2. **Equal Weight (Benchmark)**
+2. **Trend Following (Momentum-based)**
+   - Files: `strategies/trend_following.py`
+   - Command: `python scripts/run_backtest.py --strategy trend_following`
+   - Parameters: `--lookback-days`, `--half-life-days`, `--signal-threshold`
+   - Algorithm: EWMA momentum signals normalized by volatility with risk parity weighting
+
+3. **Equal Weight (Benchmark)**
    - Files: `strategies/equal_weight.py`
    - Command: `python scripts/run_backtest.py --strategy equal_weight`
    - Parameters: None
@@ -116,6 +122,7 @@ All strategies are registered in `strategies/__init__.py` using a pluggable regi
 ```python
 STRATEGY_REGISTRY = {
     'hrp': {'class': HRPStrategy, 'display_name': 'Hierarchical Risk Parity', ...},
+    'trend_following': {'class': TrendFollowingStrategy, 'display_name': 'Trend Following', ...},
     'equal_weight': {'class': EqualWeightStrategy, 'display_name': 'Equal Weight', ...}
 }
 ```
@@ -156,6 +163,53 @@ HRP is one of the available strategies. It uses a 3-stage process:
    - `get_rec_bipart()` returns final weights (sum to 1.0)
 
 **Reference**: De Prado, M. L. (2016). "Building Diversified Portfolios that Outperform Out of Sample"
+
+### Trend Following Strategy
+
+Trend Following uses momentum signals to dynamically allocate across assets. It implements a systematic approach based on:
+
+1. **Momentum Calculation**
+   - Uses 2-year (504 trading days) historical lookback period
+   - Applies EWMA (Exponentially Weighted Moving Average) with 60-day half-life
+   - Emphasizes recent price trends while discounting older data
+   - Formula: momentum = weighted average of returns × 252 (annualized)
+
+2. **Signal Normalization**
+   - Divides momentum by asset volatility (Sharpe-like ratio)
+   - Accounts for risk differences: high momentum/low vol assets favored
+   - Computed over same 2-year lookback for consistency
+
+3. **Signal Smoothing**
+   - Applies 5-day exponential smoothing to reduce noise
+   - Prevents overtrading on daily fluctuations
+   - Preserves larger trend changes
+
+4. **Weak Signal Thresholding**
+   - Sets signals with |value| < 0.1 to zero
+   - Avoids trading on marginal signals
+   - Reduces transaction costs on uncertain positions
+
+5. **Risk Parity on Signals**
+   - Allocates inversely to volatility among strong signals
+   - Positions weighted by (signal / volatility)
+   - Equal risk contribution from momentum factors
+   - Long-only: only positive signals used, cash drag when all weak
+
+**Example Usage**:
+```python
+from strategies import TrendFollowingStrategy, UKETFsMarket
+
+market = UKETFsMarket()
+trend = TrendFollowingStrategy(
+    underlying=market,
+    lookback_days=504,      # 2 years
+    half_life_days=60,      # EWMA decay
+    smooth_window=5,        # Signal smoothing
+    signal_threshold=0.1    # Threshold for weak signals
+)
+
+weights = trend.calculate_weights(prices_df)
+```
 
 ### Implementation Status
 
@@ -514,10 +568,22 @@ See `COMPOSABLE_STRATEGIES.md` for comprehensive guide.
 - ✅ Created composable_strategies_demo.py with 5 comprehensive examples
 - ✅ Created COMPOSABLE_STRATEGIES.md with complete user guide
 
+**Recent Changes** (This Session - Trend Following Implementation):
+- ✅ Implemented `TrendFollowingStrategy` with EWMA momentum calculation
+- ✅ 2-year lookback with 60-day EWMA half-life for momentum weighting
+- ✅ Volatility normalization and signal smoothing (5-day exponential average)
+- ✅ Weak signal thresholding to eliminate marginal trades
+- ✅ Risk parity allocation based on momentum strength
+- ✅ Long-only portfolio with cash drag on weak signals
+- ✅ Registered strategy in STRATEGY_REGISTRY
+- ✅ Added composable demo example (example_2c_trend_following)
+- ✅ Comprehensive documentation in CLAUDE.md
+
 **Next Actions** (Optional):
 - [ ] Add market data fetching to BacktestEngine for async execution
-- [ ] Implement additional strategies (mean-variance, risk parity, momentum)
-- [ ] Parameter optimization/tuning system
+- [ ] Implement additional strategies (mean-variance, risk parity variants)
+- [ ] Parameter optimization/tuning system (walk-forward analysis)
 - [ ] Multi-strategy comparison (3+ strategies with dashboard refactor)
 - [ ] Live trading execution with overlay strategies
 - [ ] Custom overlay creation tutorial
+- [ ] Backtest Trend Following vs HRP vs Equal Weight

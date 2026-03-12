@@ -1,0 +1,12 @@
+# Equal Weight Strategy
+# Simple benchmark: 1/N allocation to all assets
+type: allocation
+class: EqualWeightStrategy
+market: uk_etfs
+description: |
+  Baseline benchmark strategy that allocates equal weight to all assets.
+  Simple, transparent, and provides a useful comparison point.
+
+  Best for: Baseline comparison, risk management targets
+
+parameters: {}

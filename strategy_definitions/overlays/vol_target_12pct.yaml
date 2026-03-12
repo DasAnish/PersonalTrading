@@ -1,0 +1,17 @@
+# Volatility Target: 12%
+# Scales allocation weights to achieve 12% annual volatility
+type: overlay
+class: VolatilityTargetStrategy
+underlying: trend_following
+description: |
+  Scales portfolio weights to achieve target volatility level.
+  Reduces leverage when realized volatility exceeds target.
+  Increases when volatility is below target.
+
+  Target: 12% annual volatility (conservative)
+
+  Usage: Apply to any allocation strategy to control risk
+
+parameters:
+  target_vol: 0.12       # 12% annual volatility
+  lookback_days: 252     # 1-year lookback for vol calculation

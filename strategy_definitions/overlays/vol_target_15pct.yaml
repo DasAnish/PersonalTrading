@@ -1,0 +1,17 @@
+# Volatility Target: 15%
+# Scales allocation weights to achieve 15% annual volatility
+type: overlay
+class: VolatilityTargetStrategy
+underlying: hrp_ward
+description: |
+  Scales portfolio weights to achieve target volatility level.
+  Reduces leverage when realized volatility exceeds target.
+  Increases when volatility is below target.
+
+  Target: 15% annual volatility (moderate)
+
+  Usage: Apply to any allocation strategy to control risk
+
+parameters:
+  target_vol: 0.15       # 15% annual volatility
+  lookback_days: 252     # 1-year lookback for vol calculation

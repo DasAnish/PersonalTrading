@@ -1,0 +1,14 @@
+# Hierarchical Risk Parity (HRP) - Ward Linkage
+# Base allocation strategy using HRP optimization with ward linkage
+type: allocation
+class: HRPStrategy
+market: uk_etfs
+description: |
+  Hierarchical Risk Parity optimization using ward linkage clustering.
+  Ward linkage minimizes variance within clusters, creating more
+  balanced and stable cluster structures than single linkage.
+
+  Best for: More balanced weight distributions, smoother rebalancing
+
+parameters:
+  linkage_method: ward

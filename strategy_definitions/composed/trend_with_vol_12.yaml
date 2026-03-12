@@ -1,0 +1,21 @@
+# Composed Strategy: Trend Following + Vol Target (12%)
+# Combines trend following with volatility targeting
+type: composed
+description: |
+  Trend Following allocation scaled to 12% volatility target.
+
+  Composition:
+  1. Market: UK ETFs (VUSA, SSLN, SGLN, IWRD)
+  2. Allocation: Trend Following (momentum + signal processing)
+  3. Overlay: Volatility Target (12% annual vol)
+
+  Characteristics:
+  - Captures momentum trends from TF strategy
+  - Controls risk via vol targeting
+  - Conservative volatility target (12%)
+  - Long-only with cash drag on weak signals
+
+  Best for: Risk-aware trend followers, stable equity portfolios
+
+layers:
+  - vol_target_12pct

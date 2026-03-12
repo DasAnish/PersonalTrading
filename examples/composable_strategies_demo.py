@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from strategies.markets import UKETFsMarket, USEquitiesMarket
 from strategies.hrp import HRPStrategy
 from strategies.equal_weight import EqualWeightStrategy
-from strategies.overlays import VarianceTargetOverlay, VolatilityTargetOverlay, ConstraintOverlay
+from strategies.overlays import VarianceTargetStrategy, VolatilityTargetStrategy, ConstraintStrategy
 from backtesting import BacktestEngine
 
 
@@ -58,7 +58,7 @@ def example_2_overlay_strategy():
     hrp = HRPStrategy(underlying=market, linkage_method='ward')
 
     # Step 3: Apply overlay
-    vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+    vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
     print(f"\nComposed Strategy: {vol_target.name}")
     print(f"  Layer 1 (Overlay): {vol_target.name}")
     print(f"  Layer 2 (Allocation): {hrp.name}")
@@ -89,7 +89,7 @@ def example_2b_variance_target_overlay():
     hrp = HRPStrategy(underlying=market, linkage_method='ward')
 
     # Step 3: Apply variance target (0.02 variance ≈ 14.1% volatility)
-    var_target = VarianceTargetOverlay(underlying=hrp, target_variance=0.02)
+    var_target = VarianceTargetStrategy(underlying=hrp, target_variance=0.02)
 
     print(f"\nComposed Strategy: {var_target.name}")
     print(f"  Layer 1 (Overlay): {var_target.name}")
@@ -112,10 +112,10 @@ def example_3_multiple_overlays():
     hrp = HRPStrategy(underlying=market)
 
     # First overlay: Volatility target
-    vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+    vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
 
     # Second overlay: Constraints on top of vol target
-    constrained = ConstraintOverlay(
+    constrained = ConstraintStrategy(
         underlying=vol_target,
         min_weight=0.05,  # Minimum 5% per position
         max_weight=0.40   # Maximum 40% per position
@@ -164,7 +164,7 @@ def example_5_weight_calculation():
     # Create a composed strategy
     market = UKETFsMarket()
     hrp = HRPStrategy(underlying=market)
-    vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.15)
+    vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.15)
 
     # Create sample price data
     dates = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
@@ -246,9 +246,9 @@ The new composable architecture enables:
    - Wrap a market definition
 
 3. Overlay Strategies
-   - VolatilityTargetOverlay: Scale weights to achieve target vol
-   - ConstraintOverlay: Apply min/max weight constraints
-   - LeverageOverlay: Apply leverage limits
+   - VolatilityTargetStrategy: Scale weights to achieve target vol
+   - ConstraintStrategy: Apply min/max weight constraints
+   - LeverageStrategy: Apply leverage limits
    - Wrap any other strategy
 
 4. Composition

@@ -21,7 +21,7 @@ from .models import Instrument, MarketDefinition, OverlayContext
 from .hrp import HRPStrategy
 from .equal_weight import EqualWeightStrategy
 from .markets import UKETFsMarket, USEquitiesMarket, CustomMarket, EuropeanEquitiesMarket, BondsMarket, CommunitiesMarket
-from .overlays import VarianceTargetOverlay, VolatilityTargetOverlay, ConstraintOverlay, LeverageOverlay
+from .overlays import VarianceTargetStrategy, VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
 
 
 # Strategy Registry for pluggable strategy selection
@@ -136,10 +136,10 @@ __all__ = [
     'BondsMarket',
     'CommunitiesMarket',
     # Overlay strategies
-    'VarianceTargetOverlay',
-    'VolatilityTargetOverlay',
-    'ConstraintOverlay',
-    'LeverageOverlay',
+    'VarianceTargetStrategy',
+    'VolatilityTargetStrategy',
+    'ConstraintStrategy',
+    'LeverageStrategy',
     # Registry and utilities
     'STRATEGY_REGISTRY',
     'create_strategy',

@@ -448,7 +448,7 @@ VolatilityTarget(HRP(UKETFsMarket()))
 **Three-Tier System**:
 1. **Market Strategies** - Define which assets to trade (UKETFsMarket, USEquitiesMarket, CustomMarket)
 2. **Allocation Strategies** - Calculate weights (HRPStrategy, EqualWeightStrategy wrap a market)
-3. **Overlay Strategies** - Transform weights (VolatilityTargetOverlay, ConstraintOverlay wrap any strategy)
+3. **Overlay Strategies** - Transform weights (VolatilityTargetStrategy, ConstraintStrategy wrap any strategy)
 
 **New Files**:
 - `strategies/base.py` - Added `ExecutableStrategy`, `MarketStrategy`, `AllocationStrategy`, `OverlayStrategy`
@@ -458,9 +458,9 @@ VolatilityTarget(HRP(UKETFsMarket()))
 - `COMPOSABLE_STRATEGIES.md` - Complete guide with examples
 
 **Key Overlays**:
-- **VolatilityTargetOverlay**: Scale weights to achieve target volatility (e.g., 12% annually)
-- **ConstraintOverlay**: Enforce min/max weight limits per position (e.g., 5%-40%)
-- **LeverageOverlay**: Apply gross leverage limits
+- **VolatilityTargetStrategy**: Scale weights to achieve target volatility (e.g., 12% annually)
+- **ConstraintStrategy**: Enforce min/max weight limits per position (e.g., 5%-40%)
+- **LeverageStrategy**: Apply gross leverage limits
 
 **Benefits**:
 - Modular and testable architecture
@@ -471,11 +471,11 @@ VolatilityTarget(HRP(UKETFsMarket()))
 
 **Example Usage**:
 ```python
-from strategies import HRPStrategy, VolatilityTargetOverlay, UKETFsMarket
+from strategies import HRPStrategy, VolatilityTargetStrategy, UKETFsMarket
 
 market = UKETFsMarket()
 hrp = HRPStrategy(underlying=market, linkage_method='ward')
-vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
 
 weights = vol_target.calculate_weights(prices)
 ```
@@ -508,7 +508,7 @@ See `COMPOSABLE_STRATEGIES.md` for comprehensive guide.
 - ✅ Refactored `HRPStrategy` and `EqualWeightStrategy` to use `AllocationStrategy`
 - ✅ Implemented `OverlayStrategy` base class with transform_weights()
 - ✅ Created market strategies: UKETFsMarket, USEquitiesMarket, CustomMarket, etc.
-- ✅ Created overlay strategies: VolatilityTargetOverlay, ConstraintOverlay, LeverageOverlay
+- ✅ Created overlay strategies: VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
 - ✅ Enhanced BacktestEngine with run_backtest_with_overlay() method
 - ✅ Updated strategies/__init__.py with new exports
 - ✅ Created composable_strategies_demo.py with 5 comprehensive examples

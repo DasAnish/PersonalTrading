@@ -214,9 +214,9 @@ class OverlayStrategy(ExecutableStrategy):
     Strategy that applies transformations to underlying strategy weights.
 
     Examples:
-    - VolatilityTargetOverlay: Scale weights to achieve target volatility
-    - ConstraintOverlay: Apply min/max weight constraints
-    - LeverageOverlay: Apply leverage limits
+    - VolatilityTargetStrategy: Scale weights to achieve target volatility
+    - ConstraintStrategy: Apply min/max weight constraints
+    - LeverageStrategy: Apply leverage limits
 
     OverlayStrategy wraps any ExecutableStrategy and modifies its weights
     at each rebalance. It needs access to the underlying strategy's results

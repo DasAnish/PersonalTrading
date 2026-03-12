@@ -66,17 +66,17 @@ ew = EqualWeightStrategy(underlying=market)
 
 Apply **dynamic adjustments** to weights. Built-in overlays:
 
-- **VarianceTargetOverlay**: Scale weights to achieve target variance (math-friendly alternative to vol targeting)
-- **VolatilityTargetOverlay**: Scale weights to achieve target volatility
-- **ConstraintOverlay**: Apply min/max weight limits per position
-- **LeverageOverlay**: Apply gross leverage limits
+- **VarianceTargetStrategy**: Scale weights to achieve target variance (math-friendly alternative to vol targeting)
+- **VolatilityTargetStrategy**: Scale weights to achieve target volatility
+- **ConstraintStrategy**: Apply min/max weight limits per position
+- **LeverageStrategy**: Apply gross leverage limits
 
 Overlays wrap any other strategy:
 
 ```python
 from strategies import (
-    VolatilityTargetOverlay,
-    ConstraintOverlay,
+    VolatilityTargetStrategy,
+    ConstraintStrategy,
     HRPStrategy,
     UKETFsMarket
 )
@@ -85,10 +85,10 @@ market = UKETFsMarket()
 hrp = HRPStrategy(underlying=market)
 
 # Single overlay
-vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
 
 # Chained overlays
-constrained = ConstraintOverlay(
+constrained = ConstraintStrategy(
     underlying=vol_target,
     min_weight=0.05,
     max_weight=0.40
@@ -124,13 +124,13 @@ Apply risk management on top of allocation:
 ```python
 from strategies import (
     HRPStrategy,
-    VolatilityTargetOverlay,
+    VolatilityTargetStrategy,
     UKETFsMarket
 )
 
 market = UKETFsMarket()
 hrp = HRPStrategy(underlying=market)
-vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.15)
+vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.15)
 
 # Weights are automatically scaled based on realized volatility
 weights = vol_target.calculate_weights(prices_dataframe)
@@ -143,15 +143,15 @@ Stack overlays for comprehensive portfolio management:
 ```python
 from strategies import (
     HRPStrategy,
-    VolatilityTargetOverlay,
-    ConstraintOverlay,
+    VolatilityTargetStrategy,
+    ConstraintStrategy,
     UKETFsMarket
 )
 
 market = UKETFsMarket()
 allocation = HRPStrategy(underlying=market)
-vol_targeted = VolatilityTargetOverlay(underlying=allocation, target_vol=0.12)
-constrained = ConstraintOverlay(
+vol_targeted = VolatilityTargetStrategy(underlying=allocation, target_vol=0.12)
+constrained = ConstraintStrategy(
     underlying=vol_targeted,
     min_weight=0.05,   # Min 5% per position
     max_weight=0.35    # Max 35% per position
@@ -216,11 +216,11 @@ Example: 15% volatility = 0.0225 variance
 
 Example:
 ```python
-from strategies import VarianceTargetOverlay, HRPStrategy, UKETFsMarket
+from strategies import VarianceTargetStrategy, HRPStrategy, UKETFsMarket
 
 market = UKETFsMarket()
 hrp = HRPStrategy(underlying=market)
-var_target = VarianceTargetOverlay(
+var_target = VarianceTargetStrategy(
     underlying=hrp,
     target_variance=0.02,  # Targets 2% annual variance
     lookback_days=252
@@ -314,7 +314,7 @@ For overlays, use the specialized overlay method:
 from backtesting import BacktestEngine
 from strategies import (
     HRPStrategy,
-    VolatilityTargetOverlay,
+    VolatilityTargetStrategy,
     UKETFsMarket
 )
 
@@ -322,7 +322,7 @@ engine = BacktestEngine(initial_capital=10000.0)
 
 market = UKETFsMarket()
 hrp = HRPStrategy(underlying=market)
-vol_target = VolatilityTargetOverlay(underlying=hrp, target_vol=0.12)
+vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
 
 # First run underlying to get portfolio values
 hrp_results = engine.run_backtest(hrp, prices_dataframe, start, end)

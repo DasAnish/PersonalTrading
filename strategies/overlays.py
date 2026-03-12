@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from backtesting.engine import BacktestEngine
 
 
-class VarianceTargetOverlay(OverlayStrategy):
+class VarianceTargetStrategy(OverlayStrategy):
     """
     Scale portfolio weights to achieve target variance level.
 
@@ -129,7 +129,7 @@ class VarianceTargetOverlay(OverlayStrategy):
         return scaled_weights
 
 
-class VolatilityTargetOverlay(OverlayStrategy):
+class VolatilityTargetStrategy(OverlayStrategy):
     """
     Scale portfolio weights to achieve target volatility level.
 
@@ -231,7 +231,7 @@ class VolatilityTargetOverlay(OverlayStrategy):
         return scaled_weights
 
 
-class ConstraintOverlay(OverlayStrategy):
+class ConstraintStrategy(OverlayStrategy):
     """
     Apply minimum and maximum weight constraints to portfolio.
 
@@ -332,7 +332,7 @@ class ConstraintOverlay(OverlayStrategy):
         return constrained
 
 
-class LeverageOverlay(OverlayStrategy):
+class LeverageStrategy(OverlayStrategy):
     """
     Apply leverage limits to portfolio.
 

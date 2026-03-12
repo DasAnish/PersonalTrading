@@ -27,6 +27,7 @@ from ib_wrapper.config import Config
 
 # Strategy imports
 from strategies import create_strategy, get_available_strategies, STRATEGY_REGISTRY
+from strategies.strategy_loader import StrategyLoader
 
 # Backtesting imports
 from backtesting import BacktestEngine
@@ -164,9 +165,50 @@ async def main(args):
     Args:
         args: Parsed command-line arguments
     """
-    # Get strategy display names
-    strategy_display = STRATEGY_REGISTRY[args.strategy]['display_name']
-    benchmark_display = STRATEGY_REGISTRY[args.benchmark]['display_name']
+    # Load strategies (from YAML definitions or registry)
+    if args.use_definitions:
+        logger.info("Loading strategies from YAML definitions...")
+        loader = StrategyLoader()
+
+        try:
+            if args.composed_strategy:
+                # Load composed strategy
+                primary_strategy = loader.build_composed_strategy(args.composed_strategy)
+                strategy_display = args.composed_strategy
+            else:
+                # Load allocation + underlying + overlays
+                primary_strategy = loader.build_strategy(args.strategy)
+                strategy_display = STRATEGY_REGISTRY.get(
+                    args.strategy, {}
+                ).get('display_name', args.strategy)
+
+            benchmark_strategy = loader.build_strategy(args.benchmark)
+            benchmark_display = STRATEGY_REGISTRY.get(
+                args.benchmark, {}
+            ).get('display_name', args.benchmark)
+
+            logger.info(f"✓ Loaded strategies from definitions")
+        except Exception as e:
+            logger.error(f"Failed to load strategies from definitions: {e}")
+            raise
+    else:
+        # Use traditional registry-based approach
+        strategy_display = STRATEGY_REGISTRY[args.strategy]['display_name']
+        benchmark_display = STRATEGY_REGISTRY[args.benchmark]['display_name']
+
+        # Extract strategy-specific parameters
+        strategy_params = extract_strategy_params(args, args.strategy)
+        benchmark_params = extract_strategy_params(args, args.benchmark)
+
+        logger.info(f"\nInitializing {strategy_display}...")
+        if strategy_params:
+            logger.info(f"  Parameters: {strategy_params}")
+        primary_strategy = create_strategy(args.strategy, **strategy_params)
+
+        logger.info(f"\nInitializing {benchmark_display}...")
+        if benchmark_params:
+            logger.info(f"  Parameters: {benchmark_params}")
+        benchmark_strategy = create_strategy(args.benchmark, **benchmark_params)
 
     print("\n" + "=" * 60)
     print("PORTFOLIO STRATEGY BACKTEST")
@@ -183,6 +225,10 @@ async def main(args):
         print("Data Mode: FRESH FROM IB (cache skipped)")
     else:
         print("Data Mode: Using cache if available (faster)")
+    if args.use_definitions:
+        print("Strategy Mode: YAML Definitions")
+    else:
+        print("Strategy Mode: Registry-based")
     print("=" * 60 + "\n")
 
     # Initialize cache
@@ -260,19 +306,6 @@ async def main(args):
     logger.info("RUNNING BACKTESTS")
     logger.info("=" * 60)
 
-    # Extract strategy-specific parameters
-    strategy_params = extract_strategy_params(args, args.strategy)
-    benchmark_params = extract_strategy_params(args, args.benchmark)
-
-    logger.info(f"\nInitializing {strategy_display}...")
-    if strategy_params:
-        logger.info(f"  Parameters: {strategy_params}")
-    primary_strategy = create_strategy(args.strategy, **strategy_params)
-
-    logger.info(f"\nInitializing {benchmark_display}...")
-    if benchmark_params:
-        logger.info(f"  Parameters: {benchmark_params}")
-    benchmark_strategy = create_strategy(args.benchmark, **benchmark_params)
 
     # Initialize backtest engine
     engine = BacktestEngine(
@@ -379,18 +412,49 @@ async def main(args):
     logger.info(f"✓ Performance table saved to: {perf_table_path}")
 
     # Save metadata for dashboard
-    metadata = {
-        'primary_strategy': {
+    if args.use_definitions:
+        if args.composed_strategy:
+            primary_info = {
+                'name': args.composed_strategy,
+                'display_name': strategy_display,
+                'type': 'composed',
+                'params': None
+            }
+            benchmark_info = None
+        else:
+            primary_info = {
+                'name': args.strategy,
+                'display_name': strategy_display,
+                'type': 'definition',
+                'params': None
+            }
+            benchmark_info = {
+                'name': args.benchmark,
+                'display_name': benchmark_display,
+                'type': 'definition',
+                'params': None
+            }
+    else:
+        strategy_params = extract_strategy_params(args, args.strategy)
+        benchmark_params = extract_strategy_params(args, args.benchmark)
+        primary_info = {
             'name': args.strategy,
             'display_name': strategy_display,
+            'type': 'registry',
             'params': strategy_params
-        },
-        'benchmark_strategy': {
+        }
+        benchmark_info = {
             'name': args.benchmark,
             'display_name': benchmark_display,
+            'type': 'registry',
             'params': benchmark_params
-        },
+        }
+
+    metadata = {
+        'primary_strategy': primary_info,
+        'benchmark_strategy': benchmark_info,
         'run_date': datetime.now().isoformat(),
+        'strategy_mode': 'definitions' if args.use_definitions else 'registry',
         'config': {
             'symbols': SYMBOLS,
             'currency': CURRENCY,
@@ -426,12 +490,28 @@ if __name__ == "__main__":
         description="Run portfolio strategy backtest on UK ETFs",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
+Examples (Registry-based - Traditional):
   python run_backtest.py                                    # Default: HRP vs Equal Weight
   python run_backtest.py --refresh                          # Force fresh data from IB
   python run_backtest.py --strategy hrp --hrp-linkage-method ward
   python run_backtest.py --strategy equal_weight --benchmark hrp
+
+Examples (YAML Definitions - Recommended):
+  python run_backtest.py --use-definitions --strategy trend_following --benchmark hrp_ward
+  python run_backtest.py --use-definitions --composed-strategy trend_with_vol_12
+  python run_backtest.py --use-definitions --strategy hrp_single --benchmark equal_weight
+  python run_backtest.py --use-definitions --composed-strategy hrp_with_constraints
+
+List Available Strategies:
+  python -c "from strategies.strategy_loader import StrategyLoader; loader = StrategyLoader(); loader.list_strategies()"
         """
+    )
+
+    # Strategy loading mode
+    parser.add_argument(
+        '--use-definitions',
+        action='store_true',
+        help='Load strategies from YAML definitions (strategy_definitions/) instead of registry'
     )
 
     # Strategy selection
@@ -439,16 +519,27 @@ Examples:
         '--strategy',
         type=str,
         default='hrp',
-        choices=get_available_strategies(),
-        help='Primary strategy to test (default: hrp)'
+        help='Primary strategy to test (default: hrp). '
+             'When --use-definitions is set, this is a YAML definition key (e.g., trend_following). '
+             'Otherwise, this is a registry strategy name.'
     )
 
     parser.add_argument(
         '--benchmark',
         type=str,
         default='equal_weight',
-        choices=get_available_strategies(),
-        help='Benchmark strategy for comparison (default: equal_weight)'
+        help='Benchmark strategy for comparison (default: equal_weight). '
+             'When --use-definitions is set, this is a YAML definition key. '
+             'Otherwise, this is a registry strategy name.'
+    )
+
+    parser.add_argument(
+        '--composed-strategy',
+        type=str,
+        default=None,
+        help='Use a composed strategy instead of primary/benchmark. '
+             'Only works with --use-definitions. '
+             'Example: --use-definitions --composed-strategy trend_with_vol_12'
     )
 
     # Data refresh flag
@@ -459,7 +550,8 @@ Examples:
              'Useful for getting the latest market data.'
     )
 
-    # Strategy-specific parameters (dynamically generated)
+    # Strategy-specific parameters (dynamically generated for registry mode)
+    # Only add these if not using YAML definitions
     for strategy_key, config in STRATEGY_REGISTRY.items():
         for param_name, param_config in config.get('params', {}).items():
             arg_name = f'--{strategy_key}-{param_name.replace("_", "-")}'
@@ -474,8 +566,11 @@ Examples:
     args = parser.parse_args()
 
     # Validation
-    if args.strategy == args.benchmark:
-        parser.error("Strategy and benchmark must be different")
+    if args.composed_strategy is None and args.strategy == args.benchmark:
+        parser.error("Strategy and benchmark must be different (unless using --composed-strategy)")
+
+    if args.composed_strategy and not args.use_definitions:
+        parser.error("--composed-strategy requires --use-definitions")
 
     # Run the async main function
     asyncio.run(main(args))

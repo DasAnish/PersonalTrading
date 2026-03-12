@@ -232,6 +232,15 @@ def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) 
         Dictionary with all results data
     """
     import pandas as pd
+    import numpy as np
+
+    def clean_value(val):
+        """Convert NaN/inf to None for JSON serialization."""
+        if isinstance(val, float):
+            if np.isnan(val) or np.isinf(val):
+                return None
+            return float(val)
+        return val
 
     # Convert portfolio history to list of dicts
     portfolio_history = []
@@ -239,6 +248,8 @@ def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) 
         for idx, row in results.portfolio_history.iterrows():
             entry = row.to_dict() if hasattr(row, 'to_dict') else dict(row)
             entry['date'] = idx.isoformat() if hasattr(idx, 'isoformat') else str(idx)
+            # Clean NaN values
+            entry = {k: clean_value(v) for k, v in entry.items()}
             portfolio_history.append(entry)
 
     # Convert transactions to list of dicts
@@ -258,10 +269,11 @@ def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) 
         for idx, row in results.weights_history.iterrows():
             entry = row.to_dict() if hasattr(row, 'to_dict') else dict(row)
             entry['date'] = idx.isoformat() if hasattr(idx, 'isoformat') else str(idx)
+            # Clean NaN values
+            entry = {k: clean_value(v) for k, v in entry.items()}
             weights_history.append(entry)
 
     # Calculate metrics
-    import numpy as np
     portfolio_values = results.portfolio_history['total_value'].values
     returns = np.diff(portfolio_values) / portfolio_values[:-1]
 
@@ -278,11 +290,11 @@ def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) 
         'key': strategy_key,
         'info': strategy_info,
         'metrics': {
-            'total_return': float(total_return),
-            'volatility': float(volatility),
-            'sharpe_ratio': float(sharpe_ratio),
-            'max_drawdown': float(max_drawdown),
-            'final_value': float(results.final_value),
+            'total_return': clean_value(float(total_return)),
+            'volatility': clean_value(float(volatility)),
+            'sharpe_ratio': clean_value(float(sharpe_ratio)),
+            'max_drawdown': clean_value(float(max_drawdown)),
+            'final_value': clean_value(float(results.final_value)),
             'total_transactions': len(results.transactions),
             'rebalances': len(results.portfolio_history),
         },

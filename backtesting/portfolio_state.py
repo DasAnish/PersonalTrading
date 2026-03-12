@@ -95,13 +95,17 @@ class PortfolioState:
         # Round to whole shares
         target_units = {symbol: round(units) for symbol, units in target_units.items()}
 
+        # CRITICAL: Save original positions before any updates
+        # This is needed for the insufficient cash recovery path to work correctly
+        original_positions = self.positions.copy()
+
         # Generate transactions: target - current
         transactions = []
         total_cost = 0.0
         total_buy_cost = 0.0  # Track total cost of buys (excluding costs, which are paid separately)
 
         for symbol in target_weights.index:
-            current_qty = self.positions.get(symbol, 0.0)
+            current_qty = original_positions.get(symbol, 0.0)
             target_qty = target_units[symbol]
             trade_qty = target_qty - current_qty
 
@@ -142,13 +146,16 @@ class PortfolioState:
             # Insufficient cash - need to scale down buys
             # Strategy: Execute all sells first to raise cash, then scale down buys
 
+            # Restore original positions before recalculating
+            self.positions = original_positions.copy()
+
             # Recalculate with sells prioritized
             transactions = []
             total_cost = 0.0
 
             # First pass: execute all sells
             for symbol in target_weights.index:
-                current_qty = self.positions.get(symbol, 0.0)
+                current_qty = original_positions.get(symbol, 0.0)
                 target_qty = target_units[symbol]
                 trade_qty = target_qty - current_qty
 

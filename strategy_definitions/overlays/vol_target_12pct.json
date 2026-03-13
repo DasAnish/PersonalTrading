@@ -1,0 +1,10 @@
+{
+  "type": "overlay",
+  "class": "VolatilityTargetStrategy",
+  "name": "Vol Target 12%",
+  "description": "Scale portfolio weights to achieve 12% annualized volatility",
+  "parameters": {
+    "target_vol": 0.12,
+    "lookback_days": 252
+  }
+}

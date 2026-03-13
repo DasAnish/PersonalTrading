@@ -1,0 +1,11 @@
+{
+  "type": "portfolio",
+  "class": "EqualWeightStrategy",
+  "name": "Meta: 50/50 Trend & HRP (15% Vol Target)",
+  "description": "Equal-weight meta-portfolio combining Trend Following and HRP, both with 15% volatility targeting",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_15vol",
+    "composed/hrp_15vol"
+  ]
+}

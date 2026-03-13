@@ -1,0 +1,10 @@
+{
+  "type": "overlay",
+  "class": "ConstraintStrategy",
+  "name": "Constraints 10%-30%",
+  "description": "Enforce position size constraints: minimum 10%, maximum 30% per position",
+  "parameters": {
+    "min_weight": 0.10,
+    "max_weight": 0.30
+  }
+}

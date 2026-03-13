@@ -72,6 +72,15 @@ class VarianceTargetStrategy(OverlayStrategy):
         self.target_variance = target_variance
         self.lookback_days = lookback_days
 
+    def get_overlay_lookback(self) -> int:
+        """
+        Variance Target requires lookback for variance calculation.
+
+        Returns:
+            lookback_days (for variance calculation)
+        """
+        return self.lookback_days
+
     def transform_weights(
         self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
@@ -80,12 +89,12 @@ class VarianceTargetStrategy(OverlayStrategy):
 
         Args:
             weights: Original weights from underlying strategy
-            context: OverlayContext with portfolio values and prices
+            context: StrategyContext with portfolio values and prices
 
         Returns:
             Scaled weights (sum may be < 1.0, with cash making up the difference)
         """
-        portfolio_values = context.underlying_portfolio_values
+        portfolio_values = context.portfolio_values
 
         # Need at least 2 data points to calculate returns
         if len(portfolio_values) < 2:
@@ -181,6 +190,15 @@ class VolatilityTargetStrategy(OverlayStrategy):
         self.target_vol = target_vol
         self.lookback_days = lookback_days
 
+    def get_overlay_lookback(self) -> int:
+        """
+        Volatility Target requires lookback for volatility calculation.
+
+        Returns:
+            lookback_days (for volatility calculation)
+        """
+        return self.lookback_days
+
     def transform_weights(
         self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
@@ -189,12 +207,12 @@ class VolatilityTargetStrategy(OverlayStrategy):
 
         Args:
             weights: Original weights from underlying strategy
-            context: OverlayContext with portfolio values and prices
+            context: StrategyContext with portfolio values and prices
 
         Returns:
             Scaled weights (sum may be < 1.0, with cash making up the difference)
         """
-        portfolio_values = context.underlying_portfolio_values
+        portfolio_values = context.portfolio_values
 
         # Need at least 2 data points to calculate returns
         if len(portfolio_values) < 2:
@@ -289,6 +307,15 @@ class ConstraintStrategy(OverlayStrategy):
         self.min_weight = min_weight
         self.max_weight = max_weight
 
+    def get_overlay_lookback(self) -> int:
+        """
+        Constraint overlay requires no lookback of its own.
+
+        Returns:
+            0 (constraints don't need historical data)
+        """
+        return 0
+
     def transform_weights(
         self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
@@ -297,7 +324,7 @@ class ConstraintStrategy(OverlayStrategy):
 
         Args:
             weights: Original weights from underlying strategy
-            context: OverlayContext (unused for constraints)
+            context: StrategyContext (unused for constraints)
 
         Returns:
             Constrained weights that satisfy min/max bounds
@@ -363,7 +390,7 @@ class LeverageStrategy(OverlayStrategy):
         # Limits gross leverage to 150% (e.g., 1.5x long, 0x short)
     """
 
-    def __init__(self, underlying: ExecutableStrategy, max_leverage: float = 1.0):
+    def __init__(self, underlying: Strategy, max_leverage: float = 1.0):
         """
         Initialize leverage overlay.
 
@@ -378,6 +405,15 @@ class LeverageStrategy(OverlayStrategy):
         super().__init__(underlying, name=f"Leverage ({max_leverage:.1f}x)")
         self.max_leverage = max_leverage
 
+    def get_overlay_lookback(self) -> int:
+        """
+        Leverage overlay requires no lookback of its own.
+
+        Returns:
+            0 (leverage constraint doesn't need historical data)
+        """
+        return 0
+
     def transform_weights(
         self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
@@ -386,7 +422,7 @@ class LeverageStrategy(OverlayStrategy):
 
         Args:
             weights: Original weights from underlying strategy
-            context: OverlayContext (unused for leverage)
+            context: StrategyContext (unused for leverage)
 
         Returns:
             Deleveraged weights satisfying gross leverage limit

@@ -1,0 +1,34 @@
+{
+  "type": "portfolio",
+  "class": "EqualWeightStrategy",
+  "name": "Meta: Multi-Volatility Diversification",
+  "description": "Equal-weight meta-portfolio combining HRP at different volatility targets (12%, 15%, 30%)",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_15vol",
+    "composed/hrp_30vol",
+    {
+      "type": "composed",
+      "class": "VolatilityTargetStrategy",
+      "name": "HRP (Ward) + 12% Vol Target",
+      "parameters": {
+        "target_vol": 0.12,
+        "lookback_days": 252
+      },
+      "underlying": {
+        "type": "allocation",
+        "class": "HRPStrategy",
+        "name": "HRP (Ward)",
+        "parameters": {
+          "linkage_method": "ward"
+        },
+        "underlying": [
+          "assets/vusa",
+          "assets/ssln",
+          "assets/sgln",
+          "assets/iwrd"
+        ]
+      }
+    }
+  ]
+}

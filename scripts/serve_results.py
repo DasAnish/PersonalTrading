@@ -11,6 +11,8 @@ Run with: python scripts/serve_results.py
 Then visit: http://localhost:5000
 """
 
+import csv
+import io
 import json
 import os
 from datetime import datetime
@@ -18,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, Response, jsonify, render_template_string, request
 
 # Configuration
 BASE_DIR = Path(__file__).parent.parent
@@ -552,6 +554,8 @@ def index():
                 <button class="tab-button" onclick="showTab('portfolio')">Portfolio Value</button>
                 <button class="tab-button" onclick="showTab('drawdown')">Drawdown</button>
                 <button class="tab-button" onclick="showTab('weights')">Weights</button>
+                <button class="tab-button" onclick="showTab('monthly')">Monthly Returns</button>
+                <button class="tab-button" onclick="showTab('rolling')">Rolling Metrics</button>
                 <button class="tab-button" onclick="showTab('transactions')">Transactions</button>
             </div>
 
@@ -577,7 +581,7 @@ def index():
 
                 <!-- Portfolio Value Tab -->
                 <div id="portfolio" class="tab-panel">
-                    <h2>Portfolio Value Over Time</h2>
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">Portfolio Value Over Time <button class="view-mode-btn" onclick="exportCSV('portfolio')" style="font-size: 0.7em; padding: 6px 12px;">Export CSV</button></h2>
                     <div class="chart-container">
                         <canvas id="portfolioChart"></canvas>
                     </div>
@@ -599,9 +603,38 @@ def index():
                     </div>
                 </div>
 
+                <!-- Monthly Returns Tab -->
+                <div id="monthly" class="tab-panel">
+                    <h2>Monthly Returns Heatmap</h2>
+                    <div id="monthlyHeatmap" style="overflow-x: auto;"></div>
+                </div>
+
+                <!-- Rolling Metrics Tab -->
+                <div id="rolling" class="tab-panel">
+                    <h2>Rolling Metrics</h2>
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                        <label for="rollingMetricSelect" style="font-weight: 600;">Metric:</label>
+                        <select id="rollingMetricSelect" onchange="loadRollingMetrics()" style="padding: 8px; border-radius: 6px; border: 2px solid #ddd;">
+                            <option value="sharpe">Sharpe Ratio</option>
+                            <option value="volatility">Volatility</option>
+                            <option value="sortino">Sortino Ratio</option>
+                        </select>
+                        <label for="rollingWindowSelect" style="font-weight: 600; margin-left: 10px;">Window:</label>
+                        <select id="rollingWindowSelect" onchange="loadRollingMetrics()" style="padding: 8px; border-radius: 6px; border: 2px solid #ddd;">
+                            <option value="21">21d (~1 month)</option>
+                            <option value="63" selected>63d (~3 months)</option>
+                            <option value="126">126d (~6 months)</option>
+                            <option value="252">252d (~1 year)</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="rollingChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Transactions Tab -->
                 <div id="transactions" class="tab-panel">
-                    <h2>Transaction History</h2>
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">Transaction History <button class="view-mode-btn" onclick="exportCSV('transactions')" style="font-size: 0.7em; padding: 6px 12px;">Export CSV</button></h2>
                     <table class="transactions-table" id="transactionsTable">
                         <thead>
                             <tr>
@@ -753,6 +786,7 @@ def index():
                 displayDrawdownChart(data1, data2, strategy1, strategy2);
                 displayWeightsChart(data1, data2, strategy1, strategy2);
                 displayTransactions(data1);
+                loadMonthlyReturns(strategy1);
             }
 
             function displayMetrics(data1, data2, name1, name2) {
@@ -997,6 +1031,134 @@ def index():
                 handleStrategyChange();
             }
 
+            async function loadMonthlyReturns(strategyKey) {
+                try {
+                    const response = await fetch(`/api/strategy/${strategyKey}/monthly_returns`);
+                    const data = await response.json();
+
+                    const container = document.getElementById('monthlyHeatmap');
+                    if (!data || data.length === 0) {
+                        container.innerHTML = '<p>No monthly returns data available</p>';
+                        return;
+                    }
+
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const years = [...new Set(data.map(d => d.year))].sort();
+
+                    let html = '<table class="metrics-table"><thead><tr><th>Year</th>';
+                    months.forEach(m => html += `<th>${m}</th>`);
+                    html += '<th>Annual</th></tr></thead><tbody>';
+
+                    for (const year of years) {
+                        html += `<tr><td><strong>${year}</strong></td>`;
+                        let yearReturn = 1;
+                        for (let m = 1; m <= 12; m++) {
+                            const entry = data.find(d => d.year === year && d.month === m);
+                            if (entry) {
+                                const val = entry.return;
+                                yearReturn *= (1 + val / 100);
+                                const color = val >= 0 ? `rgba(40,167,69,${Math.min(Math.abs(val)/5, 0.8)})` :
+                                                         `rgba(220,53,69,${Math.min(Math.abs(val)/5, 0.8)})`;
+                                html += `<td style="background:${color}; text-align:center; font-weight:600;">${val.toFixed(1)}%</td>`;
+                            } else {
+                                html += '<td style="text-align:center; color:#ccc;">-</td>';
+                            }
+                        }
+                        const annualReturn = (yearReturn - 1) * 100;
+                        const annualColor = annualReturn >= 0 ? '#28a745' : '#dc3545';
+                        html += `<td style="text-align:center; font-weight:700; color:${annualColor};">${annualReturn.toFixed(1)}%</td>`;
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } catch (error) {
+                    console.error('Error loading monthly returns:', error);
+                    document.getElementById('monthlyHeatmap').innerHTML = '<p>Error loading monthly returns</p>';
+                }
+            }
+
+            async function loadRollingMetrics() {
+                const strategy1 = document.getElementById('strategySelect').value;
+                if (!strategy1) return;
+
+                const metric = document.getElementById('rollingMetricSelect').value;
+                const window = document.getElementById('rollingWindowSelect').value;
+
+                try {
+                    const response = await fetch(`/api/strategy/${strategy1}/rolling?metric=${metric}&window=${window}`);
+                    const result = await response.json();
+
+                    if (result.error) {
+                        console.error(result.error);
+                        return;
+                    }
+
+                    const ctx = document.getElementById('rollingChart').getContext('2d');
+                    if (charts.rolling) charts.rolling.destroy();
+
+                    const dates = result.data.map(d => d.date);
+                    const values = result.data.map(d => d.value);
+
+                    const metricLabels = {sharpe: 'Sharpe Ratio', volatility: 'Volatility (%)', sortino: 'Sortino Ratio'};
+
+                    const datasets = [{
+                        label: `Rolling ${metricLabels[metric]} (${window}d) - ${strategy1}`,
+                        data: values,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        fill: true,
+                    }];
+
+                    // Load second strategy if in comparison mode
+                    const strategy2 = document.getElementById('strategy2Select').value;
+                    if (strategy2) {
+                        const response2 = await fetch(`/api/strategy/${strategy2}/rolling?metric=${metric}&window=${window}`);
+                        const result2 = await response2.json();
+                        if (!result2.error) {
+                            datasets.push({
+                                label: `Rolling ${metricLabels[metric]} (${window}d) - ${strategy2}`,
+                                data: result2.data.map(d => d.value),
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                tension: 0.4,
+                                pointRadius: 0,
+                                borderWidth: 2,
+                                fill: true,
+                            });
+                        }
+                    }
+
+                    charts.rolling = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: dates, datasets: datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: true, position: 'top' } },
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: v => metric === 'volatility' ? v.toFixed(1) + '%' : v.toFixed(2)
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error loading rolling metrics:', error);
+                }
+            }
+
+            function exportCSV(type) {
+                const strategy = document.getElementById('strategySelect').value;
+                if (!strategy) return;
+                window.open(`/api/strategy/${strategy}/export?type=${type}`, '_blank');
+            }
+
             // Initialize on page load
             document.addEventListener('DOMContentLoaded', initializeDashboard);
         </script>
@@ -1036,6 +1198,168 @@ def api_strategy(strategy_key: str):
         return jsonify({"error": f"Strategy {strategy_key} not found"}), 404
 
     return jsonify(data)
+
+
+@app.route("/api/strategy/<strategy_key>/monthly_returns")
+def api_monthly_returns(strategy_key: str):
+    """API endpoint for monthly returns heatmap data."""
+    data = load_strategy_data(strategy_key)
+    if not data:
+        return jsonify({"error": f"Strategy {strategy_key} not found"}), 404
+
+    portfolio = data.get('portfolio_history', [])
+    if not portfolio:
+        return jsonify({"error": "No portfolio history"}), 404
+
+    values = pd.Series(
+        [p['total_value'] for p in portfolio],
+        index=pd.to_datetime([p.get('date', p.get('timestamp')) for p in portfolio])
+    )
+
+    monthly = values.resample('ME').last()
+    monthly_returns = monthly.pct_change().dropna()
+
+    result = []
+    for date, ret in monthly_returns.items():
+        result.append({
+            'year': int(date.year),
+            'month': int(date.month),
+            'return': round(float(ret) * 100, 2)
+        })
+
+    return jsonify(result)
+
+
+@app.route("/api/strategy/<strategy_key>/rolling")
+def api_rolling_metrics(strategy_key: str):
+    """API endpoint for rolling metrics data."""
+    data = load_strategy_data(strategy_key)
+    if not data:
+        return jsonify({"error": f"Strategy {strategy_key} not found"}), 404
+
+    metric = request.args.get('metric', 'sharpe')
+    window = int(request.args.get('window', 63))
+
+    portfolio = data.get('portfolio_history', [])
+    if not portfolio:
+        return jsonify({"error": "No portfolio history"}), 404
+
+    values = pd.Series(
+        [p['total_value'] for p in portfolio],
+        index=pd.to_datetime([p.get('date', p.get('timestamp')) for p in portfolio])
+    )
+    returns = values.pct_change().dropna()
+
+    if len(returns) < window:
+        return jsonify({"error": f"Insufficient data for window={window}"}), 400
+
+    results = []
+    for i in range(window, len(returns) + 1):
+        window_returns = returns.iloc[i - window:i]
+        date = returns.index[i - 1]
+
+        if metric == 'sharpe':
+            mean_r = window_returns.mean()
+            std_r = window_returns.std()
+            val = (mean_r / std_r * np.sqrt(252)) if std_r > 0 else 0
+        elif metric == 'volatility':
+            val = window_returns.std() * np.sqrt(252) * 100
+        elif metric == 'sortino':
+            downside = window_returns[window_returns < 0]
+            down_std = np.sqrt((downside ** 2).mean()) if len(downside) > 0 else 0
+            val = (window_returns.mean() / down_std * np.sqrt(252)) if down_std > 0 else 0
+        else:
+            val = 0
+
+        results.append({
+            'date': date.isoformat(),
+            'value': round(float(val), 4)
+        })
+
+    return jsonify({'metric': metric, 'window': window, 'data': results})
+
+
+@app.route("/api/strategy/<strategy_key>/export")
+def api_export(strategy_key: str):
+    """Export strategy data as CSV."""
+    data = load_strategy_data(strategy_key)
+    if not data:
+        return jsonify({"error": f"Strategy {strategy_key} not found"}), 404
+
+    export_type = request.args.get('type', 'portfolio')
+
+    if export_type == 'portfolio':
+        rows = data.get('portfolio_history', [])
+    elif export_type == 'transactions':
+        rows = data.get('transactions', [])
+    elif export_type == 'weights':
+        rows = data.get('weights_history', [])
+    else:
+        return jsonify({"error": f"Unknown export type: {export_type}"}), 400
+
+    if not rows:
+        return jsonify({"error": "No data to export"}), 404
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=rows[0].keys())
+    writer.writeheader()
+    writer.writerows(rows)
+
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={strategy_key}_{export_type}.csv'}
+    )
+
+
+@app.route("/api/compare/<key1>/<key2>")
+def api_compare(key1: str, key2: str):
+    """API endpoint for comparison metrics between two strategies."""
+    data1 = load_strategy_data(key1)
+    data2 = load_strategy_data(key2)
+
+    if not data1 or not data2:
+        return jsonify({"error": "One or both strategies not found"}), 404
+
+    portfolio1 = data1.get('portfolio_history', [])
+    portfolio2 = data2.get('portfolio_history', [])
+
+    if not portfolio1 or not portfolio2:
+        return jsonify({"error": "Missing portfolio history"}), 404
+
+    values1 = pd.Series(
+        [p['total_value'] for p in portfolio1],
+        index=pd.to_datetime([p.get('date', p.get('timestamp')) for p in portfolio1])
+    )
+    values2 = pd.Series(
+        [p['total_value'] for p in portfolio2],
+        index=pd.to_datetime([p.get('date', p.get('timestamp')) for p in portfolio2])
+    )
+
+    # Align on common dates
+    common = values1.index.intersection(values2.index)
+    if len(common) < 2:
+        return jsonify({"error": "Insufficient overlapping data"}), 400
+
+    returns1 = values1[common].pct_change().dropna()
+    returns2 = values2[common].pct_change().dropna()
+
+    active_returns = returns1 - returns2
+    tracking_error = float(active_returns.std() * np.sqrt(252))
+    info_ratio = float(active_returns.mean() / active_returns.std() * np.sqrt(252)) if active_returns.std() > 0 else 0
+
+    # Relative performance (strategy1 / strategy2)
+    relative = (values1[common] / values2[common]).dropna()
+    relative_data = [
+        {'date': d.isoformat(), 'value': round(float(v), 4)}
+        for d, v in relative.items()
+    ]
+
+    return jsonify({
+        'tracking_error': round(tracking_error * 100, 2),
+        'information_ratio': round(info_ratio, 4),
+        'relative_performance': relative_data
+    })
 
 
 if __name__ == "__main__":

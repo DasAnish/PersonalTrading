@@ -1,0 +1,13 @@
+# Risk Parity (Equal Risk Contribution)
+# Each asset contributes equally to total portfolio risk
+type: allocation
+class: RiskParityStrategy
+market: uk_etfs
+description: |
+  Risk Parity optimizes for equal marginal risk contribution from
+  each asset. Unlike HRP which uses hierarchical clustering, this
+  directly solves the equal risk contribution problem.
+
+  Best for: Balanced risk exposure across all portfolio assets
+
+parameters: {}

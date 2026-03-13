@@ -1,0 +1,15 @@
+# Momentum Top-2 Strategy
+# Selects top 2 assets by trailing return, weights by inverse vol
+type: allocation
+class: MomentumTopNStrategy
+market: uk_etfs
+description: |
+  Momentum strategy that selects the top 2 assets by 12-month
+  trailing return and weights them by inverse volatility.
+  Unselected assets receive zero weight.
+
+  Best for: Concentrated momentum exposure with risk-aware sizing
+
+parameters:
+  top_n: 2
+  lookback_days: 252

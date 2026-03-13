@@ -44,6 +44,9 @@ from .core import (
 from .hrp import HRPStrategy
 from .equal_weight import EqualWeightStrategy
 from .trend_following import TrendFollowingStrategy
+from .minimum_variance import MinimumVarianceStrategy
+from .risk_parity import RiskParityStrategy
+from .momentum import MomentumTopNStrategy
 
 # Overlay strategies
 from .overlays import (
@@ -64,6 +67,9 @@ __all__ = [
     'HRPStrategy',
     'EqualWeightStrategy',
     'TrendFollowingStrategy',
+    'MinimumVarianceStrategy',
+    'RiskParityStrategy',
+    'MomentumTopNStrategy',
     # Overlay strategies
     'VolatilityTargetStrategy',
     'ConstraintStrategy',

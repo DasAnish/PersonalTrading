@@ -9,14 +9,34 @@ The HRP algorithm consists of three stages:
 1. Tree Clustering: Use hierarchical clustering on correlation matrix
 2. Quasi-Diagonalization: Reorganize covariance matrix by cluster similarity
 3. Recursive Bisection: Allocate weights inversely proportional to cluster variance
+
+Example:
+    from strategies.core import AssetStrategy
+    from strategies.hrp import HRPStrategy
+    from backtesting.engine import BacktestEngine
+
+    # Create asset strategies
+    assets = [
+        AssetStrategy('VUSA', currency='GBP'),
+        AssetStrategy('SSLN', currency='GBP'),
+        AssetStrategy('SGLN', currency='GBP'),
+        AssetStrategy('IWRD', currency='GBP'),
+    ]
+
+    # Create HRP strategy
+    hrp = HRPStrategy(underlying=assets, linkage_method='ward')
+
+    # Run backtest
+    engine = BacktestEngine(initial_capital=10000)
+    results = await engine.run_backtest(hrp, start_date, end_date)
 """
 
 import pandas as pd
 import numpy as np
 from scipy.cluster.hierarchy import linkage
-from typing import List, Optional
+from typing import List
 
-from strategies.base import AllocationStrategy, ExecutableStrategy
+from strategies.core import AllocationStrategy, Strategy, StrategyContext
 
 
 def get_quasi_diag(link: np.ndarray) -> List[int]:
@@ -187,42 +207,56 @@ class HRPStrategy(AllocationStrategy):
     2. Quasi-Diagonalization: Reorganize assets by cluster similarity
     3. Recursive Bisection: Allocate weights inversely to cluster variance
 
-    Args:
-        underlying: MarketStrategy or AllocationStrategy that defines the asset universe
-        linkage_method: Linkage criterion for hierarchical clustering
-                      'single' = nearest neighbor (default, as in reference)
-                      'complete' = furthest neighbor
-                      'average' = average distance
-                      'ward' = minimize variance
+    Example:
+        assets = [
+            AssetStrategy('VUSA', currency='GBP'),
+            AssetStrategy('SSLN', currency='GBP'),
+            AssetStrategy('SGLN', currency='GBP'),
+            AssetStrategy('IWRD', currency='GBP'),
+        ]
+        hrp = HRPStrategy(underlying=assets, linkage_method='ward')
     """
 
-    def __init__(self, underlying: ExecutableStrategy, linkage_method: str = "single"):
+    def __init__(
+        self,
+        underlying: List[Strategy],
+        linkage_method: str = "single",
+        name: str = None
+    ):
         """
         Initialize HRP strategy.
 
         Args:
-            underlying: Strategy defining the market/asset universe
+            underlying: List of underlying strategies (assets or portfolios)
             linkage_method: Linkage criterion for hierarchical clustering
+                          'single' = nearest neighbor (default, as in reference)
+                          'complete' = furthest neighbor
+                          'average' = average distance
+                          'ward' = minimize variance
+            name: Display name (default: "HRP")
         """
-        super().__init__(underlying, name="Hierarchical Risk Parity")
+        super().__init__(underlying, name=name or "Hierarchical Risk Parity")
         self.linkage_method = linkage_method
 
-    def calculate_weights(self, prices: pd.DataFrame) -> pd.Series:
+    def calculate_weights(self, context: StrategyContext) -> pd.Series:
         """
         Calculate HRP portfolio weights from historical prices.
 
         Args:
-            prices: DataFrame with columns=symbols, index=dates, values=prices
-                   Requires sufficient history for correlation calculation
-                   (recommended: at least 252 trading days)
+            context: StrategyContext with prices and metadata
+                    Prices must have sufficient history for correlation calculation
+                    (recommended: at least 252 trading days)
 
         Returns:
-            Series with index=symbols, values=weights (sum to 1.0)
+            pd.Series with index=strategy names, values=weights (sum to 1.0)
 
         Raises:
             ValueError: If insufficient data or invalid input
                        Requires at least 2 assets and 30 data points
         """
+        # Extract prices from context
+        prices = context.prices
+
         # Validation
         if prices.empty or len(prices.columns) < 2:
             raise ValueError(
@@ -278,8 +312,19 @@ class HRPStrategy(AllocationStrategy):
         # Calculate HRP weights using recursive bisection
         weights = get_rec_bipart(cov, sort_ix)
 
-        # Map from integer indices back to symbol names
-        new_index = [prices.columns[i] for i in weights.index]
+        # Map from integer indices back to symbol/strategy names
+        # First get the symbols from prices, then map to strategy names
+        symbols = list(prices.columns)
+        symbol_to_strategy_name = {}
+
+        # Build mapping from symbol to strategy name
+        for strategy in self.underlying:
+            strategy_symbols = strategy.get_symbols()
+            for symbol in strategy_symbols:
+                symbol_to_strategy_name[symbol] = strategy.name
+
+        # Convert weights index from symbols to strategy names
+        new_index = [symbol_to_strategy_name.get(symbols[i], symbols[i]) for i in weights.index]
         weights.index = new_index
 
         # Verify weights sum to 1.0 (within floating point precision)
@@ -289,3 +334,12 @@ class HRPStrategy(AllocationStrategy):
             weights = weights / weight_sum
 
         return weights
+
+    def get_strategy_lookback(self) -> int:
+        """
+        HRP requires historical data for correlation calculation.
+
+        Returns:
+            252 (1 year of daily data for stable correlation estimates)
+        """
+        return 252

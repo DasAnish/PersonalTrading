@@ -15,13 +15,9 @@ to their volatility - high momentum/low volatility assets get larger positions.
 from __future__ import annotations
 import pandas as pd
 import numpy as np
-from typing import TYPE_CHECKING
+from typing import List
 
-from strategies.base import AllocationStrategy
-from strategies.models import MarketDefinition
-
-if TYPE_CHECKING:
-    from strategies.base import MarketStrategy
+from strategies.core import AllocationStrategy, Strategy, StrategyContext
 
 
 class TrendFollowingStrategy(AllocationStrategy):
@@ -58,17 +54,18 @@ class TrendFollowingStrategy(AllocationStrategy):
 
     def __init__(
         self,
-        underlying: MarketStrategy,
+        underlying: List[Strategy],
         lookback_days: int = 504,  # 2 years of trading days
         half_life_days: int = 60,  # EWMA half-life
         smooth_window: int = 5,  # Signal smoothing window
         signal_threshold: float = 0.1,  # Min signal magnitude
         min_volatility: float = 0.001,  # Floor for volatility
+        name: str = None,
     ):
         """Initialize Trend Following Strategy."""
         super().__init__(
             underlying=underlying,
-            name=f"Trend Following (lookback={lookback_days}d, hl={half_life_days}d)",
+            name=name or f"Trend Following (lookback={lookback_days}d, hl={half_life_days}d)",
         )
         self.lookback_days = lookback_days
         self.half_life_days = half_life_days
@@ -76,19 +73,22 @@ class TrendFollowingStrategy(AllocationStrategy):
         self.signal_threshold = signal_threshold
         self.min_volatility = min_volatility
 
-    def calculate_weights(self, prices: pd.DataFrame) -> pd.Series:
+    def calculate_weights(self, context: StrategyContext) -> pd.Series:
         """
         Calculate portfolio weights using trend following signals.
 
         Args:
-            prices: DataFrame with daily prices, columns are asset symbols
+            context: StrategyContext with prices and metadata
 
         Returns:
             pd.Series with weights summing to 1.0 (long-only)
         """
+        prices = context.prices
+
         if len(prices) < self.lookback_days + self.smooth_window:
             # Not enough data, equal weight fallback
-            return pd.Series(1.0 / len(prices.columns), index=prices.columns)
+            # Return weights for underlying strategies, not price symbols
+            return pd.Series(1.0 / len(self.underlying), index=[s.name for s in self.underlying])
 
         # Step 1: Calculate momentum signals using EWMA
         momentum_signals = self._calculate_momentum_signals(prices)
@@ -111,7 +111,25 @@ class TrendFollowingStrategy(AllocationStrategy):
         # Step 6: Convert signals to weights using risk parity on signal strength
         weights = self._signals_to_weights(thresholded_signals, volatilities)
 
+        # Map weights from symbols to strategy names
+        symbol_to_strategy_name = {}
+        for strategy in self.underlying:
+            for symbol in strategy.get_symbols():
+                symbol_to_strategy_name[symbol] = strategy.name
+
+        new_index = [symbol_to_strategy_name.get(symbol, symbol) for symbol in weights.index]
+        weights.index = new_index
+
         return weights
+
+    def get_strategy_lookback(self) -> int:
+        """
+        Trend Following requires 2 years of historical data plus smoothing buffer.
+
+        Returns:
+            lookback_days + smooth_window (total days needed for calculation)
+        """
+        return self.lookback_days + self.smooth_window
 
     def _calculate_momentum_signals(self, prices: pd.DataFrame) -> pd.Series:
         """

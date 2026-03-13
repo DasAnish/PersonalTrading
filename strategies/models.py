@@ -1,7 +1,14 @@
 """
 Data models for composable strategy system.
 
-Provides data structures used across strategies, market definitions, and overlays.
+DEPRECATED: This module contains legacy data models from the old architecture.
+The new unified Strategy interface uses StrategyContext and DataRequirements
+from strategies.core instead.
+
+New code should use:
+  from strategies.core import StrategyContext, DataRequirements
+
+This file is kept for backward compatibility only.
 """
 
 from __future__ import annotations
@@ -13,7 +20,12 @@ import pandas as pd
 
 @dataclass
 class Instrument:
-    """Single instrument specification for market definitions."""
+    """
+    Single instrument specification for market definitions.
+
+    DEPRECATED: Market definitions no longer exist in the new architecture.
+    Use AssetStrategy instead for individual instruments.
+    """
 
     symbol: str
     sec_type: str = "STK"
@@ -26,7 +38,20 @@ class Instrument:
 
 @dataclass
 class MarketDefinition:
-    """Complete specification of a market (asset universe)."""
+    """
+    Complete specification of a market (asset universe).
+
+    DEPRECATED: Market definitions no longer exist in the new architecture.
+    Build portfolios directly as List[Strategy] instead.
+
+    Example (old):
+        market = UKETFsMarket()
+        hrp = HRPStrategy(underlying=market)
+
+    Example (new):
+        assets = [AssetStrategy('VUSA'), AssetStrategy('SSLN'), ...]
+        hrp = HRPStrategy(underlying=assets)
+    """
 
     instruments: List[Instrument]
     name: str = "Custom Market"
@@ -43,7 +68,12 @@ class MarketDefinition:
 
 @dataclass
 class OverlayContext:
-    """Context provided to overlay strategies during transformation."""
+    """
+    Context provided to overlay strategies during transformation.
+
+    DEPRECATED: Use StrategyContext from strategies.core instead.
+    This class is no longer used in the new architecture.
+    """
 
     current_date: datetime
     prices: pd.Series  # Current prices for all symbols

@@ -1,0 +1,7 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "IWRD",
+  "description": "iShares Global All Cap UCITS ETF (GBP)",
+  "parameters": {"symbol": "IWRD", "currency": "GBP", "exchange": "SMART"}
+}

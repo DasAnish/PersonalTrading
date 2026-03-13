@@ -1,0 +1,7 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "SGLN",
+  "description": "iShares MSCI EM UCITS ETF (GBP)",
+  "parameters": {"symbol": "SGLN", "currency": "GBP", "exchange": "SMART"}
+}

@@ -10,7 +10,12 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(tee:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/assets/ssln.json:*)",
+      "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/assets/sgln.json:*)",
+      "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/assets/iwrd.json:*)",
+      "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/hrp_single.json:*)",
+      "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/equal_weight.json:*)"
     ]
   }
 }

@@ -14,8 +14,7 @@ import pandas as pd
 import numpy as np
 from typing import TYPE_CHECKING
 
-from strategies.base import OverlayStrategy, ExecutableStrategy
-from strategies.models import OverlayContext
+from strategies.core import OverlayStrategy, Strategy, StrategyContext
 
 if TYPE_CHECKING:
     from backtesting.engine import BacktestEngine
@@ -54,7 +53,7 @@ class VarianceTargetStrategy(OverlayStrategy):
 
     def __init__(
         self,
-        underlying: ExecutableStrategy,
+        underlying: Strategy,
         target_variance: float = 0.02,
         lookback_days: int = 252,
     ):
@@ -74,7 +73,7 @@ class VarianceTargetStrategy(OverlayStrategy):
         self.lookback_days = lookback_days
 
     def transform_weights(
-        self, weights: pd.Series, context: OverlayContext
+        self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
         """
         Scale weights to achieve target variance.
@@ -164,7 +163,7 @@ class VolatilityTargetStrategy(OverlayStrategy):
 
     def __init__(
         self,
-        underlying: ExecutableStrategy,
+        underlying: Strategy,
         target_vol: float = 0.15,
         lookback_days: int = 252,
     ):
@@ -183,7 +182,7 @@ class VolatilityTargetStrategy(OverlayStrategy):
         self.lookback_days = lookback_days
 
     def transform_weights(
-        self, weights: pd.Series, context: OverlayContext
+        self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
         """
         Scale weights to achieve target volatility.
@@ -268,7 +267,7 @@ class ConstraintStrategy(OverlayStrategy):
 
     def __init__(
         self,
-        underlying: ExecutableStrategy,
+        underlying: Strategy,
         min_weight: float = 0.0,
         max_weight: float = 1.0,
     ):
@@ -291,7 +290,7 @@ class ConstraintStrategy(OverlayStrategy):
         self.max_weight = max_weight
 
     def transform_weights(
-        self, weights: pd.Series, context: OverlayContext
+        self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
         """
         Apply weight constraints.
@@ -380,7 +379,7 @@ class LeverageStrategy(OverlayStrategy):
         self.max_leverage = max_leverage
 
     def transform_weights(
-        self, weights: pd.Series, context: OverlayContext
+        self, weights: pd.Series, context: StrategyContext
     ) -> pd.Series:
         """
         Apply leverage constraints.

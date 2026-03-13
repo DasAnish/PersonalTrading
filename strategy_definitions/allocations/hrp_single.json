@@ -1,0 +1,8 @@
+{
+  "type": "allocation",
+  "class": "HRPStrategy",
+  "name": "HRP-Single",
+  "description": "Hierarchical Risk Parity with single linkage",
+  "parameters": {"linkage_method": "single"},
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

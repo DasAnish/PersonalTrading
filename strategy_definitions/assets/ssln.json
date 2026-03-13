@@ -1,0 +1,7 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "SSLN",
+  "description": "iShares MSCI World Small Cap UCITS ETF (GBP)",
+  "parameters": {"symbol": "SSLN", "currency": "GBP", "exchange": "SMART"}
+}

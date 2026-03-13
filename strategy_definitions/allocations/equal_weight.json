@@ -1,0 +1,7 @@
+{
+  "type": "allocation",
+  "class": "EqualWeightStrategy",
+  "name": "Equal-Weight",
+  "description": "Equal weight across assets (1/N benchmark)",
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "VUSA",
+  "description": "Vanguard S&P 500 UCITS ETF (GBP)",
+  "parameters": {
+    "symbol": "VUSA",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

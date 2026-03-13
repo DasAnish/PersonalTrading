@@ -2,6 +2,23 @@
 
 A production-ready Python trading system for portfolio optimization and backtesting with Interactive Brokers integration.
 
+---
+
+## 📚 Documentation Navigation
+
+**For AI Sessions & Development Iterations:**
+- **`ai_iterations/`** - Session logs and implementation history
+  - `2026-03-13_strategy_architecture_refactor.md` - Latest refactoring iteration
+
+**For Design Decisions & Architecture:**
+- **`decisions/`** - Key architectural decisions and rationales
+  - `strategy_architecture_2026-03-13.md` - Strategy refactoring decisions
+
+**For Project Overview (This File):**
+- Continue below for core project documentation
+
+---
+
 ## Project Overview
 
 This system provides:
@@ -61,11 +78,14 @@ This system provides:
 - Paper and live trading support
 - Read-only mode available
 
-**Portfolio Optimization Strategies**
-- ✅ `strategies/base.py` - Abstract BaseStrategy class for all strategies
-- ✅ `strategies/hrp.py` - Hierarchical Risk Parity implementation
-- ✅ `strategies/equal_weight.py` - Equal-weight baseline benchmark
-- ✅ `strategies/__init__.py` - Strategy registry and factory pattern for pluggable strategies
+**Portfolio Optimization Strategies (NEW UNIFIED ARCHITECTURE)**
+- ✅ `strategies/core.py` - Unified Strategy interface with 3 types: Asset, Allocation, Overlay
+- ✅ `strategies/hrp.py` - Hierarchical Risk Parity allocation strategy
+- ✅ `strategies/equal_weight.py` - Equal-weight baseline allocation strategy
+- ✅ `strategies/trend_following.py` - Momentum-based allocation strategy
+- ✅ `strategies/overlays.py` - Overlay strategies (VolatilityTarget, Constraint, Leverage)
+- ✅ `data/market_data_service.py` - Singleton for centralized data management
+- ✅ `strategy_definitions/` - JSON-based strategy definitions for composition
 
 **Backtesting Framework**
 - ✅ `backtesting/engine.py` - Core backtesting simulation engine
@@ -91,11 +111,16 @@ This system provides:
 
 ---
 
-## Pluggable Strategy System
+## Unified Strategy Architecture (NEW - March 2026)
 
 ### Overview
 
-The system now supports pluggable portfolio optimization strategies that can be easily tested and compared. Strategies inherit from `BaseStrategy` and implement the `calculate_weights()` method.
+The system now uses a unified Strategy interface where all strategies (assets, allocations, overlays) implement the same API. This enables deep composability: you can wrap any strategy with overlays, combine strategies in portfolios, or use an asset as a strategy.
+
+**Three Strategy Types:**
+1. **AssetStrategy** - Individual instruments (VUSA, AAPL). Returns 100% weight to itself.
+2. **AllocationStrategy** - Calculates weights across underlying strategies. Wraps `List[Strategy]`.
+3. **OverlayStrategy** - Transforms weights from underlying strategy (volatility targeting, constraints).
 
 ### Available Strategies
 
@@ -128,9 +153,10 @@ STRATEGY_REGISTRY = {
 ```
 
 New strategies can be added by:
-1. Creating a class that inherits from `BaseStrategy`
-2. Implementing `calculate_weights(prices)` method
-3. Registering in `STRATEGY_REGISTRY` with metadata
+1. Creating a class that inherits from `AllocationStrategy` or `OverlayStrategy`
+2. Implementing `calculate_weights(context: StrategyContext)` method
+3. Implementing `get_strategy_lookback()` method for data requirements
+4. Define in JSON file in `strategy_definitions/` and reference via path
 
 ### Backtesting Specifications
 
@@ -702,116 +728,181 @@ curl http://localhost:5000/api/strategy/hrp_single
 
 ---
 
-## Composable Strategy Architecture (NEW - March 2026)
+## Composable Strategy Architecture (COMPLETED - March 2026)
 
-A major architectural refactoring that enables building complex strategies by composing simpler components.
+The system now uses a unified, deeply composable strategy architecture where all strategies (assets, allocations, overlays) implement the same interface.
 
-**Core Concept**: Strategies can wrap other strategies to create powerful compositions:
+**Core Concept**: Everything is a Strategy. You can compose any strategy with any other strategy:
+```python
+# Asset as a strategy
+vusa = AssetStrategy('VUSA', currency='GBP')
+
+# Single-asset overlay
+vol_target_single = VolatilityTargetStrategy(underlying=vusa, target_vol=0.12)
+
+# Multi-asset allocation
+hrp = HRPStrategy(underlying=[vusa, ssln, sgln, iwrd])
+
+# Portfolio with overlay
+vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
+
+# Meta-portfolio (strategies as assets)
+meta = EqualWeightStrategy(underlying=[
+    VolatilityTargetStrategy(TrendFollowingStrategy(...), target_vol=0.30),
+    VolatilityTargetStrategy(HRPStrategy(...), target_vol=0.30)
+])
 ```
-VolatilityTarget(HRP(UKETFsMarket()))
-```
 
-**Three-Tier System**:
-1. **Market Strategies** - Define which assets to trade (UKETFsMarket, USEquitiesMarket, CustomMarket)
-2. **Allocation Strategies** - Calculate weights (HRPStrategy, EqualWeightStrategy wrap a market)
-3. **Overlay Strategies** - Transform weights (VolatilityTargetStrategy, ConstraintStrategy wrap any strategy)
+**Core Components**:
 
-**New Files**:
-- `strategies/base.py` - Added `ExecutableStrategy`, `MarketStrategy`, `AllocationStrategy`, `OverlayStrategy`
-- `strategies/models.py` - Data classes: `Instrument`, `MarketDefinition`, `OverlayContext`
-- `strategies/markets.py` - Market strategy implementations
-- `strategies/overlays.py` - Overlay strategies (Vol Target, Constraints, Leverage)
-- `COMPOSABLE_STRATEGIES.md` - Complete guide with examples
+1. **Unified Strategy Interface** (`strategies/core.py`)
+   - All strategies implement: `calculate_weights()`, `get_price_timeseries()`, `get_data_requirements()`, `get_symbols()`
+   - `StrategyContext` - Pre-sliced data context for strategies
+   - `DataRequirements` - Declarative specification of data needs
 
-**Key Overlays**:
-- **VolatilityTargetStrategy**: Scale weights to achieve target volatility (e.g., 12% annually)
-- **ConstraintStrategy**: Enforce min/max weight limits per position (e.g., 5%-40%)
-- **LeverageStrategy**: Apply gross leverage limits
+2. **Three Strategy Types**:
+   - `AssetStrategy` - Individual instruments (VUSA, AAPL, etc.)
+   - `AllocationStrategy` - Weight calculation across `List[Strategy]` (HRP, TrendFollowing, EqualWeight)
+   - `OverlayStrategy` - Weight transformation (VolTarget, Constraint, Leverage)
+
+3. **Market Data Singleton** (`data/market_data_service.py`)
+   - Centralized data management
+   - Automatic lookback window handling
+   - Caching integration
+   - Single source of truth for all price data
+
+4. **Allocation Strategies**:
+   - `HRPStrategy` - Hierarchical Risk Parity with configurable linkage methods
+   - `TrendFollowingStrategy` - Momentum-based allocation with EWMA signals
+   - `EqualWeightStrategy` - Simple 1/N baseline
+
+5. **Overlay Strategies**:
+   - `VolatilityTargetStrategy` - Scale weights to achieve target volatility
+   - `ConstraintStrategy` - Enforce min/max weight bounds
+   - `LeverageStrategy` - Apply gross leverage limits
+
+6. **JSON Strategy Definitions** (`strategy_definitions/`)
+   - Asset definitions: `assets/*.json`
+   - Allocation definitions: `allocations/*.json`
+   - Overlay definitions: `overlays/*.json`
+   - Composed strategies: `composed/*.json` (e.g., `trend_30vol.json`)
+   - Meta-portfolios: `portfolios/*.json` (e.g., `meta_trend_hrp_30vol.json`)
 
 **Benefits**:
-- Modular and testable architecture
-- Reusable components (markets, allocations, overlays)
-- Easy to combine risk management with optimization
-- Chain multiple overlays: VT(LC(HRP(Market)))
-- Full backward compatibility with old API
+- Deep composability - wrap any strategy with any other
+- Asset-as-strategy enables single-asset overlays
+- Meta-portfolios by combining strategies as assets
+- Modular, testable architecture with clear separation of concerns
+- JSON-based definitions support strategy versioning and sharing
+- Declarative data requirements - no manual lookback management
 
 **Example Usage**:
 ```python
-from strategies import HRPStrategy, VolatilityTargetStrategy, UKETFsMarket
+from strategies import (
+    AssetStrategy, HRPStrategy, TrendFollowingStrategy,
+    VolatilityTargetStrategy, ConstraintStrategy, EqualWeightStrategy
+)
 
-market = UKETFsMarket()
-hrp = HRPStrategy(underlying=market, linkage_method='ward')
-vol_target = VolatilityTargetStrategy(underlying=hrp, target_vol=0.12)
+# Create assets as strategies
+vusa = AssetStrategy('VUSA', currency='GBP')
+ssln = AssetStrategy('SSLN', currency='GBP')
+sgln = AssetStrategy('SGLN', currency='GBP')
+iwrd = AssetStrategy('IWRD', currency='GBP')
+assets = [vusa, ssln, sgln, iwrd]
 
-weights = vol_target.calculate_weights(prices)
+# Create allocation strategies
+hrp = HRPStrategy(underlying=assets, linkage_method='ward')
+trend = TrendFollowingStrategy(underlying=assets, lookback_days=504)
+
+# Apply overlays
+hrp_30vol = VolatilityTargetStrategy(underlying=hrp, target_vol=0.30)
+trend_constrained = ConstraintStrategy(
+    underlying=trend,
+    min_weight=0.05,
+    max_weight=0.40
+)
+
+# Meta-portfolio
+meta = EqualWeightStrategy(underlying=[hrp_30vol, trend_constrained])
+
+# Use in backtest
+from backtesting import BacktestEngine
+engine = BacktestEngine(initial_capital=10000)
+results = await engine.run_backtest(meta, start_date, end_date)
 ```
-
-See `COMPOSABLE_STRATEGIES.md` for comprehensive guide.
 
 ---
 
 ## Current Session Status
 
-**Session Date**: 2026-03-12 (Updated)
-**Status**: ✅ Production Ready - All-strategies mode with dynamic comparison dashboard
-**Latest Feature**: All-strategies execution with separate result files and dynamic strategy picker
+**Session Date**: 2026-03-13 (Unified Architecture Refactoring)
+**Status**: ✅ Phase 3 Complete - Unified Strategy Interface with Deep Composability
+**Latest Features**:
+- Unified Strategy interface across all strategy types
+- MarketDataService singleton for centralized data management
+- JSON-based strategy definitions with composability
+- Deep nesting support: strategies as assets in higher-level portfolios
 
-**Completed Components**:
+**Completed in This Session**:
+- ✅ Phase 1: Core infrastructure (19 tests passing)
+  - `strategies/core.py` with Strategy ABC, StrategyContext, DataRequirements
+  - `data/market_data_service.py` singleton
+  - AssetStrategy, AllocationStrategy, OverlayStrategy implementations
+- ✅ Phase 2: Refactored core strategies
+  - HRPStrategy, EqualWeightStrategy, TrendFollowingStrategy → new interface
+  - Deleted old strategies/base.py and strategies/markets.py
+  - Clean break from old architecture
+- ✅ Phase 3: JSON strategy definitions
+  - Overlay definitions (vol_target_12pct/15pct/30pct, constraints_5_40/10_30)
+  - Composed strategies (trend_30vol/15vol, hrp_30vol/15vol)
+  - Meta-portfolios (meta_trend_hrp_30vol/15vol, meta_multi_volatility)
+- ✅ Updated overlays.py with new interface and proper method names
+- ✅ Updated strategies/models.py with deprecation notices
+
+**Previously Completed Components**:
 - ✅ IB Wrapper + Market Data + Portfolio Management
-- ✅ HRP Strategy Implementation + Equal Weight Benchmark
-- ✅ Pluggable Strategy System (registry + factory pattern)
-- ✅ Composable Strategy Architecture (Markets, Allocations, Overlays)
 - ✅ Backtesting Engine with overlay support
 - ✅ Performance Analytics + Metrics Calculation
 - ✅ Data Caching with --refresh flag support
-- ✅ **NEW**: All-Strategies Execution Mode
-- ✅ **UPDATED**: Interactive Web Dashboard with Strategy Picker
-- ✅ CLI argument system for strategy selection and parameters
-- ✅ Comprehensive documentation
+- ✅ All-Strategies Execution Mode
+- ✅ Interactive Web Dashboard with Strategy Picker
+- ✅ CLI argument system for strategy selection
 
-**Recent Changes** (This Session - All-Strategies Mode):
-- ✅ Implemented `--all` flag in run_backtest.py to run all available strategies
-- ✅ Separate result files for each strategy in `results/strategies/<key>/`
-- ✅ Master index file `strategies_index.json` with all strategy metadata
-- ✅ Structured JSON output: portfolio_history.json, transactions.json, weights_history.json, metrics.json, info.json
-- ✅ Updated serve_results.py with strategy picker dropdown
-- ✅ Implemented comparison mode to compare any two strategies
-- ✅ View mode toggle: Single View vs Comparison Mode
-- ✅ Dynamic dashboard that loads selected strategy data on demand
-- ✅ All tabs support comparison (Overview, Portfolio Value, Drawdown, Weights, Transactions)
-- ✅ JSON API endpoints: /api/strategies and /api/strategy/<key>
-- ✅ Frontend caching of loaded strategy data for performance
+**This Session Changes** (2026-03-13 - Unified Architecture Refactoring):
+- ✅ Refactored overlays.py with proper `get_overlay_lookback()` method
+- ✅ Fixed OverlayStrategy implementations (VarianceTarget, VolTarget, Constraint, Leverage)
+- ✅ Created 13 JSON strategy definition files:
+  - 5 Overlay definitions (vol_target_12/15/30pct, constraints_5_40/10_30)
+  - 4 Composed strategies (trend_30/15vol, hrp_30/15vol)
+  - 3 Meta-portfolios (meta_trend_hrp_30/15vol, meta_multi_volatility)
+- ✅ Removed composable_strategies_demo.py (referenced deleted code)
+- ✅ Updated strategies/models.py with deprecation notices
+- ✅ Updated CLAUDE.md with new architecture documentation
+- ✅ All 19 unit tests passing
+- ✅ Full git commits and pushes to remote
 
-**Previous Session Changes** (Composable Architecture):
-- ✅ Implemented `ExecutableStrategy` base class with run() method
-- ✅ Created `MarketStrategy` for asset universe definitions
-- ✅ Refactored `HRPStrategy` and `EqualWeightStrategy` to use `AllocationStrategy`
-- ✅ Implemented `OverlayStrategy` base class with transform_weights()
-- ✅ Created market strategies: UKETFsMarket, USEquitiesMarket, CustomMarket, etc.
-- ✅ Created overlay strategies: VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
-- ✅ Enhanced BacktestEngine with run_backtest_with_overlay() method
-- ✅ Updated strategies/__init__.py with new exports
-- ✅ Created composable_strategies_demo.py with 5 comprehensive examples
-- ✅ Created COMPOSABLE_STRATEGIES.md with complete user guide
+**Architecture Phases Completed**:
 
-**Recent Changes** (This Session - Strategy Definitions System):
-- ✅ Created YAML-based strategy definitions system
-- ✅ Implemented `StrategyLoader` class for loading and building strategies
-- ✅ Created 16 pre-built strategy definition files (markets, allocations, overlays, composed)
-- ✅ Key-based strategy referencing for composable architecture
-- ✅ Integration with `run_backtest.py` via `--use-definitions` flag
-- ✅ Backward compatible with traditional registry-based approach
-- ✅ Full documentation: `strategy_definitions/README.md`
-- ✅ Custom strategy guide: `strategy_definitions/CUSTOM_STRATEGIES.md` (650+ lines)
-- ✅ 13 pre-configured strategy combinations ready to use
-- ✅ No-code strategy creation via YAML files
+Phase 1 - Core Infrastructure:
+- ✅ Unified Strategy interface (Strategy ABC)
+- ✅ StrategyContext and DataRequirements dataclasses
+- ✅ AssetStrategy, AllocationStrategy, OverlayStrategy implementations
+- ✅ MarketDataService singleton pattern
 
-**Previous Session Changes** (Trend Following Implementation):
-- ✅ Implemented `TrendFollowingStrategy` with EWMA momentum calculation
-- ✅ 2-year lookback with 60-day EWMA half-life for momentum weighting
-- ✅ Volatility normalization and signal smoothing
-- ✅ Weak signal thresholding to eliminate marginal trades
-- ✅ Risk parity allocation based on momentum strength
+Phase 2 - Strategy Refactoring:
+- ✅ HRPStrategy with new AllocationStrategy interface
+- ✅ EqualWeightStrategy with new AllocationStrategy interface
+- ✅ TrendFollowingStrategy with EWMA momentum
+- ✅ Deleted old strategies/base.py and strategies/markets.py
+- ✅ All strategies use StrategyContext instead of raw DataFrames
+
+Phase 3 - JSON Definitions & Overlays:
+- ✅ Asset definitions (VUSA, SSLN, SGLN, IWRD)
+- ✅ Allocation definitions (HRP, TrendFollowing, EqualWeight)
+- ✅ Overlay definitions (VolTarget, Constraint, Leverage)
+- ✅ Composed strategies (allocation + overlay combinations)
+- ✅ Meta-portfolios (strategies as assets in higher-level portfolios)
+- ✅ Overlays fully refactored with proper method names
 
 **Next Actions** (Optional):
 - [ ] Add market data fetching to BacktestEngine for async execution

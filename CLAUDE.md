@@ -101,13 +101,16 @@ This system provides:
 - ✅ `data/cache.py` - Historical data caching (parquet format)
 - ✅ `data/preprocessing.py` - Data alignment and cleaning
 
+**Parameter Optimization** (`optimization/`)
+- ✅ `param_sweep.py` - Grid search across strategy parameter combinations
+- ✅ `walk_forward.py` - Rolling in-sample/out-of-sample validation
+- ✅ `scripts/run_optimization.py` - CLI for parameter sweep and walk-forward analysis
+
 ### What Doesn't Exist Yet
 
-- ❌ Additional strategies (mean-variance, risk parity, etc.)
 - ❌ Order execution simulation
 - ❌ Live trading strategy execution
-- ❌ Parameter optimization/tuning
-- ❌ Multi-strategy comparison (3+ strategies)
+- ❌ Multi-strategy comparison (3+ strategies in dashboard simultaneously)
 
 ---
 
@@ -139,6 +142,24 @@ The system now uses a unified Strategy interface where all strategies (assets, a
    - Files: `strategies/equal_weight.py`
    - Command: `python scripts/run_backtest.py --strategy equal_weight`
    - Parameters: None
+
+4. **Minimum Variance**
+   - Files: `strategies/minimum_variance.py`
+   - Definition: `strategy_definitions/allocations/minimum_variance.yaml`
+   - Algorithm: Quadratic optimization to find lowest-volatility portfolio (scipy SLSQP)
+   - Lookback: 252 days
+
+5. **Risk Parity (Equal Risk Contribution)**
+   - Files: `strategies/risk_parity.py`
+   - Definition: `strategy_definitions/allocations/risk_parity.yaml`
+   - Algorithm: Optimizes for equal marginal risk contribution from each asset
+   - Lookback: 252 days
+
+6. **Momentum Top-N**
+   - Files: `strategies/momentum.py`
+   - Definition: `strategy_definitions/allocations/momentum_top2.yaml`
+   - Algorithm: Selects top N assets by 12-month return, weights by inverse volatility
+   - Parameters: `top_n` (default 2), `lookback_days` (default 252)
 
 ### Strategy Registry
 
@@ -428,6 +449,32 @@ python scripts/serve_results.py
 - ✓ Dynamic strategy picker in dashboard (no need to rerun for each comparison)
 - ✓ Separate JSON files enable efficient data loading on demand
 - ✓ Master index enables strategy discovery and metadata
+
+#### Mode 4: Parameter Optimization
+
+Runs parameter sweeps or walk-forward analysis on strategy parameters.
+
+```bash
+# Parameter sweep
+python scripts/run_optimization.py --strategy hrp --param linkage_method=single,complete,ward
+
+# Multiple parameters
+python scripts/run_optimization.py --strategy trend_following \
+  --param lookback_days=252,504 --param half_life_days=30,60,90
+
+# Walk-forward analysis (in-sample/out-of-sample validation)
+python scripts/run_optimization.py --strategy hrp \
+  --param linkage_method=single,complete,ward \
+  --walk-forward --in-sample 756 --out-of-sample 252
+
+# Custom target metric
+python scripts/run_optimization.py --strategy risk_parity \
+  --param dummy=1 --metric sortino_ratio
+```
+
+**Available strategies**: hrp, trend_following, equal_weight, minimum_variance, risk_parity, momentum
+
+**Output**: Results saved to `results/param_sweep_<strategy>.csv` or `results/walk_forward_<strategy>.csv`
 
 **Backward Compatibility**:
 - Old script: `run_hrp_backtest.py` (deprecated, forwards to `run_backtest.py`)
@@ -835,29 +882,32 @@ results = await engine.run_backtest(meta, start_date, end_date)
 
 ## Current Session Status
 
-**Session Date**: 2026-03-13 (Unified Architecture Refactoring)
-**Status**: ✅ Phase 3 Complete - Unified Strategy Interface with Deep Composability
+**Session Date**: 2026-03-13 (Feature Expansion)
+**Status**: ✅ 3 of 4 phases complete, Phase 3 (optimization) partially done
 **Latest Features**:
-- Unified Strategy interface across all strategy types
-- MarketDataService singleton for centralized data management
-- JSON-based strategy definitions with composability
-- Deep nesting support: strategies as assets in higher-level portfolios
+- 3 new allocation strategies (MinVar, RiskParity, MomentumTopN)
+- 9 new analytics metrics (Sortino, Calmar, VaR, CVaR, etc.)
+- Dashboard: Monthly heatmap, rolling metrics, CSV export, comparison API
+- Parameter optimization engine (sweep + walk-forward)
 
 **Completed in This Session**:
-- ✅ Phase 1: Core infrastructure (19 tests passing)
-  - `strategies/core.py` with Strategy ABC, StrategyContext, DataRequirements
-  - `data/market_data_service.py` singleton
-  - AssetStrategy, AllocationStrategy, OverlayStrategy implementations
-- ✅ Phase 2: Refactored core strategies
-  - HRPStrategy, EqualWeightStrategy, TrendFollowingStrategy → new interface
-  - Deleted old strategies/base.py and strategies/markets.py
-  - Clean break from old architecture
-- ✅ Phase 3: JSON strategy definitions
-  - Overlay definitions (vol_target_12pct/15pct/30pct, constraints_5_40/10_30)
-  - Composed strategies (trend_30vol/15vol, hrp_30vol/15vol)
-  - Meta-portfolios (meta_trend_hrp_30vol/15vol, meta_multi_volatility)
-- ✅ Updated overlays.py with new interface and proper method names
-- ✅ Updated strategies/models.py with deprecation notices
+- ✅ Phase 2 (Analytics): Sortino, Calmar, Information Ratio, Tracking Error,
+  VaR/CVaR, Max DD Duration, Monthly Returns, Rolling Metrics
+- ✅ Phase 1 (Strategies): MinimumVarianceStrategy, RiskParityStrategy, MomentumTopNStrategy
+  with YAML definitions and strategy registry integration
+- ✅ Phase 4 (Dashboard): Monthly Returns Heatmap tab, Rolling Metrics tab,
+  CSV export endpoints, comparison API with Info Ratio
+- 🔄 Phase 3 (Optimization): ParameterSweep and WalkForwardAnalysis engines complete,
+  CLI script complete. Still needs: /optimize slash command, integration testing
+
+**Previous Session (Unified Architecture)**:
+- ✅ Unified Strategy interface (Strategy ABC)
+- ✅ StrategyContext and DataRequirements dataclasses
+- ✅ AssetStrategy, AllocationStrategy, OverlayStrategy
+- ✅ HRP, TrendFollowing, EqualWeight strategies
+- ✅ JSON strategy definitions with composability
+- ✅ Overlays: VolTarget, Constraint, Leverage
+- ✅ MarketDataService singleton
 
 **Previously Completed Components**:
 - ✅ IB Wrapper + Market Data + Portfolio Management
@@ -905,12 +955,13 @@ Phase 3 - JSON Definitions & Overlays:
 - ✅ Overlays fully refactored with proper method names
 
 **Next Actions** (Optional):
+- [ ] Finish /optimize slash command (Phase 3 remaining item)
+- [ ] Integration test the optimization engine with real cached data
 - [ ] Add market data fetching to BacktestEngine for async execution
-- [ ] Implement additional strategies (mean-variance, risk parity variants)
-- [ ] Parameter optimization/tuning system (walk-forward analysis)
 - [ ] Multi-strategy comparison (3+ strategies with dashboard refactor)
 - [ ] Live trading execution with overlay strategies
-- [ ] Custom overlay creation tutorial
+- [x] ~~Implement additional strategies~~ (MinVar, RiskParity, MomentumTopN added)
+- [x] ~~Parameter optimization/tuning system~~ (ParameterSweep + WalkForwardAnalysis added)
 - [x] ~~Backtest Trend Following vs HRP vs Equal Weight~~ (Bug discovered and documented)
 
 ---

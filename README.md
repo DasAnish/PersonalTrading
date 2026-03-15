@@ -66,7 +66,7 @@ The web-based dashboard provides:
 - **📋 Transaction History** - Detailed trade-by-trade breakdown
 - **📱 Responsive Design** - Works on desktop, tablet, and mobile
 
-**→ See [DASHBOARD.md](DASHBOARD.md) for detailed guide**
+**→ See [docs/dashboard.md](docs/dashboard.md) for detailed guide**
 
 ## Installation
 

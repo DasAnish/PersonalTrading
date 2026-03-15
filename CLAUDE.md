@@ -1,6 +1,13 @@
 # PersonalTrading - Claude Development Context
 
-> **IMPORTANT**: If a user prompt is ambiguous or lacks sufficient detail, ask clarifying questions before proceeding. Do not make assumptions about intent on tasks involving trading logic, backtesting parameters, or strategy changes.
+> **IMPORTANT: NEVER send orders into IB Gateway.** This project is for experimentation and research only. All orders must be entered manually by the user. Claude must never place, submit, or trigger any trade orders programmatically.
+
+---
+
+## Clarification
+
+- When requirements are ambiguous or a task has multiple valid interpretations, use AskUserQuestion to clarify before proceeding.
+- Before making major design decisions, confirm assumptions with AskUserQuestion.
 
 ---
 

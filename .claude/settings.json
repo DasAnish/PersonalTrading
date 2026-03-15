@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(claude mcp:*)",
+      "Bash(claude.exe mcp:*)",
+      "Bash(where claude:*)",
+      "Bash(npx claude:*)"
+    ]
+  }
+}

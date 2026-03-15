@@ -2,6 +2,8 @@
 
 > **IMPORTANT: NEVER send orders into IB Gateway.** This project is for experimentation and research only. All orders must be entered manually by the user. Claude must never place, submit, or trigger any trade orders programmatically.
 
+> **IMPORTANT: No automated order execution — ever.** This project is purely for experimentation and research. The user will always enter orders manually via the IB Gateway UI. Claude must only generate rebalance reports and recommendations; it must never programmatically place, submit, modify, or cancel any trade orders.
+
 ---
 
 ## Clarification

@@ -9,7 +9,8 @@
       "Bash(xargs grep:*)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading"
+      "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading",
+      "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading\\.claude\\skills"
     ]
   }
 }

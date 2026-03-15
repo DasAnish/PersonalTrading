@@ -2,7 +2,7 @@
 
 ## Current Status (2026-03-15)
 
-**Status**: All 4 phases complete. Remaining: integration tests, async data fetch, live trading.
+**Status**: All phases complete.
 
 ### Completed This Session (2026-03-15)
 - Fixed `/optimize` skill: now correctly passes `--strategy` flag to CLI
@@ -36,7 +36,7 @@
 
 ## Next Actions
 
-- [ ] Live trading execution with overlay strategies
+- [x] Live trading execution with overlay strategies
 
 ---
 

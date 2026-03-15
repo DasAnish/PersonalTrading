@@ -33,7 +33,7 @@ from strategies import create_strategy, get_available_strategies, STRATEGY_REGIS
 from strategies.strategy_loader import StrategyLoader
 
 # Backtesting imports
-from backtesting import BacktestEngine
+from backtesting import BacktestEngine, BacktestResults, PortfolioState
 
 # Analytics imports
 from analytics import generate_metrics_summary, plot_portfolio_comparison, create_performance_table
@@ -304,12 +304,143 @@ def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) 
     }
 
 
+def _compute_portfolio_values(strategy, prices, backtest_start, backtest_end, engine):
+    """Run a strategy and return its portfolio-value time-series.
+
+    Used by overlay strategies that need the underlying portfolio's history
+    (e.g. VolatilityTargetStrategy computes realised vol from these values).
+    """
+    import pandas as pd
+    results = _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
+    if results.portfolio_history.empty:
+        return pd.Series(dtype=float)
+    return results.portfolio_history['total_value']
+
+
+def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine):
+    """Run a strategy backtest directly from a pre-fetched prices DataFrame.
+
+    Bypasses MarketDataService so no live IB connection is required after the
+    data fetch.  Works for allocation, overlay, and composed (stacked overlay)
+    strategies.
+
+    Args:
+        strategy      : Any Strategy instance
+        prices        : Aligned price DataFrame (columns=symbols, index=dates)
+        backtest_start: First rebalance date
+        backtest_end  : Last rebalance date
+        engine        : BacktestEngine (for rebalance dates and transaction cost)
+
+    Returns:
+        BacktestResults
+    """
+    import pandas as pd
+    from datetime import timedelta
+    from strategies.core import StrategyContext, OverlayStrategy
+
+    # Determine how much lookback history the strategy needs
+    try:
+        requirements = strategy.get_data_requirements()
+        lookback_days = requirements.lookback_days or LOOKBACK_DAYS
+    except Exception:
+        lookback_days = LOOKBACK_DAYS
+
+    # For overlay strategies, pre-compute the underlying portfolio value series
+    portfolio_values = None
+    if isinstance(strategy, OverlayStrategy):
+        portfolio_values = _compute_portfolio_values(
+            strategy.underlying, prices, backtest_start, backtest_end, engine
+        )
+
+    # Generate rebalance dates aligned to actual trading days
+    rebalance_dates = engine._generate_rebalance_dates(
+        backtest_start, backtest_end, prices.index
+    )
+
+    # Initialise portfolio
+    portfolio = PortfolioState(
+        timestamp=backtest_start,
+        cash=engine.initial_capital,
+        positions={},
+        prices={}
+    )
+
+    portfolio_history = []
+    weights_history = []
+    all_transactions = []
+
+    # Record initial state
+    if backtest_start in prices.index:
+        portfolio_history.append(engine._record_state(portfolio, prices.loc[backtest_start]))
+
+    for rebalance_date in rebalance_dates:
+        lookback_start = rebalance_date - timedelta(days=lookback_days)
+        sliced = prices[
+            (prices.index >= lookback_start) &
+            (prices.index <= rebalance_date)
+        ]
+
+        if sliced.empty or len(sliced) < 5:
+            continue
+
+        # Pass accumulated portfolio values to overlays (up to current date)
+        pv_slice = None
+        if portfolio_values is not None and not portfolio_values.empty:
+            pv_slice = portfolio_values[portfolio_values.index <= rebalance_date]
+
+        context = StrategyContext(
+            current_date=rebalance_date,
+            lookback_start=lookback_start,
+            prices=sliced,
+            portfolio_values=pv_slice,
+            metadata={}
+        )
+
+        try:
+            weights = strategy.calculate_weights(context)
+        except Exception as e:
+            logger.warning(f"{strategy.name} at {rebalance_date.date()}: {e}")
+            continue
+
+        weight_record = {'timestamp': rebalance_date}
+        weight_record.update(weights.to_dict())
+        weights_history.append(weight_record)
+
+        current_prices = prices.loc[rebalance_date]
+        portfolio.timestamp = rebalance_date
+
+        transactions = portfolio.execute_rebalance(
+            target_weights=weights,
+            prices=current_prices,
+            transaction_cost_bps=engine.transaction_cost_bps
+        )
+        all_transactions.extend(transactions)
+        portfolio_history.append(engine._record_state(portfolio, current_prices))
+
+    # Assemble result DataFrames
+    history_df = pd.DataFrame(portfolio_history)
+    if not history_df.empty:
+        history_df.set_index('timestamp', inplace=True)
+
+    if weights_history:
+        weights_df = pd.DataFrame(weights_history)
+        weights_df.set_index('timestamp', inplace=True)
+    else:
+        weights_df = pd.DataFrame()
+
+    return BacktestResults(
+        strategy_name=strategy.name,
+        portfolio_history=history_df,
+        weights_history=weights_df,
+        transactions=all_transactions,
+        initial_capital=engine.initial_capital,
+        final_value=portfolio.total_value()
+    )
+
+
 async def run_all_strategies(args, prices, backtest_start, backtest_end):
     """
     Run all available strategies and generate comprehensive results.
-
-    Handles both allocation strategies (which have calculate_weights) and
-    composed/overlay strategies (which need run_backtest_with_overlay).
 
     Args:
         args: Parsed command-line arguments
@@ -320,8 +451,6 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
     Returns:
         Dictionary with all strategy results
     """
-    from strategies.base import OverlayStrategy, AllocationStrategy
-
     logger.info("\n" + "=" * 60)
     logger.info("RUNNING ALL AVAILABLE STRATEGIES")
     logger.info("=" * 60)
@@ -330,69 +459,27 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
     available_strategies = get_all_available_strategies(use_definitions=True)
     logger.info(f"Found {len(available_strategies)} available strategies")
 
-    # Initialize backtest engine
+    # Initialize backtest engine (lookback_days handled per-strategy in _run_single_backtest)
     engine = BacktestEngine(
         initial_capital=INITIAL_CAPITAL,
         transaction_cost_bps=TRANSACTION_COST_BPS,
         rebalance_frequency=REBALANCE_FREQUENCY,
-        lookback_days=LOOKBACK_DAYS
     )
 
     all_results = {}
-    # Cache underlying results so overlays sharing the same underlying don't re-run it
-    underlying_results_cache = {}
 
-    # Run each strategy
     for strategy_key, (strategy, strategy_info) in available_strategies.items():
         try:
             logger.info(f"\nRunning {strategy_key}...")
 
-            if isinstance(strategy, OverlayStrategy):
-                # Overlay/composed strategy: need to run underlying first, then apply overlay
-                # Walk down the overlay chain to find the innermost allocation strategy
-                underlying = strategy.underlying
-                while isinstance(underlying, OverlayStrategy):
-                    underlying = underlying.underlying
+            results = _run_single_backtest(
+                strategy, prices, backtest_start, backtest_end, engine
+            )
 
-                if not isinstance(underlying, AllocationStrategy):
-                    logger.error(f"  Cannot find allocation strategy under overlay {strategy_key}")
-                    continue
-
-                # Run or retrieve underlying allocation results
-                underlying_id = id(underlying)
-                if underlying_id not in underlying_results_cache:
-                    underlying_results_cache[underlying_id] = engine.run_backtest(
-                        strategy=underlying,
-                        historical_data=prices,
-                        start_date=backtest_start,
-                        end_date=backtest_end
-                    )
-
-                underlying_results = underlying_results_cache[underlying_id]
-
-                # Run backtest with overlay transformations
-                results = engine.run_backtest_with_overlay(
-                    underlying_strategy=underlying,
-                    overlay_strategy=strategy,
-                    historical_data=prices,
-                    underlying_results=underlying_results,
-                    start_date=backtest_start,
-                    end_date=backtest_end
-                )
-            else:
-                # Regular allocation strategy: run directly
-                results = engine.run_backtest(
-                    strategy=strategy,
-                    historical_data=prices,
-                    start_date=backtest_start,
-                    end_date=backtest_end
-                )
-
-            # Serialize results
             serialized = serialize_backtest_results(results, strategy_key, strategy_info)
             all_results[strategy_key] = serialized
 
-            logger.info(f"  Final value: {results.final_value:,.2f}")
+            logger.info(f"  Final value: £{results.final_value:,.2f}")
             logger.info(f"  Rebalances: {len(results.portfolio_history)}")
             logger.info(f"  Transactions: {len(results.transactions)}")
 

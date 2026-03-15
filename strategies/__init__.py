@@ -55,6 +55,64 @@ from .overlays import (
     LeverageStrategy
 )
 
+# ---------------------------------------------------------------------------
+# Legacy registry stubs — kept for backward compatibility with run_backtest.py
+# (non-YAML code paths).  STRATEGY_REGISTRY is intentionally empty because the
+# project now uses YAML definitions exclusively.
+# ---------------------------------------------------------------------------
+
+STRATEGY_REGISTRY: dict = {}
+
+
+def create_strategy(strategy_key: str, **kwargs):
+    """Build a strategy from the legacy registry (not used in YAML/--all mode)."""
+    raise NotImplementedError(
+        f"create_strategy('{strategy_key}') is not supported; "
+        "use StrategyLoader.build_strategy() with YAML definitions instead."
+    )
+
+
+def get_available_strategies() -> list:
+    """Return available strategy keys (legacy registry — always empty)."""
+    return list(STRATEGY_REGISTRY.keys())
+
+
+# ---------------------------------------------------------------------------
+# Market universe convenience classes (used by YAML strategy definitions)
+# ---------------------------------------------------------------------------
+
+class UKETFsMarket(list):
+    """UK ETF universe: VUSA, SSLN, SGLN, IWRD (GBP).
+
+    Behaves exactly like List[AssetStrategy] so it can be passed as the
+    `underlying` parameter of any AllocationStrategy.
+    """
+
+    def __init__(self):
+        super().__init__([
+            AssetStrategy('VUSA', currency='GBP'),
+            AssetStrategy('SSLN', currency='GBP'),
+            AssetStrategy('SGLN', currency='GBP'),
+            AssetStrategy('IWRD', currency='GBP'),
+        ])
+
+
+class USEquitiesMarket(list):
+    """US large-cap tech universe: AAPL, MSFT, GOOGL, AMZN (USD).
+
+    Behaves exactly like List[AssetStrategy] so it can be passed as the
+    `underlying` parameter of any AllocationStrategy.
+    """
+
+    def __init__(self):
+        super().__init__([
+            AssetStrategy('AAPL', currency='USD'),
+            AssetStrategy('MSFT', currency='USD'),
+            AssetStrategy('GOOGL', currency='USD'),
+            AssetStrategy('AMZN', currency='USD'),
+        ])
+
+
 __all__ = [
     # Core interfaces
     'Strategy',
@@ -74,4 +132,11 @@ __all__ = [
     'VolatilityTargetStrategy',
     'ConstraintStrategy',
     'LeverageStrategy',
+    # Market universe classes
+    'UKETFsMarket',
+    'USEquitiesMarket',
+    # Legacy registry stubs
+    'STRATEGY_REGISTRY',
+    'create_strategy',
+    'get_available_strategies',
 ]

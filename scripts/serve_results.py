@@ -532,20 +532,9 @@ def index():
 
             <div class="controls" id="controls">
                 <div class="control-group">
-                    <label for="strategySelect">Strategy 1:</label>
-                    <select id="strategySelect" onchange="handleStrategyChange()">
-                        <option value="">Loading...</option>
-                    </select>
-                </div>
-                <div class="control-group" id="strategy2Container" style="display: none;">
-                    <label for="strategy2Select">Strategy 2 (Comparison):</label>
-                    <select id="strategy2Select" onchange="handleStrategyChange()">
-                        <option value="">None (View single strategy)</option>
-                    </select>
-                </div>
-                <div class="view-mode-buttons">
-                    <button class="view-mode-btn active" onclick="setViewMode('single')">Single View</button>
-                    <button class="view-mode-btn" onclick="setViewMode('comparison')">Comparison</button>
+                    <label>Strategies:</label>
+                    <div id="strategySelectors"></div>
+                    <button class="view-mode-btn" onclick="addStrategyRow()" style="margin-top: 8px;">+ Add Strategy</button>
                 </div>
             </div>
 
@@ -655,9 +644,47 @@ def index():
 
         <script>
             let charts = {};
-            let currentViewMode = 'single';
             let availableStrategies = [];
             let loadedData = {};
+
+            const CHART_COLORS = [
+                { border: '#667eea', bg: 'rgba(102,126,234,0.1)' },
+                { border: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                { border: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+                { border: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
+                { border: '#f97316', bg: 'rgba(249,115,22,0.1)' },
+                { border: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
+            ];
+
+            function getStrategySelections() {
+                return Array.from(document.querySelectorAll('.strategy-select'))
+                    .map(s => s.value).filter(v => v);
+            }
+
+            function addStrategyRow(initialValue) {
+                const container = document.getElementById('strategySelectors');
+                const isFirst = container.children.length === 0;
+                const row = document.createElement('div');
+                row.className = 'strategy-row';
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+                const optionsHtml = availableStrategies.map(s =>
+                    `<option value="${s}"${s === initialValue ? ' selected' : ''}>${s}</option>`
+                ).join('');
+                row.innerHTML = `
+                    <select class="strategy-select" onchange="handleStrategyChange()"
+                        style="padding:8px;border-radius:6px;border:2px solid #ddd;min-width:200px;">
+                        ${isFirst ? '' : '<option value="">-- none --</option>'}
+                        ${optionsHtml}
+                    </select>
+                    ${isFirst ? '' : '<button onclick="removeStrategyRow(this)" style="background:#dc3545;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:1em;">×</button>'}
+                `;
+                container.appendChild(row);
+            }
+
+            function removeStrategyRow(btn) {
+                btn.parentElement.remove();
+                handleStrategyChange();
+            }
 
             // Format currency values with £ and comma separators
             function formatCurrency(value) {
@@ -707,30 +734,17 @@ def index():
 
             async function initializeDashboard() {
                 try {
-                    // Get available strategies
                     const response = await fetch('/api/strategies');
                     availableStrategies = await response.json();
 
-                    // Populate dropdowns
-                    const select1 = document.getElementById('strategySelect');
-                    const select2 = document.getElementById('strategy2Select');
-
-                    const optionsHtml = availableStrategies.map(s =>
-                        `<option value="${s}">${s}</option>`
-                    ).join('');
-
-                    select1.innerHTML = optionsHtml;
-                    select2.innerHTML = '<option value="">None (View single strategy)</option>' + optionsHtml;
-
-                    // Show strategy 2 selector if we have multiple strategies
-                    if (availableStrategies.length > 1) {
-                        document.getElementById('strategy2Container').style.display = 'block';
+                    if (availableStrategies.length === 0) {
+                        document.querySelector('.content').innerHTML =
+                            '<div class="error">No strategies found. Run: python scripts/run_backtest.py --all</div>';
+                        return;
                     }
 
-                    // Load first strategy
-                    if (availableStrategies.length > 0) {
-                        await handleStrategyChange();
-                    }
+                    addStrategyRow(availableStrategies[0]);
+                    await handleStrategyChange();
                 } catch (error) {
                     console.error('Error initializing dashboard:', error);
                     document.querySelector('.content').innerHTML =
@@ -739,21 +753,15 @@ def index():
             }
 
             async function handleStrategyChange() {
-                const strategy1 = document.getElementById('strategySelect').value;
-                const strategy2 = document.getElementById('strategy2Select').value;
+                const strategies = getStrategySelections();
+                if (strategies.length === 0) return;
 
-                if (!strategy1) return;
+                await Promise.all(strategies.map(s => {
+                    if (!loadedData[s]) return loadStrategyData(s);
+                    return Promise.resolve();
+                }));
 
-                // Load strategy data
-                if (!loadedData[strategy1]) {
-                    await loadStrategyData(strategy1);
-                }
-                if (strategy2 && !loadedData[strategy2]) {
-                    await loadStrategyData(strategy2);
-                }
-
-                // Update dashboard
-                updateDashboard(strategy1, strategy2);
+                updateDashboard(strategies);
             }
 
             async function loadStrategyData(strategyKey) {
@@ -766,81 +774,55 @@ def index():
                 }
             }
 
-            function updateDashboard(strategy1, strategy2) {
-                const data1 = loadedData[strategy1];
-                if (!data1) return;
+            function updateDashboard(strategies) {
+                const dataList = strategies.map(s => loadedData[s]).filter(d => d);
+                if (dataList.length === 0) return;
 
-                const data2 = strategy2 ? loadedData[strategy2] : null;
-
-                // Update metrics table header
                 const headerRow = document.getElementById('metricsHeaderRow');
-                if (data2) {
-                    headerRow.innerHTML = `<th>Metric</th><th>${strategy1}</th><th>${strategy2}</th>`;
-                } else {
-                    headerRow.innerHTML = `<th>Metric</th><th>${strategy1}</th>`;
-                }
+                headerRow.innerHTML = '<th>Metric</th>' + strategies.map(s => `<th>${s}</th>`).join('');
 
-                // Update content
-                displayMetrics(data1, data2, strategy1, strategy2);
-                displayPortfolioChart(data1, data2, strategy1, strategy2);
-                displayDrawdownChart(data1, data2, strategy1, strategy2);
-                displayWeightsChart(data1, data2, strategy1, strategy2);
-                displayTransactions(data1);
-                loadMonthlyReturns(strategy1);
+                displayMetrics(dataList, strategies);
+                displayPortfolioChart(dataList, strategies);
+                displayDrawdownChart(dataList, strategies);
+                displayWeightsChart(dataList[0], strategies[0]);
+                displayTransactions(dataList[0]);
+                loadMonthlyReturns(strategies[0]);
             }
 
-            function displayMetrics(data1, data2, name1, name2) {
+            function displayMetrics(dataList, names) {
                 const tbody = document.getElementById('metricsBody');
                 tbody.innerHTML = '';
 
-                const metrics1 = data1.metrics || {};
-                const metrics2 = data2 ? (data2.metrics || {}) : null;
-
-                const metricKeys = Object.keys(metrics1);
+                const metricKeys = Object.keys(dataList[0].metrics || {});
                 for (const key of metricKeys) {
                     const row = document.createElement('tr');
-                    const value1 = formatMetric(key, metrics1[key]);
-                    let html = `<td><strong>${key}</strong></td><td>${value1}</td>`;
-                    if (metrics2) {
-                        const value2 = formatMetric(key, metrics2[key]);
-                        html += `<td>${value2}</td>`;
+                    let html = `<td><strong>${key}</strong></td>`;
+                    for (const data of dataList) {
+                        html += `<td>${formatMetric(key, (data.metrics || {})[key])}</td>`;
                     }
                     row.innerHTML = html;
                     tbody.appendChild(row);
                 }
             }
 
-            function displayPortfolioChart(data1, data2, name1, name2) {
+            function displayPortfolioChart(dataList, names) {
                 const ctx = document.getElementById('portfolioChart').getContext('2d');
                 if (charts.portfolio) charts.portfolio.destroy();
 
-                const portfolioData1 = data1.portfolio_history || [];
-                const dates = portfolioData1.map(p => p.date || p.timestamp).slice(0, 100); // Limit points for performance
-                const values1 = portfolioData1.map(p => p.total_value).slice(0, 100);
+                const dates = (dataList[0].portfolio_history || []).map(p => p.date || p.timestamp).slice(0, 100);
 
-                const datasets = [{
-                    label: name1,
-                    data: values1,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    tension: 0.4,
-                    pointRadius: 0,
-                    borderWidth: 2,
-                }];
-
-                if (data2) {
-                    const portfolioData2 = data2.portfolio_history || [];
-                    const values2 = portfolioData2.map(p => p.total_value).slice(0, 100);
-                    datasets.push({
-                        label: name2,
-                        data: values2,
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                const datasets = dataList.map((data, i) => {
+                    const color = CHART_COLORS[i % CHART_COLORS.length];
+                    return {
+                        label: names[i],
+                        data: (data.portfolio_history || []).map(p => p.total_value).slice(0, 100),
+                        borderColor: color.border,
+                        backgroundColor: color.bg,
                         tension: 0.4,
                         pointRadius: 0,
                         borderWidth: 2,
-                    });
-                }
+                    };
+                });
 
                 charts.portfolio = new Chart(ctx, {
                     type: 'line',
@@ -868,52 +850,32 @@ def index():
                 });
             }
 
-            function displayDrawdownChart(data1, data2, name1, name2) {
+            function displayDrawdownChart(dataList, names) {
                 const ctx = document.getElementById('drawdownChart').getContext('2d');
                 if (charts.drawdown) charts.drawdown.destroy();
 
-                const portfolio1 = (data1.portfolio_history || []).slice(0, 100);
-                const dates = portfolio1.map(p => p.date || p.timestamp);
+                const dates = (dataList[0].portfolio_history || []).slice(0, 100).map(p => p.date || p.timestamp);
 
-                // Calculate drawdown
-                const values1 = portfolio1.map(p => p.total_value);
-                const runningMax1 = values1.reduce((acc, val) => {
-                    acc.push(acc.length === 0 ? val : Math.max(acc[acc.length - 1], val));
-                    return acc;
-                }, []);
-                const drawdown1 = values1.map((val, i) => ((val - runningMax1[i]) / runningMax1[i]) * 100);
-
-                const datasets = [{
-                    label: name1,
-                    data: drawdown1,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                    tension: 0.4,
-                    pointRadius: 0,
-                    borderWidth: 2,
-                    fill: true,
-                }];
-
-                if (data2) {
-                    const portfolio2 = (data2.portfolio_history || []).slice(0, 100);
-                    const values2 = portfolio2.map(p => p.total_value);
-                    const runningMax2 = values2.reduce((acc, val) => {
+                const datasets = dataList.map((data, i) => {
+                    const portfolio = (data.portfolio_history || []).slice(0, 100);
+                    const values = portfolio.map(p => p.total_value);
+                    const runningMax = values.reduce((acc, val) => {
                         acc.push(acc.length === 0 ? val : Math.max(acc[acc.length - 1], val));
                         return acc;
                     }, []);
-                    const drawdown2 = values2.map((val, i) => ((val - runningMax2[i]) / runningMax2[i]) * 100);
-
-                    datasets.push({
-                        label: name2,
-                        data: drawdown2,
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    const drawdown = values.map((val, j) => ((val - runningMax[j]) / runningMax[j]) * 100);
+                    const color = CHART_COLORS[i % CHART_COLORS.length];
+                    return {
+                        label: names[i],
+                        data: drawdown,
+                        borderColor: color.border,
+                        backgroundColor: color.bg.replace('0.1', '0.2'),
                         tension: 0.4,
                         pointRadius: 0,
                         borderWidth: 2,
                         fill: true,
-                    });
-                }
+                    };
+                });
 
                 charts.drawdown = new Chart(ctx, {
                     type: 'line',
@@ -927,7 +889,7 @@ def index():
                 });
             }
 
-            function displayWeightsChart(data1, data2, name1, name2) {
+            function displayWeightsChart(data1, name1) {
                 const weightsData = (data1 && data1.weights_history) || [];
                 if (!weightsData || weightsData.length === 0) {
                     document.getElementById('weightsChart').parentElement.innerHTML = '<p>Weights data not available</p>';
@@ -1017,19 +979,6 @@ def index():
                 event.target.classList.add('active');
             }
 
-            function setViewMode(mode) {
-                currentViewMode = mode;
-                const buttons = document.querySelectorAll('.view-mode-btn');
-                buttons.forEach(b => b.classList.remove('active'));
-                event.target.classList.add('active');
-
-                if (mode === 'comparison') {
-                    document.getElementById('strategy2Container').style.display = 'block';
-                } else {
-                    document.getElementById('strategy2Select').value = '';
-                }
-                handleStrategyChange();
-            }
 
             async function loadMonthlyReturns(strategyKey) {
                 try {
@@ -1079,58 +1028,39 @@ def index():
             }
 
             async function loadRollingMetrics() {
-                const strategy1 = document.getElementById('strategySelect').value;
-                if (!strategy1) return;
+                const strategies = getStrategySelections();
+                if (strategies.length === 0) return;
 
                 const metric = document.getElementById('rollingMetricSelect').value;
                 const window = document.getElementById('rollingWindowSelect').value;
+                const metricLabels = {sharpe: 'Sharpe Ratio', volatility: 'Volatility (%)', sortino: 'Sortino Ratio'};
 
                 try {
-                    const response = await fetch(`/api/strategy/${strategy1}/rolling?metric=${metric}&window=${window}`);
-                    const result = await response.json();
+                    const results = await Promise.all(strategies.map(s =>
+                        fetch(`/api/strategy/${s}/rolling?metric=${metric}&window=${window}`).then(r => r.json())
+                    ));
 
-                    if (result.error) {
-                        console.error(result.error);
-                        return;
-                    }
+                    if (results[0].error) { console.error(results[0].error); return; }
 
                     const ctx = document.getElementById('rollingChart').getContext('2d');
                     if (charts.rolling) charts.rolling.destroy();
 
-                    const dates = result.data.map(d => d.date);
-                    const values = result.data.map(d => d.value);
+                    const dates = results[0].data.map(d => d.date);
 
-                    const metricLabels = {sharpe: 'Sharpe Ratio', volatility: 'Volatility (%)', sortino: 'Sortino Ratio'};
-
-                    const datasets = [{
-                        label: `Rolling ${metricLabels[metric]} (${window}d) - ${strategy1}`,
-                        data: values,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4,
-                        pointRadius: 0,
-                        borderWidth: 2,
-                        fill: true,
-                    }];
-
-                    // Load second strategy if in comparison mode
-                    const strategy2 = document.getElementById('strategy2Select').value;
-                    if (strategy2) {
-                        const response2 = await fetch(`/api/strategy/${strategy2}/rolling?metric=${metric}&window=${window}`);
-                        const result2 = await response2.json();
-                        if (!result2.error) {
-                            datasets.push({
-                                label: `Rolling ${metricLabels[metric]} (${window}d) - ${strategy2}`,
-                                data: result2.data.map(d => d.value),
-                                borderColor: '#f59e0b',
-                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                tension: 0.4,
-                                pointRadius: 0,
-                                borderWidth: 2,
-                                fill: true,
-                            });
-                        }
-                    }
+                    const datasets = results.map((result, i) => {
+                        if (result.error) return null;
+                        const color = CHART_COLORS[i % CHART_COLORS.length];
+                        return {
+                            label: `Rolling ${metricLabels[metric]} (${window}d) - ${strategies[i]}`,
+                            data: result.data.map(d => d.value),
+                            borderColor: color.border,
+                            backgroundColor: color.bg,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            fill: true,
+                        };
+                    }).filter(Boolean);
 
                     charts.rolling = new Chart(ctx, {
                         type: 'line',
@@ -1310,6 +1240,67 @@ def api_export(strategy_key: str):
         mimetype='text/csv',
         headers={'Content-Disposition': f'attachment; filename={strategy_key}_{export_type}.csv'}
     )
+
+
+@app.route("/api/compare")
+def api_compare_multi():
+    """Multi-strategy comparison: pairwise tracking error, info ratio, and correlation matrix."""
+    strategies_param = request.args.get('strategies', '')
+    keys = [k.strip() for k in strategies_param.split(',') if k.strip()]
+
+    if len(keys) < 2:
+        return jsonify({"error": "Provide at least 2 strategies via ?strategies=k1,k2"}), 400
+
+    returns_series = {}
+    for key in keys:
+        data = load_strategy_data(key)
+        if not data:
+            return jsonify({"error": f"Strategy not found: {key}"}), 404
+        portfolio = data.get('portfolio_history', [])
+        if not portfolio:
+            return jsonify({"error": f"No portfolio history for: {key}"}), 404
+        values = pd.Series(
+            [p['total_value'] for p in portfolio],
+            index=pd.to_datetime([p.get('date', p.get('timestamp')) for p in portfolio])
+        )
+        returns_series[key] = values.pct_change().dropna()
+
+    common = None
+    for r in returns_series.values():
+        common = r.index if common is None else common.intersection(r.index)
+
+    if len(common) < 2:
+        return jsonify({"error": "Insufficient overlapping data"}), 400
+
+    aligned = {k: v[common] for k, v in returns_series.items()}
+    key_list = list(aligned.keys())
+
+    pairwise = []
+    for i in range(len(key_list)):
+        for j in range(i + 1, len(key_list)):
+            k1, k2 = key_list[i], key_list[j]
+            active = aligned[k1] - aligned[k2]
+            te = float(active.std() * np.sqrt(252))
+            ir = float(active.mean() / active.std() * np.sqrt(252)) if active.std() > 0 else 0
+            pairwise.append({
+                'strategy1': k1,
+                'strategy2': k2,
+                'tracking_error': round(te * 100, 2),
+                'information_ratio': round(ir, 4),
+            })
+
+    df_returns = pd.DataFrame(aligned)
+    corr = df_returns.corr()
+    correlation_matrix = {
+        k: {k2: round(float(v), 4) for k2, v in row.items()}
+        for k, row in corr.to_dict().items()
+    }
+
+    return jsonify({
+        'strategies': key_list,
+        'pairwise': pairwise,
+        'correlation_matrix': correlation_matrix,
+    })
 
 
 @app.route("/api/compare/<key1>/<key2>")

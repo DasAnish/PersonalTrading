@@ -5,7 +5,8 @@
       "Bash(claude mcp:*)",
       "Bash(claude.exe mcp:*)",
       "Bash(where claude:*)",
-      "Bash(npx claude:*)"
+      "Bash(npx claude:*)",
+      "Bash(xargs grep:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading"

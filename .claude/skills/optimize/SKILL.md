@@ -22,7 +22,7 @@ Examples:
 - `/optimize hrp --param linkage_method=single,complete,ward --walk-forward`
 - `/optimize momentum --param top_n=1,2,3 --metric sortino_ratio`
 
-1. Run: `python scripts/run_optimization.py $ARGUMENTS`
+1. Run: `python scripts/run_optimization.py --strategy $ARGUMENTS`
 2. Wait for completion and report any errors
 3. Show the top 5 results by target metric, including parameter values and key metrics (Sharpe, Sortino, CAGR, Max Drawdown)
 4. If walk-forward mode, also report the overfitting ratio (in-sample / out-of-sample metric)

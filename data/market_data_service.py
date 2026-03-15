@@ -42,6 +42,7 @@ from __future__ import annotations
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
+import asyncio
 import pandas as pd
 import logging
 
@@ -156,12 +157,8 @@ class MarketDataService:
             f"from {actual_start.date()} to {end_date.date()}"
         )
 
-        data_dict = {}
-        failed_symbols = []
-
-        for symbol in requirements.symbols:
+        async def _fetch_one(symbol: str):
             try:
-                # Try to fetch from disk cache or IB
                 df = await self._data_cache.get_or_fetch_data(
                     symbol=symbol,
                     start_date=actual_start,
@@ -172,17 +169,25 @@ class MarketDataService:
                     sec_type=requirements.sec_type,
                     bar_size=requirements.frequency
                 )
-
                 if not df.empty and 'close' in df.columns:
-                    data_dict[symbol] = df['close']
                     logger.debug(f"Fetched {len(df)} rows for {symbol}")
+                    return symbol, df['close']
                 else:
-                    failed_symbols.append(symbol)
                     logger.warning(f"No data for {symbol}")
-
+                    return symbol, None
             except Exception as e:
-                failed_symbols.append(symbol)
                 logger.error(f"Failed to fetch {symbol}: {e}")
+                return symbol, None
+
+        fetch_results = await asyncio.gather(*[_fetch_one(s) for s in requirements.symbols])
+
+        data_dict = {}
+        failed_symbols = []
+        for symbol, series in fetch_results:
+            if series is not None:
+                data_dict[symbol] = series
+            else:
+                failed_symbols.append(symbol)
 
         # Validate we got at least some data
         if not data_dict:
@@ -293,7 +298,7 @@ class MarketDataService:
         df = pd.DataFrame(data_dict)
 
         # Forward fill for up to 3 days (handle short gaps)
-        df = df.fillna(method='ffill', limit=3)
+        df = df.ffill(limit=3)
 
         # Drop remaining rows with any NaN
         df = df.dropna()

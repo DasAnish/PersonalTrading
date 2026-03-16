@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "DualMomentumStrategy",
+  "name": "Dual Momentum (Top-2, Fully Invested)",
+  "description": "Dual Momentum variant that redistributes filtered-out allocations to the remaining passing assets instead of holding cash. Stays fully invested while still avoiding absolute downtrends.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 252,
+    "abs_threshold": 0.0,
+    "cash_redistribute": true
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

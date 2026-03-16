@@ -1,0 +1,16 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Minimum Variance + 15% Vol Target",
+  "description": "Minimum Variance allocation scaled to target 15% annualised volatility. Combines low-variance stock selection with volatility scaling.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MinimumVarianceStrategy",
+    "parameters": {},
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

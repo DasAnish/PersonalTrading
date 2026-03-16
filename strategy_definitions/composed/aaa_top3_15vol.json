@@ -1,0 +1,21 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Adaptive Asset Allocation (Top-3) + 15% Vol",
+  "description": "Adaptive Asset Allocation (momentum screen + min-var) with top-3 selection, scaled to 15% annualised volatility target. Combines regime-responsive asset selection with volatility control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "AdaptiveAssetAllocationStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 126,
+      "min_weight": 0.05,
+      "max_weight": 0.60
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

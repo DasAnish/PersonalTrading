@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "TrendFollowingStrategy",
+  "name": "Trend Following (Short Lookback 252d)",
+  "description": "EWMA trend following with a shorter 1-year (252-day) lookback, making the strategy more responsive to recent momentum shifts compared to the standard 2-year lookback.",
+  "parameters": {
+    "lookback_days": 252,
+    "half_life_days": 60,
+    "smooth_window": 5,
+    "signal_threshold": 0.1,
+    "min_volatility": 0.001
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: All-Season",
+  "description": "Equal-weight blend of four complementary approaches covering trend (momentum_top2), diversified risk (risk_parity), minimum-variance safety (min_var_with_constraints), and clustering-based allocation (hrp_average). Designed to perform across different market regimes.",
+  "parameters": {},
+  "underlying": [
+    "allocations/momentum_top2",
+    "allocations/risk_parity",
+    "composed/min_var_with_constraints",
+    "allocations/hrp_average"
+  ]
+}

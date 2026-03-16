@@ -1,0 +1,21 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal MVO + 15% Vol Target",
+  "description": "Trend-Signal MVO (lambda=1) scaled to 15% annualised volatility target. The vol overlay caps leverage and reduces drawdown risk.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendSignalMVOStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "risk_aversion": 1.0,
+      "signal_threshold": 0.05
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

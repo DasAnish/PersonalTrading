@@ -1,0 +1,16 @@
+{
+  "type": "composed",
+  "class": "ConstraintStrategy",
+  "name": "Minimum Variance + Constraints 5%-40%",
+  "description": "Minimum Variance with 5%-40% position constraints to prevent degenerate corner solutions and ensure minimum diversification.",
+  "parameters": {
+    "min_weight": 0.05,
+    "max_weight": 0.40
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MinimumVarianceStrategy",
+    "parameters": {},
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

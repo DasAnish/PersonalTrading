@@ -1,0 +1,14 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Risk-Managed Blend",
+  "description": "Equal-weight blend of all 15% volatility-targeted strategies: HRP (Single) 15vol, HRP (Average) 15vol, Trend 15vol, Min Var 15vol, Risk Parity 15vol. Each strategy controls volatility independently; blending further smooths the portfolio.",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_15vol",
+    "composed/hrp_average_15vol",
+    "composed/trend_15vol",
+    "composed/min_var_15vol",
+    "composed/risk_parity_15vol"
+  ]
+}

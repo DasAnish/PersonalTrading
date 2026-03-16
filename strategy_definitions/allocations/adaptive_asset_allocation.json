@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "AdaptiveAssetAllocationStrategy",
+  "name": "Adaptive Asset Allocation (Top-2)",
+  "description": "Keller & Keuning (2012) two-step approach: rank assets by 6-month momentum, select the top 2, then apply minimum-variance optimisation within that subset. Combines the best of momentum (asset selection) and min-var (efficient allocation).",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 126,
+    "min_weight": 0.05,
+    "max_weight": 0.60
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

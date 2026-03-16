@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Momentum Ensemble",
+  "description": "Equal-weight blend of all momentum variants: Top-1, Top-2, Top-3, and 6-month Top-2. Diversifies across momentum horizons and concentration levels to reduce turnover and signal noise.",
+  "parameters": {},
+  "underlying": [
+    "allocations/momentum_top1",
+    "allocations/momentum_top2",
+    "allocations/momentum_top3",
+    "allocations/momentum_top2_6m"
+  ]
+}

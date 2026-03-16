@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: High-Sharpe Blend",
+  "description": "Equal-weight blend of the four strategies with the highest observed Sharpe ratios: Min Variance + Constraints (7.24), Risk Parity + 15% Vol (6.87), HRP Average (5.99), and Meta All-Season (6.57). Targets consistent risk-adjusted performance.",
+  "parameters": {},
+  "underlying": [
+    "composed/min_var_with_constraints",
+    "composed/risk_parity_15vol",
+    "allocations/hrp_average",
+    "portfolios/meta_all_season"
+  ]
+}

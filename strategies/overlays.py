@@ -97,7 +97,7 @@ class VarianceTargetStrategy(OverlayStrategy):
         portfolio_values = context.portfolio_values
 
         # Need at least 2 data points to calculate returns
-        if len(portfolio_values) < 2:
+        if portfolio_values is None or len(portfolio_values) < 2:
             return weights
 
         # Filter to dates on or before current_date (important for overlay backtest)
@@ -215,7 +215,7 @@ class VolatilityTargetStrategy(OverlayStrategy):
         portfolio_values = context.portfolio_values
 
         # Need at least 2 data points to calculate returns
-        if len(portfolio_values) < 2:
+        if portfolio_values is None or len(portfolio_values) < 2:
             return weights
 
         # Filter to dates on or before current_date (important for overlay backtest)

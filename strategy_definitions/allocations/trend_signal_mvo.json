@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "TrendSignalMVOStrategy",
+  "name": "Trend-Signal MVO",
+  "description": "Uses EWMA momentum signals as expected return estimates (mu) in a Mean-Variance Optimiser. Solves max mu'w - lambda*w'Cov*w to find the efficient portfolio aligned with trend direction, accounting for cross-asset covariance.",
+  "parameters": {
+    "lookback_days": 252,
+    "half_life_days": 60,
+    "risk_aversion": 1.0,
+    "signal_threshold": 0.05
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

@@ -1,0 +1,11 @@
+{
+  "type": "allocation",
+  "class": "MomentumTopNStrategy",
+  "name": "Momentum Top-2 (6-Month)",
+  "description": "Momentum strategy selecting the top 2 assets by 6-month trailing return (126 days). Shorter lookback captures more recent momentum vs the standard 12-month variant.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 126
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

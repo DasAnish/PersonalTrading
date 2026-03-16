@@ -1,0 +1,11 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Contrarian Blend",
+  "description": "Equal-weight blend of contrarian strategies: Mean Reversion (20-day reversal) and Skewness-Weighted (penalises crash-risk assets). Both strategies fade recent trends, providing a natural hedge to momentum-based portfolios.",
+  "parameters": {},
+  "underlying": [
+    "allocations/mean_reversion",
+    "allocations/skewness_weighted"
+  ]
+}

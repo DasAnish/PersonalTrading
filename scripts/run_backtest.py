@@ -177,11 +177,12 @@ def get_all_available_strategies(use_definitions: bool = True) -> dict:
         loader = StrategyLoader()
         available = {}
 
-        # Get all allocations and composed strategies
+        # Get all allocations, composed strategies, and meta-portfolios
         allocations = loader.list_strategies('allocation')
         composed = loader.list_strategies('composed')
+        portfolios = loader.list_strategies('portfolio')
 
-        for strategy_key in list(allocations.keys()) + list(composed.keys()):
+        for strategy_key in list(allocations.keys()) + list(composed.keys()) + list(portfolios.keys()):
             try:
                 strategy = loader.build_strategy(strategy_key)
                 definition = loader.load_definition(strategy_key)

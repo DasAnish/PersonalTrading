@@ -1,0 +1,12 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Defensive Core",
+  "description": "Equal-weight combination of three defensive, low-drawdown strategies: Minimum Variance with constraints, Risk Parity at 15% vol target, and Mean Reversion. Aims for capital preservation with steady compounding.",
+  "parameters": {},
+  "underlying": [
+    "composed/min_var_with_constraints",
+    "composed/risk_parity_15vol",
+    "allocations/mean_reversion"
+  ]
+}

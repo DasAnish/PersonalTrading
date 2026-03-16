@@ -1,6 +1,6 @@
 {
   "type": "portfolio",
-  "class": "EqualWeightStrategy",
+  "class": "MetaPortfolioStrategy",
   "name": "Meta: Multi-Volatility Diversification",
   "description": "Equal-weight meta-portfolio combining HRP at different volatility targets (12%, 15%, 30%)",
   "parameters": {},

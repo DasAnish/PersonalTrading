@@ -1,0 +1,16 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Risk Parity + 15% Vol Target",
+  "description": "Risk Parity allocation scaled to target 15% annualised volatility. Equal risk contribution per asset with overall portfolio volatility controlled.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "RiskParityStrategy",
+    "parameters": {},
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

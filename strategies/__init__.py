@@ -47,6 +47,13 @@ from .trend_following import TrendFollowingStrategy
 from .minimum_variance import MinimumVarianceStrategy
 from .risk_parity import RiskParityStrategy
 from .momentum import MomentumTopNStrategy
+from .trend_signal_mvo import TrendSignalMVOStrategy
+from .mean_reversion import MeanReversionStrategy
+from .skewness_weighted import SkewnessWeightedStrategy
+from .meta_portfolio import MetaPortfolioStrategy
+from .dual_momentum import DualMomentumStrategy
+from .adaptive_asset_allocation import AdaptiveAssetAllocationStrategy
+from .trend_signal_rp import TrendSignalRPStrategy
 
 # Overlay strategies
 from .overlays import (
@@ -128,6 +135,13 @@ __all__ = [
     'MinimumVarianceStrategy',
     'RiskParityStrategy',
     'MomentumTopNStrategy',
+    'TrendSignalMVOStrategy',
+    'MeanReversionStrategy',
+    'SkewnessWeightedStrategy',
+    'MetaPortfolioStrategy',
+    'DualMomentumStrategy',
+    'AdaptiveAssetAllocationStrategy',
+    'TrendSignalRPStrategy',
     # Overlay strategies
     'VolatilityTargetStrategy',
     'ConstraintStrategy',

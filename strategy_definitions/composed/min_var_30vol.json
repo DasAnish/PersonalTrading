@@ -1,0 +1,16 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Minimum Variance + 30% Vol Target",
+  "description": "Minimum Variance allocation scaled to target 30% annualised volatility. Aggressive leverage variant of min-var for higher return potential.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MinimumVarianceStrategy",
+    "parameters": {},
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

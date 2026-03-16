@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Ultimate Blend",
+  "description": "Equal-weight combination of the four highest-performing strategies by Sharpe: Adaptive Asset Allocation Top-3 (6.80), Meta All-Season (6.57), Min Var + Constraints (7.24), and Risk Parity + 15% Vol (6.87). Targets the best risk-adjusted outcomes from across all strategy families.",
+  "parameters": {},
+  "underlying": [
+    "allocations/adaptive_asset_allocation_top3",
+    "portfolios/meta_all_season",
+    "composed/min_var_with_constraints",
+    "composed/risk_parity_15vol"
+  ]
+}

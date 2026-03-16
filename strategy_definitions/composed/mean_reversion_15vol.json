@@ -1,0 +1,19 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Mean Reversion + 15% Vol Target",
+  "description": "Short-term mean reversion (20-day) scaled to 15% annualised volatility. Combines contrarian signals with volatility control to limit drawdowns from reversal trades.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 63
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MeanReversionStrategy",
+    "parameters": {
+      "lookback_days": 20,
+      "vol_lookback_days": 63
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

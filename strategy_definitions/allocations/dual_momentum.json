@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "DualMomentumStrategy",
+  "name": "Dual Momentum (Top-2)",
+  "description": "Gary Antonacci's Dual Momentum: selects the top 2 assets by 12-month relative momentum, then applies an absolute momentum filter (must have positive trailing return). Filtered-out assets remain as cash. Designed to capture trending assets while avoiding downtrending ones.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 252,
+    "abs_threshold": 0.0,
+    "cash_redistribute": false
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

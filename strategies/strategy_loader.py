@@ -184,7 +184,7 @@ class StrategyLoader:
             strategy_class = self._get_class(class_name)
             return strategy_class(**params)
 
-        if strategy_type in ('allocation',):
+        if strategy_type in ('allocation', 'portfolio'):
             strategy_class = self._get_class(class_name)
             underlying_refs = definition.get('underlying', [])
             underlying_list = []

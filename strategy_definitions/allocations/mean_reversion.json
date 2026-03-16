@@ -1,0 +1,11 @@
+{
+  "type": "allocation",
+  "class": "MeanReversionStrategy",
+  "name": "Mean Reversion (20d)",
+  "description": "Short-term contrarian strategy. Ranks assets by 20-day trailing return in ascending order, overweighting recent underperformers. Weights are scaled by inverse volatility. Exploits short-horizon price reversal.",
+  "parameters": {
+    "lookback_days": 20,
+    "vol_lookback_days": 63
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

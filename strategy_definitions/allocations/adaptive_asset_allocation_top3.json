@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "AdaptiveAssetAllocationStrategy",
+  "name": "Adaptive Asset Allocation (Top-3)",
+  "description": "Adaptive Asset Allocation selecting top 3 assets by 6-month momentum, then minimum-variance weighted. More diversified than Top-2 with still-concentrated momentum screening.",
+  "parameters": {
+    "top_n": 3,
+    "lookback_days": 126,
+    "min_weight": 0.05,
+    "max_weight": 0.60
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

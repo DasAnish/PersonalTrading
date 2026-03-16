@@ -22,7 +22,15 @@
       "Bash(python -c \":*)",
       "WebFetch(domain:happy.engineering)",
       "mcp__ib-trading__get_historical_data",
-      "Bash(find /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))"
+      "Bash(find /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
+      "Bash(netstat -ano)",
+      "mcp__ib-trading__get_multiple_historical_data",
+      "Bash(pip show:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/**)",
+      "Bash(done)",
+      "Bash(sort -k1)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

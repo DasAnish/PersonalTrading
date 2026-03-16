@@ -110,14 +110,23 @@ class MarketDataService:
                 f"Fetching {duration} of {bar_size} bars for {symbol}"
             )
 
-            bars = await self.ib.reqHistoricalDataAsync(
-                qualified[0],
-                endDateTime=end_datetime or '',
-                durationStr=duration,
-                barSizeSetting=bar_size,
-                whatToShow=what_to_show,
-                useRTH=use_rth
-            )
+            try:
+                bars = await self.ib.reqHistoricalDataAsync(
+                    qualified[0],
+                    endDateTime=end_datetime or '',
+                    durationStr=duration,
+                    barSizeSetting=bar_size,
+                    whatToShow=what_to_show,
+                    useRTH=use_rth
+                )
+            except Exception as e:
+                if "cannot insert" in str(e) or "already exists" in str(e):
+                    logger.warning(
+                        f"ib_insync duplicate-date error for {symbol} ({e}); "
+                        "skipping live fetch, will use cache"
+                    )
+                    return pd.DataFrame()
+                raise
 
             if not bars:
                 logger.warning(f"No data returned for {symbol}")

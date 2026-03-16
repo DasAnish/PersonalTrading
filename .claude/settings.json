@@ -1,12 +1,22 @@
 {
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(pip install:*)",
       "Bash(claude mcp:*)",
       "Bash(claude.exe mcp:*)",
       "Bash(where claude:*)",
       "Bash(npx claude:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Read(//c/Users/dasan/.claude/**)",
+      "Bash(python scripts/*:*)",
+      "Bash(python -m pytest*)",
+      "Bash(pytest*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading",

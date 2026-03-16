@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "IINDLNN",
+  "description": "iShares MSCI India UCITS ETF (GBP, LSE)",
+  "parameters": {
+    "symbol": "IIND",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

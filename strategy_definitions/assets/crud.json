@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "CRUD",
+  "description": "WisdomTree WTI Crude Oil ETC (GBP, LSE)",
+  "parameters": {
+    "symbol": "CRUD",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

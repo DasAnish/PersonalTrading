@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "VUTY",
+  "description": "Vanguard USD Treasury Bond UCITS ETF (GBP, LSE)",
+  "parameters": {
+    "symbol": "VUTY",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

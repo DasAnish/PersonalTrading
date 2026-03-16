@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "COMM",
+  "description": "iShares Diversified Commodity Swap UCITS ETF (GBP, LSE)",
+  "parameters": {
+    "symbol": "COMM",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

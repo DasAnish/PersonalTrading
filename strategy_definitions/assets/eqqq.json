@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "EQQQ",
+  "description": "Invesco EQQQ NASDAQ-100 UCITS ETF (GBP, LSE)",
+  "parameters": {
+    "symbol": "EQQQ",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

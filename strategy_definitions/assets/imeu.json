@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "IMEU",
+  "description": "iShares Core MSCI Europe UCITS ETF (GBP, LSE)",
+  "parameters": {
+    "symbol": "IMEU",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

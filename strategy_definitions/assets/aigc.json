@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "AIGC",
+  "description": "WisdomTree Artificial Intelligence UCITS ETF (GBP, LSE)",
+  "parameters": {
+    "symbol": "AIGC",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

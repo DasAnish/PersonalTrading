@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "WCOA",
+  "description": "WisdomTree Coal ETC (GBP, LSE)",
+  "parameters": {
+    "symbol": "WCOA",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

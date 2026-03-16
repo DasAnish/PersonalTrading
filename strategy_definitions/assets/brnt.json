@@ -1,0 +1,11 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "BRNT",
+  "description": "WisdomTree Brent Crude Oil ETC (GBP, LSE)",
+  "parameters": {
+    "symbol": "BRNT",
+    "currency": "GBP",
+    "exchange": "SMART"
+  }
+}

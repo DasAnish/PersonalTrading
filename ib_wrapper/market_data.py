@@ -123,15 +123,36 @@ class MarketDataService:
                 logger.warning(f"No data returned for {symbol}")
                 return pd.DataFrame()
 
-            # Convert to DataFrame
-            df = util.df(bars)
+            # Convert to DataFrame — ib_insync raises "cannot insert date, already
+            # exists" for some LSE ETFs that return duplicate timestamps.  Fall
+            # back to manual construction in that case.
+            try:
+                df = util.df(bars)
+            except Exception as e:
+                logger.warning(f"util.df failed for {symbol} ({e}), building DataFrame manually")
+                records = [
+                    {
+                        "open": b.open, "high": b.high, "low": b.low,
+                        "close": b.close, "volume": b.volume,
+                        "average": getattr(b, "average", None),
+                        "barCount": getattr(b, "barCount", None),
+                    }
+                    for b in bars
+                ]
+                dates = pd.to_datetime([b.date for b in bars])
+                df = pd.DataFrame(records, index=dates)
+                df.index.name = "date"
+                # Drop duplicates that triggered the original error
+                df = df[~df.index.duplicated(keep="first")]
 
             # Force set datetime index from bars to ensure it's proper DatetimeIndex
             if not df.empty and bars:
                 try:
-                    dates = pd.to_datetime([bar.date for bar in bars])
-                    df.index = dates
-                    df.index.name = 'date'
+                    if not isinstance(df.index, pd.DatetimeIndex):
+                        dates = pd.to_datetime([bar.date for bar in bars])
+                        df.index = dates
+                        df.index.name = 'date'
+                        df = df[~df.index.duplicated(keep='first')]
                 except Exception as e:
                     logger.warning(f"Could not set datetime index: {e}")
 

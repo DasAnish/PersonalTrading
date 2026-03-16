@@ -2,7 +2,7 @@
 Main script to run portfolio strategy backtests on UK ETFs.
 
 This script:
-1. Fetches historical data for UK ETFs (VUSA, SSLN, SGLN, IWRD)
+1. Fetches historical data for all assets defined in strategy_definitions/assets/
 2. Runs ALL available strategies in backtests
 3. Generates comprehensive results in structured JSON format
 4. Outputs data suitable for frontend consumption (strategy picker + comparison mode)
@@ -50,7 +50,11 @@ logger = logging.getLogger(__name__)
 
 
 # Configuration
-SYMBOLS = ['VUSA', 'SSLN', 'SGLN', 'IWRD']
+_ASSETS_DIR = Path(__file__).parent.parent / 'strategy_definitions' / 'assets'
+SYMBOLS = sorted(
+    json.loads(p.read_text())['parameters']['symbol']
+    for p in _ASSETS_DIR.glob('*.json')
+)
 EXCHANGE = 'SMART'
 CURRENCY = 'GBP'
 SEC_TYPE = 'STK'

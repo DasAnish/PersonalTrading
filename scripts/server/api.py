@@ -2,12 +2,45 @@
 
 import csv
 import io
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
 from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data
+
+
+def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
+    """Compute CAGR from portfolio history dates and total return."""
+    if not portfolio_history or len(portfolio_history) < 2:
+        return None
+    try:
+        def parse_date(entry):
+            raw = entry.get("date", entry.get("timestamp", ""))
+            return datetime.fromisoformat(str(raw).replace("Z", ""))
+
+        start = parse_date(portfolio_history[0])
+        end = parse_date(portfolio_history[-1])
+        years = (end - start).days / 365.25
+        if years <= 0:
+            return None
+        return (1 + total_return) ** (1 / years) - 1
+    except Exception:
+        return None
+
+
+def _compute_omega_ratio(portfolio_history: list, threshold: float = 0.0) -> float | None:
+    """Compute omega ratio from portfolio history (threshold-adjusted)."""
+    if not portfolio_history or len(portfolio_history) < 2:
+        return None
+    values = [p["total_value"] for p in portfolio_history]
+    returns = [(values[i] - values[i - 1]) / values[i - 1] for i in range(1, len(values))]
+    gains = sum(r - threshold for r in returns if r > threshold)
+    losses = sum(threshold - r for r in returns if r < threshold)
+    if losses == 0:
+        return None
+    return round(gains / losses, 4)
 
 bp = Blueprint("api", __name__)
 
@@ -29,16 +62,31 @@ def api_strategies_summary():
             continue
         metrics = data.get("metrics", {})
         info = data.get("info", {})
+        portfolio_history = data.get("portfolio_history", [])
+        total_return = metrics.get("total_return")
+        max_drawdown = metrics.get("max_drawdown")
+
+        cagr = metrics.get("cagr") or metrics.get("annualized_return")
+        if cagr is None and total_return is not None:
+            cagr = _compute_cagr(portfolio_history, total_return)
+
+        calmar = metrics.get("calmar_ratio")
+        if calmar is None and cagr is not None and max_drawdown and max_drawdown != 0:
+            calmar = round(cagr / abs(max_drawdown), 4)
+
+        omega = metrics.get("omega_ratio") or _compute_omega_ratio(portfolio_history)
+
         rows.append(
             {
                 "key": key,
                 "name": info.get("name", key),
                 "sharpe_ratio": metrics.get("sharpe_ratio"),
-                "cagr": metrics.get("cagr") or metrics.get("annualized_return"),
-                "max_drawdown": metrics.get("max_drawdown"),
+                "cagr": cagr,
+                "max_drawdown": max_drawdown,
                 "volatility": metrics.get("annualized_volatility") or metrics.get("volatility"),
-                "total_return": metrics.get("total_return"),
-                "calmar_ratio": metrics.get("calmar_ratio"),
+                "total_return": total_return,
+                "calmar_ratio": calmar,
+                "omega_ratio": omega,
             }
         )
     return jsonify(rows)
@@ -50,6 +98,27 @@ def api_strategy(strategy_key: str):
     data = load_strategy_data(strategy_key)
     if not data:
         return jsonify({"error": f"Strategy {strategy_key} not found"}), 404
+
+    metrics = data.get("metrics", {})
+    portfolio_history = data.get("portfolio_history", [])
+    total_return = metrics.get("total_return")
+    max_drawdown = metrics.get("max_drawdown")
+
+    if "cagr" not in metrics and total_return is not None:
+        cagr = _compute_cagr(portfolio_history, total_return)
+        if cagr is not None:
+            metrics["cagr"] = cagr
+
+    if "calmar_ratio" not in metrics:
+        cagr = metrics.get("cagr")
+        if cagr is not None and max_drawdown and max_drawdown != 0:
+            metrics["calmar_ratio"] = round(cagr / abs(max_drawdown), 4)
+
+    if "omega_ratio" not in metrics:
+        omega = _compute_omega_ratio(portfolio_history)
+        if omega is not None:
+            metrics["omega_ratio"] = omega
+
     return jsonify(data)
 
 

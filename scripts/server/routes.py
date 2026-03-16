@@ -122,6 +122,50 @@ _OVERVIEW_HTML = """
         .sort-btn.asc::after { content: '↑'; opacity: 1; }
         .sort-btn.desc::after { content: '↓'; opacity: 1; }
 
+        .th-wrap { display: flex; align-items: center; gap: 4px; }
+        .metric-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%%;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: help;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .metric-info:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            top: calc(100%% + 6px);
+            left: 50%%;
+            transform: translateX(-50%%);
+            background: #1a1a2e;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 400;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .metric-info:hover::before {
+            content: '';
+            position: absolute;
+            top: calc(100%% + 2px);
+            left: 50%%;
+            transform: translateX(-50%%);
+            border: 4px solid transparent;
+            border-bottom-color: #1a1a2e;
+            z-index: 100;
+        }
+
         .summary-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -176,16 +220,17 @@ _OVERVIEW_HTML = """
                 <thead>
                     <tr>
                         <th><button class="sort-btn" onclick="sortTable('name')">Strategy</button></th>
-                        <th><button class="sort-btn" onclick="sortTable('sharpe_ratio')">Sharpe Ratio</button></th>
-                        <th><button class="sort-btn" onclick="sortTable('cagr')">CAGR</button></th>
-                        <th><button class="sort-btn" onclick="sortTable('max_drawdown')">Max Drawdown</button></th>
-                        <th><button class="sort-btn" onclick="sortTable('volatility')">Volatility</button></th>
-                        <th><button class="sort-btn" onclick="sortTable('total_return')">Total Return</button></th>
-                        <th><button class="sort-btn" onclick="sortTable('calmar_ratio')">Calmar</button></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio')">Sharpe Ratio</button><span class="metric-info" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr')">CAGR</button><span class="metric-info" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown')">Max Drawdown</button><span class="metric-info" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility')">Volatility</button><span class="metric-info" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return')">Total Return</button><span class="metric-info" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio')">Calmar</button><span class="metric-info" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio')">Omega</button><span class="metric-info" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
                     </tr>
                 </thead>
                 <tbody id="overviewBody">
-                    <tr><td colspan="7" class="loading">Loading strategies...</td></tr>
+                    <tr><td colspan="8" class="loading">Loading strategies...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -201,36 +246,67 @@ _OVERVIEW_HTML = """
             const n = parseFloat(val);
             if (isNaN(n)) return '—';
             if (isPercent) {
-                const pct = Math.abs(n) <= 1 ? n * 100 : n;
-                return pct.toFixed(2) + '%%';
+                return (n * 100).toFixed(2) + '%%';
             }
             return n.toFixed(3);
         }
 
-        function colorClass(val, isPercent, lowerBetter) {
+        // Columns: key → higherIsBetter
+        const COL_DIR = {
+            sharpe_ratio: true,
+            cagr:         true,
+            max_drawdown: true,   // less negative = better, so higher value = better
+            volatility:   false,
+            total_return: true,
+            calmar_ratio: true,
+            omega_ratio:  true,
+        };
+
+        let colStats = {};
+
+        function computeColStats(rows) {
+            const stats = {};
+            for (const col of Object.keys(COL_DIR)) {
+                const vals = rows
+                    .map(r => r[col])
+                    .filter(v => v !== null && v !== undefined)
+                    .map(parseFloat)
+                    .filter(n => !isNaN(n));
+                if (vals.length < 2) continue;
+                stats[col] = { min: Math.min(...vals), max: Math.max(...vals) };
+            }
+            return stats;
+        }
+
+        function cellStyle(val, col) {
             if (val === null || val === undefined) return '';
             const n = parseFloat(val);
             if (isNaN(n)) return '';
-            const positive = lowerBetter ? n < 0 : n >= 0;
-            return positive ? 'positive' : 'negative';
+            const s = colStats[col];
+            if (!s || s.max === s.min) return '';
+            let pct = (n - s.min) / (s.max - s.min);
+            if (!COL_DIR[col]) pct = 1 - pct;
+            const hue = Math.round(pct * 120);   // 0 = red, 120 = green
+            return `background-color: hsla(${hue}, 80%%, 45%%, 0.18);`;
         }
 
         function renderTable(rows) {
             const tbody = document.getElementById('overviewBody');
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="error">No strategies found. Run: python scripts/run_backtest.py --all</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="error">No strategies found. Run: python scripts/run_backtest.py --all</td></tr>';
                 return;
             }
 
             tbody.innerHTML = rows.map(r => `
                 <tr onclick="window.location='/strategy/${r.key}'">
                     <td><a class="strategy-link" href="/strategy/${r.key}">${r.key}</a></td>
-                    <td class="${colorClass(r.sharpe_ratio, false, false)}">${fmt(r.sharpe_ratio, false)}</td>
-                    <td class="${colorClass(r.cagr, true, false)}">${fmt(r.cagr, true)}</td>
-                    <td class="${colorClass(r.max_drawdown, true, true)}">${fmt(r.max_drawdown, true)}</td>
-                    <td>${fmt(r.volatility, true)}</td>
-                    <td class="${colorClass(r.total_return, true, false)}">${fmt(r.total_return, true)}</td>
-                    <td class="${colorClass(r.calmar_ratio, false, false)}">${fmt(r.calmar_ratio, false)}</td>
+                    <td style="${cellStyle(r.sharpe_ratio, 'sharpe_ratio')}">${fmt(r.sharpe_ratio, false)}</td>
+                    <td style="${cellStyle(r.cagr, 'cagr')}">${fmt(r.cagr, true)}</td>
+                    <td style="${cellStyle(r.max_drawdown, 'max_drawdown')}">${fmt(r.max_drawdown, true)}</td>
+                    <td style="${cellStyle(r.volatility, 'volatility')}">${fmt(r.volatility, true)}</td>
+                    <td style="${cellStyle(r.total_return, 'total_return')}">${fmt(r.total_return, true)}</td>
+                    <td style="${cellStyle(r.calmar_ratio, 'calmar_ratio')}">${fmt(r.calmar_ratio, false)}</td>
+                    <td style="${cellStyle(r.omega_ratio, 'omega_ratio')}">${fmt(r.omega_ratio, false)}</td>
                 </tr>
             `).join('');
         }
@@ -273,15 +349,14 @@ _OVERVIEW_HTML = """
             const withCagr = rows.filter(r => r.cagr !== null && r.cagr !== undefined);
             if (withCagr.length) {
                 const best = withCagr.reduce((a, b) => a.cagr > b.cagr ? a : b);
-                const pct = Math.abs(best.cagr) <= 1 ? best.cagr * 100 : best.cagr;
-                document.getElementById('bestCagr').textContent = pct.toFixed(1) + '%%';
+                document.getElementById('bestCagr').textContent = (best.cagr * 100).toFixed(1) + '%%';
                 document.getElementById('bestCagrName').textContent = best.key;
             }
 
             const withDD = rows.filter(r => r.max_drawdown !== null && r.max_drawdown !== undefined);
             if (withDD.length) {
                 const best = withDD.reduce((a, b) => a.max_drawdown > b.max_drawdown ? a : b);
-                const pct = Math.abs(best.max_drawdown) <= 1 ? best.max_drawdown * 100 : best.max_drawdown;
+                const pct = best.max_drawdown * 100;
                 document.getElementById('lowestDD').textContent = pct.toFixed(1) + '%%';
                 document.getElementById('lowestDDName').textContent = best.key;
             }
@@ -299,11 +374,12 @@ _OVERVIEW_HTML = """
                     return bv - av;
                 });
 
+                colStats = computeColStats(allRows);
                 updateSummaryCards(allRows);
                 renderTable(allRows);
             } catch (err) {
                 document.getElementById('overviewBody').innerHTML =
-                    '<tr><td colspan="7" class="error">Error loading strategies: ' + err.message + '</td></tr>';
+                    '<tr><td colspan="8" class="error">Error loading strategies: ' + err.message + '</td></tr>';
             }
         }
 
@@ -630,26 +706,24 @@ _DETAIL_HTML = """
                 return formatCurrency(value);
             }
 
-            if (key.toLowerCase().includes('return') || key.toLowerCase().includes('volatility') ||
-                key.toLowerCase().includes('drawdown') || key.toLowerCase().includes('sharpe')) {
-                const num = parseFloat(value);
-                if (isNaN(num)) return value;
-                if ((key.toLowerCase().includes('return') ||
-                     key.toLowerCase().includes('volatility') ||
-                     key.toLowerCase().includes('drawdown')) &&
-                    num >= -1 && num <= 1) {
-                    return (num * 100).toFixed(2) + '%%';
-                }
-                return num.toFixed(2);
-            }
-
-            if (key.toLowerCase().includes('transaction') || key.toLowerCase().includes('rebalance') ||
-                key.toLowerCase().includes('count')) {
-                return Math.round(parseFloat(value));
-            }
-
+            const k = key.toLowerCase();
             const num = parseFloat(value);
-            return isNaN(num) ? value : num.toFixed(2);
+            if (isNaN(num)) return String(value);
+
+            // Always treat these as decimal fractions → multiply by 100
+            if (k.includes('return') || k.includes('volatility') || k.includes('drawdown') || k === 'cagr') {
+                return (num * 100).toFixed(2) + '%%';
+            }
+
+            if (k.includes('sharpe') || k.includes('sortino') || k.includes('calmar') || k.includes('omega')) {
+                return num.toFixed(3);
+            }
+
+            if (k.includes('transaction') || k.includes('rebalance') || k.includes('count')) {
+                return Math.round(num);
+            }
+
+            return num.toFixed(2);
         }
 
         async function initializeDashboard() {

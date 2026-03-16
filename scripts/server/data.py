@@ -10,29 +10,20 @@ import pandas as pd
 BASE_DIR = Path(__file__).parent.parent.parent
 RESULTS_DIR = BASE_DIR / "results"
 
-# Global cache for strategies index
-_strategies_index = None
-
-
 def load_strategies_index() -> dict | None:
     """
     Load the strategies index from all-strategies run.
 
     Returns dict with available strategies and their paths.
     Falls back to legacy metadata.json if index doesn't exist.
+    Reads fresh from disk each call so new backtest runs are picked up immediately.
     """
-    global _strategies_index
-
-    if _strategies_index is not None:
-        return _strategies_index
-
     index_path = RESULTS_DIR / "strategies_index.json"
 
     if index_path.exists():
         try:
             with open(index_path, "r") as f:
-                _strategies_index = json.load(f)
-                return _strategies_index
+                return json.load(f)
         except Exception as e:
             print(f"   [!] Error loading strategies_index.json: {e}")
 
@@ -42,13 +33,12 @@ def load_strategies_index() -> dict | None:
         try:
             with open(metadata_path, "r") as f:
                 metadata = json.load(f)
-                _strategies_index = {
+                return {
                     "run_date": datetime.now().isoformat(),
                     "total_strategies": 2,
                     "strategies": {},
                     "config": metadata.get("config", {}),
                 }
-                return _strategies_index
         except Exception as e:
             print(f"   [!] Error loading metadata.json: {e}")
 

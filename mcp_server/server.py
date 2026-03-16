@@ -81,7 +81,7 @@ mcp = FastMCP(
     "ib-trading",
     instructions=(
         "Tools for Interactive Brokers market data, portfolio management, and "
-        "backtesting UK ETFs (VUSA, SSLN, SGLN, IWRD). "
+        "backtesting UK ETFs (VUSA, SSLN, SGLN, IWRD, EQQQ, BRNT, CRUD, COMM, COMML). "
         "Market data tools fall back to local parquet cache when IB Gateway is "
         "offline. Portfolio tools require a live IB connection on port 4001."
     ),

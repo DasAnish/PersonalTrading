@@ -20,7 +20,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(python -c \":*)",
-      "WebFetch(domain:happy.engineering)"
+      "WebFetch(domain:happy.engineering)",
+      "mcp__ib-trading__get_historical_data"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

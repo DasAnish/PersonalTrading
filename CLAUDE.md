@@ -30,6 +30,7 @@ plan/
 
 ### Workflow
 
+0. Create a findings.md that can be used as context for future continue plan runs
 1. Describe the work → run `/clearplan <description>`
 2. Claude breaks it into **3–7 phases**, writes all files, confirms the plan
 3. Run `/continueplan` at the start of each session to pick up where you left off
@@ -64,6 +65,7 @@ plan/
 | CLI reference (all 4 modes + examples) | [docs/cli.md](docs/cli.md) |
 | Web dashboard usage & API | [docs/dashboard.md](docs/dashboard.md) |
 | Session log, next actions, known bugs | [docs/session_log.md](docs/session_log.md) |
+| Full file/directory reference | [docs/project-structure.md](docs/project-structure.md) |
 | Session history | `ai_iterations/` |
 | Architecture decisions | `decisions/` |
 

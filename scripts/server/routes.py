@@ -1,7 +1,5 @@
 """Page routes for the dashboard server."""
 
-import json
-
 from flask import Blueprint, render_template
 
 bp = Blueprint(
@@ -23,9 +21,7 @@ def overview():
 @bp.route("/strategy/<strategy_key>")
 def strategy_detail(strategy_key: str = None):
     """Serve the strategy detail page."""
-    initial_strategy = json.dumps(strategy_key) if strategy_key else "null"
     return render_template(
         "strategy.html",
         strategy_key=strategy_key or "Strategy",
-        initial_strategy=initial_strategy,
     )

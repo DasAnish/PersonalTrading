@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Backtest Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
+    <style>
+        .overview-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 24px;
+        }
+
+        .overview-table thead { background: #667eea; color: white; }
+        .overview-table th { padding: 14px 16px; text-align: left; font-weight: 600; }
+        .overview-table td { padding: 12px 16px; border-bottom: 1px solid #e0e0e0; }
+        .overview-table tbody tr:hover { background: #f5f7ff; cursor: pointer; }
+        .overview-table tbody tr:last-child td { border-bottom: none; }
+
+        .strategy-link { color: #667eea; font-weight: 600; text-decoration: none; }
+        .strategy-link:hover { text-decoration: underline; }
+
+        .sort-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sort-btn::after { content: '↕'; font-size: 0.8em; opacity: 0.7; }
+        .sort-btn.asc::after { content: '↑'; opacity: 1; }
+        .sort-btn.desc::after { content: '↓'; opacity: 1; }
+
+        .th-wrap { display: flex; align-items: center; gap: 4px; }
+        .metric-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: help;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .metric-info:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a2e;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 400;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .metric-info:hover::before {
+            content: '';
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-bottom-color: #1a1a2e;
+            z-index: 100;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-card h3 { font-size: 0.85em; opacity: 0.85; text-transform: uppercase; margin-bottom: 6px; }
+        .summary-card .value { font-size: 1.8em; font-weight: bold; }
+        .summary-card .sub { font-size: 0.8em; opacity: 0.8; margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Strategy Backtest Dashboard</h1>
+            <p>Overview of all backtested strategies</p>
+        </div>
+
+        <div class="content">
+            <div class="summary-cards" id="summaryCards">
+                <div class="summary-card">
+                    <h3>Strategies</h3>
+                    <div class="value" id="totalStrategies">—</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Best Sharpe</h3>
+                    <div class="value" id="bestSharpe">—</div>
+                    <div class="sub" id="bestSharpeName"></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Best CAGR</h3>
+                    <div class="value" id="bestCagr">—</div>
+                    <div class="sub" id="bestCagrName"></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Lowest Max DD</h3>
+                    <div class="value" id="lowestDD">—</div>
+                    <div class="sub" id="lowestDDName"></div>
+                </div>
+            </div>
+
+            <table class="overview-table" id="overviewTable">
+                <thead>
+                    <tr>
+                        <th><button class="sort-btn" onclick="sortTable('name')">Strategy</button></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio')">Sharpe Ratio</button><span class="metric-info" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr')">CAGR</button><span class="metric-info" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown')">Max Drawdown</button><span class="metric-info" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility')">Volatility</button><span class="metric-info" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return')">Total Return</button><span class="metric-info" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio')">Calmar</button><span class="metric-info" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio')">Omega</button><span class="metric-info" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
+                    </tr>
+                </thead>
+                <tbody id="overviewBody">
+                    <tr><td colspan="8" class="loading">Loading strategies...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allRows = [];
+        let sortKey = 'sharpe_ratio';
+        let sortDir = 'desc';
+
+        function fmt(val, isPercent) {
+            if (val === null || val === undefined) return '—';
+            const n = parseFloat(val);
+            if (isNaN(n)) return '—';
+            if (isPercent) {
+                return (n * 100).toFixed(2) + '%';
+            }
+            return n.toFixed(3);
+        }
+
+        // Columns: key → higherIsBetter
+        const COL_DIR = {
+            sharpe_ratio: true,
+            cagr:         true,
+            max_drawdown: true,   // less negative = better, so higher value = better
+            volatility:   false,
+            total_return: true,
+            calmar_ratio: true,
+            omega_ratio:  true,
+        };
+
+        let colStats = {};
+
+        function computeColStats(rows) {
+            const stats = {};
+            for (const col of Object.keys(COL_DIR)) {
+                const vals = rows
+                    .map(r => r[col])
+                    .filter(v => v !== null && v !== undefined)
+                    .map(parseFloat)
+                    .filter(n => !isNaN(n));
+                if (vals.length < 2) continue;
+                stats[col] = { min: Math.min(...vals), max: Math.max(...vals) };
+            }
+            return stats;
+        }
+
+        function cellStyle(val, col) {
+            if (val === null || val === undefined) return '';
+            const n = parseFloat(val);
+            if (isNaN(n)) return '';
+            const s = colStats[col];
+            if (!s || s.max === s.min) return '';
+            let pct = (n - s.min) / (s.max - s.min);
+            if (!COL_DIR[col]) pct = 1 - pct;
+            const hue = Math.round(pct * 120);   // 0 = red, 120 = green
+            return `background-color: hsla(${hue}, 80%, 45%, 0.18);`;
+        }
+
+        function renderTable(rows) {
+            const tbody = document.getElementById('overviewBody');
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="error">No strategies found. Run: python scripts/run_backtest.py --all</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => `
+                <tr onclick="window.location='/strategy/${r.key}'">
+                    <td>
+                        <a class="strategy-link" href="/strategy/${r.key}">${r.key}</a>
+                        ${r.description ? `<div style="font-size: 0.78em; color: #666; margin-top: 2px; font-weight: 400;">${r.description}</div>` : ''}
+                    </td>
+                    <td style="${cellStyle(r.sharpe_ratio, 'sharpe_ratio')}">${fmt(r.sharpe_ratio, false)}</td>
+                    <td style="${cellStyle(r.cagr, 'cagr')}">${fmt(r.cagr, true)}</td>
+                    <td style="${cellStyle(r.max_drawdown, 'max_drawdown')}">${fmt(r.max_drawdown, true)}</td>
+                    <td style="${cellStyle(r.volatility, 'volatility')}">${fmt(r.volatility, true)}</td>
+                    <td style="${cellStyle(r.total_return, 'total_return')}">${fmt(r.total_return, true)}</td>
+                    <td style="${cellStyle(r.calmar_ratio, 'calmar_ratio')}">${fmt(r.calmar_ratio, false)}</td>
+                    <td style="${cellStyle(r.omega_ratio, 'omega_ratio')}">${fmt(r.omega_ratio, false)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function sortTable(key) {
+            if (sortKey === key) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortKey = key;
+                sortDir = 'desc';
+            }
+
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.className = 'sort-btn';
+            });
+            const activeBtn = event.target;
+            activeBtn.className = 'sort-btn ' + sortDir;
+
+            allRows.sort((a, b) => {
+                const av = a[key], bv = b[key];
+                if (av === null || av === undefined) return 1;
+                if (bv === null || bv === undefined) return -1;
+                if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+                return sortDir === 'asc' ? av - bv : bv - av;
+            });
+
+            renderTable(allRows);
+        }
+
+        function updateSummaryCards(rows) {
+            document.getElementById('totalStrategies').textContent = rows.length;
+
+            const withSharpe = rows.filter(r => r.sharpe_ratio !== null && r.sharpe_ratio !== undefined);
+            if (withSharpe.length) {
+                const best = withSharpe.reduce((a, b) => a.sharpe_ratio > b.sharpe_ratio ? a : b);
+                document.getElementById('bestSharpe').textContent = parseFloat(best.sharpe_ratio).toFixed(2);
+                document.getElementById('bestSharpeName').textContent = best.key;
+            }
+
+            const withCagr = rows.filter(r => r.cagr !== null && r.cagr !== undefined);
+            if (withCagr.length) {
+                const best = withCagr.reduce((a, b) => a.cagr > b.cagr ? a : b);
+                document.getElementById('bestCagr').textContent = (best.cagr * 100).toFixed(1) + '%';
+                document.getElementById('bestCagrName').textContent = best.key;
+            }
+
+            const withDD = rows.filter(r => r.max_drawdown !== null && r.max_drawdown !== undefined);
+            if (withDD.length) {
+                const best = withDD.reduce((a, b) => a.max_drawdown > b.max_drawdown ? a : b);
+                const pct = best.max_drawdown * 100;
+                document.getElementById('lowestDD').textContent = pct.toFixed(1) + '%';
+                document.getElementById('lowestDDName').textContent = best.key;
+            }
+        }
+
+        async function init() {
+            try {
+                const response = await fetch('/api/strategies/summary');
+                allRows = await response.json();
+
+                allRows.sort((a, b) => {
+                    const av = a.sharpe_ratio, bv = b.sharpe_ratio;
+                    if (av === null || av === undefined) return 1;
+                    if (bv === null || bv === undefined) return -1;
+                    return bv - av;
+                });
+
+                colStats = computeColStats(allRows);
+                updateSummaryCards(allRows);
+                renderTable(allRows);
+            } catch (err) {
+                document.getElementById('overviewBody').innerHTML =
+                    '<tr><td colspan="8" class="error">Error loading strategies: ' + err.message + '</td></tr>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            // Auto-refresh every 10 seconds
+            setInterval(init, 10000);
+        });
+    </script>
+</body>
+</html>

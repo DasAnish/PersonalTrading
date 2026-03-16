@@ -80,6 +80,7 @@ def api_strategies_summary():
             {
                 "key": key,
                 "name": info.get("name", key),
+                "description": info.get("description", ""),
                 "sharpe_ratio": metrics.get("sharpe_ratio"),
                 "cagr": cagr,
                 "max_drawdown": max_drawdown,

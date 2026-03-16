@@ -20,6 +20,7 @@ Usage:
 """
 
 from __future__ import annotations
+import json
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, List
@@ -55,26 +56,45 @@ class StrategyLoader:
         with open(file_path, 'r') as f:
             return yaml.safe_load(f)
 
+    def _load_file(self, file_path: Path) -> Dict[str, Any]:
+        """Load a JSON or YAML definition file."""
+        with open(file_path, 'r') as f:
+            if file_path.suffix == '.json':
+                return json.load(f)
+            return yaml.safe_load(f)
+
     def _find_strategy_file(self, strategy_key: str) -> Optional[Path]:
         """
         Find strategy definition file by key.
 
-        Searches all subdirectories (markets, allocations, overlays, composed).
+        Handles path-based refs like "assets/vusa" (maps directly to
+        strategy_definitions/assets/vusa.json) and simple keys like
+        "equal_weight" (searched across all subdirectories).
+
+        Prefers .json over .yaml when both exist.
 
         Args:
-            strategy_key: Strategy identifier (e.g., 'trend_following', 'vol_target_12pct')
+            strategy_key: Strategy identifier, e.g. 'equal_weight' or 'assets/vusa'
 
         Returns:
-            Path to YAML file if found, None otherwise
+            Path to file if found, None otherwise
         """
-        # Search subdirectories
-        for subdir in self.config_dir.iterdir():
-            if not subdir.is_dir():
-                continue
+        # Path-based ref: look directly under config_dir
+        if '/' in strategy_key:
+            for ext in ('.json', '.yaml'):
+                path = self.config_dir / f"{strategy_key}{ext}"
+                if path.exists():
+                    return path
+            return None
 
-            file_path = subdir / f"{strategy_key}.yaml"
-            if file_path.exists():
-                return file_path
+        # Simple key: search all subdirectories, JSON first
+        for ext in ('.json', '.yaml'):
+            for subdir in self.config_dir.iterdir():
+                if not subdir.is_dir():
+                    continue
+                file_path = subdir / f"{strategy_key}{ext}"
+                if file_path.exists():
+                    return file_path
 
         return None
 
@@ -100,7 +120,7 @@ class StrategyLoader:
                 f"Strategy definition not found: {strategy_key}"
             )
 
-        definition = self._load_yaml(file_path)
+        definition = self._load_file(file_path)
         self._cache[strategy_key] = definition
         return definition
 
@@ -134,6 +154,65 @@ class StrategyLoader:
                 pass
 
         raise ImportError(f"Cannot import class: {class_name}")
+
+    def _build_strategy_from_def(self, definition: Dict[str, Any]) -> ExecutableStrategy:
+        """
+        Recursively build a strategy from an inline definition dict.
+
+        Handles all types:
+          - "asset"      → AssetStrategy(**parameters)
+          - "allocation" → StrategyClass(underlying=[...], **parameters)
+          - "composed"   → StrategyClass(underlying=<recursive>, **parameters)
+          - "overlay"    → StrategyClass(underlying=<recursive>, **parameters)
+          - "market"     → legacy YAML market class
+
+        The "underlying" field in allocation definitions is a list of either
+        string refs (e.g. "assets/vusa") or inline dicts.  In composed/overlay
+        definitions it is a single string ref or inline dict.
+
+        Args:
+            definition: Parsed definition dictionary
+
+        Returns:
+            Instantiated strategy
+        """
+        strategy_type = definition.get('type')
+        class_name = definition.get('class')
+        params = definition.get('parameters', {}).copy()
+
+        if strategy_type == 'asset':
+            strategy_class = self._get_class(class_name)
+            return strategy_class(**params)
+
+        if strategy_type in ('allocation',):
+            strategy_class = self._get_class(class_name)
+            underlying_refs = definition.get('underlying', [])
+            underlying_list = []
+            for ref in underlying_refs:
+                if isinstance(ref, str):
+                    underlying_def = self.load_definition(ref)
+                    underlying_list.append(self._build_strategy_from_def(underlying_def))
+                elif isinstance(ref, dict):
+                    underlying_list.append(self._build_strategy_from_def(ref))
+            params['underlying'] = underlying_list
+            return strategy_class(**params)
+
+        if strategy_type in ('composed', 'overlay'):
+            strategy_class = self._get_class(class_name)
+            underlying_ref = definition.get('underlying')
+            if underlying_ref is not None:
+                if isinstance(underlying_ref, str):
+                    underlying_def = self.load_definition(underlying_ref)
+                    params['underlying'] = self._build_strategy_from_def(underlying_def)
+                elif isinstance(underlying_ref, dict):
+                    params['underlying'] = self._build_strategy_from_def(underlying_ref)
+            return strategy_class(**params)
+
+        if strategy_type == 'market':
+            strategy_class = self._get_class(class_name)
+            return strategy_class(**params)
+
+        raise ValueError(f"Unknown strategy type: {strategy_type!r}")
 
     def build_market_strategy(
         self, strategy_key: str
@@ -299,16 +378,7 @@ class StrategyLoader:
             ValueError: If strategy type is unknown
         """
         definition = self.load_definition(strategy_key)
-        strategy_type = definition.get('type')
-
-        if strategy_type == 'allocation':
-            return self.build_allocation_strategy(strategy_key)
-        elif strategy_type == 'overlay':
-            return self.build_overlay_strategy(strategy_key)
-        elif strategy_type == 'composed':
-            return self.build_composed_strategy(strategy_key)
-        else:
-            raise ValueError(f"Unknown strategy type: {strategy_type}")
+        return self._build_strategy_from_def(definition)
 
     def list_strategies(self, strategy_type: Optional[str] = None) -> Dict[str, str]:
         """
@@ -321,27 +391,28 @@ class StrategyLoader:
         Returns:
             Dict mapping strategy_key to description
         """
-        strategies = {}
+        # Collect best file per stem: JSON takes priority over YAML
+        best_files: Dict[str, Path] = {}
+        for file_path in self.config_dir.rglob('*.json'):
+            best_files[file_path.stem] = file_path
+        for file_path in self.config_dir.rglob('*.yaml'):
+            if file_path.stem not in best_files:
+                best_files[file_path.stem] = file_path
 
-        # Find all YAML files
-        for yaml_file in self.config_dir.rglob('*.yaml'):
+        strategies = {}
+        for stem, file_path in best_files.items():
             try:
-                definition = self._load_yaml(yaml_file)
+                definition = self._load_file(file_path)
                 file_type = definition.get('type')
 
-                # Filter by type if specified
                 if strategy_type and file_type != strategy_type:
                     continue
 
-                # Extract strategy key from filename
-                strategy_key = yaml_file.stem
                 description = definition.get('description', '').split('\n')[0]
-
-                strategies[strategy_key] = description
+                strategies[stem] = description
 
             except Exception as e:
-                # Skip files that can't be parsed
-                print(f"Warning: Could not parse {yaml_file}: {e}")
+                print(f"Warning: Could not parse {file_path}: {e}")
                 continue
 
         return strategies

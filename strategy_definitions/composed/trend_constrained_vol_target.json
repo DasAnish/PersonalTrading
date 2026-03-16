@@ -1,0 +1,30 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend + Constraints 5%-40% + 12% Vol Target",
+  "description": "Trend Following with 5%-40% position constraints then scaled to 12% volatility target.",
+  "parameters": {
+    "target_vol": 0.12,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.05,
+      "max_weight": 0.40
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "TrendFollowingStrategy",
+      "parameters": {
+        "lookback_days": 504,
+        "half_life_days": 60,
+        "smooth_window": 5,
+        "signal_threshold": 0.1,
+        "min_volatility": 0.001
+      },
+      "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+    }
+  }
+}

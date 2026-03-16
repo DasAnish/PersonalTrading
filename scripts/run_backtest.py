@@ -374,7 +374,12 @@ def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
         portfolio_history.append(engine._record_state(portfolio, prices.loc[backtest_start]))
 
     for rebalance_date in rebalance_dates:
-        lookback_start = rebalance_date - timedelta(days=lookback_days)
+        # Convert trading-day lookback to calendar days (+14-day buffer),
+        # with a minimum of 60 calendar days so strategies with minimal
+        # lookback (e.g. equal_weight with lookback_days=1) always get
+        # enough rows to pass the len(sliced) < 5 guard.
+        calendar_lookback = max(60, int(lookback_days * 365 / 252) + 14)
+        lookback_start = rebalance_date - timedelta(days=calendar_lookback)
         sliced = prices[
             (prices.index >= lookback_start) &
             (prices.index <= rebalance_date)

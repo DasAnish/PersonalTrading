@@ -1,0 +1,8 @@
+{
+  "type": "allocation",
+  "class": "RiskParityStrategy",
+  "name": "Risk Parity",
+  "description": "Risk Parity optimizes for equal marginal risk contribution from each asset. Unlike HRP which uses hierarchical clustering, this directly solves the equal risk contribution problem.",
+  "parameters": {},
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "TrendFollowingStrategy",
+  "name": "Trend Following",
+  "description": "Systematic trend following strategy based on momentum signals. Calculates 2-year momentum using EWMA, normalizes by asset volatility, smooths signals, and allocates inversely to volatility among strong signals.",
+  "parameters": {
+    "lookback_days": 504,
+    "half_life_days": 60,
+    "smooth_window": 5,
+    "signal_threshold": 0.1,
+    "min_volatility": 0.001
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

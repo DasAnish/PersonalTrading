@@ -28,11 +28,12 @@ Write `tests/test_backtest_e2e.py` with simulated market data to verify the full
 - Not run in normal `pytest` pass — only with `pytest -m slow`
 
 ## TODOs
-- [ ] Add `slow` marker registration to `pyproject.toml` or `pytest.ini` (create if needed)
-- [ ] Write `make_simulated_prices(n_days, seed)` helper function with 4 trending assets
-- [ ] Write `test_equal_weight_nonzero_returns` test
-- [ ] Write `test_trend_following_differs_from_equal_weight` test
-- [ ] Run tests with `pytest tests/test_backtest_e2e.py -m slow -v` to confirm both pass
-- [ ] Run `pytest tests/ -m "not slow"` to confirm existing tests still pass
+- [x] Add `slow` marker registration to `pyproject.toml` or `pytest.ini` (create if needed)
+- [x] Write `test_loader_builds_all_json_definitions` — fast test (no `slow` mark) that calls `loader.build_strategy(key)` for every JSON definition stem and asserts no exception is raised
+- [x] Write `make_simulated_prices(n_days, seed)` helper function with 4 trending assets
+- [x] Write `test_equal_weight_nonzero_returns` test
+- [x] Write `test_trend_following_differs_from_equal_weight` test
+- [x] Run tests with `pytest tests/test_backtest_e2e.py -m slow -v` to confirm both pass
+- [x] Run `pytest tests/ -m "not slow"` to confirm existing tests still pass (4 pre-existing IB mock failures, unrelated)
 
 ## Notes

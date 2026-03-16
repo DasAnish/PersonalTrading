@@ -1,0 +1,8 @@
+{
+  "type": "allocation",
+  "class": "MinimumVarianceStrategy",
+  "name": "Minimum Variance",
+  "description": "Minimum Variance optimization finds the portfolio with the lowest possible volatility using quadratic optimization (scipy SLSQP). Long-only with weights summing to 1.",
+  "parameters": {},
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

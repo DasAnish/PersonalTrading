@@ -25,15 +25,15 @@ Create JSON definition files for every strategy that currently only exists as YA
 - `constraints_5_40`, `constraints_10_30`, `vol_target_12pct`, `vol_target_15pct`, `leverage_1x` — currently exist as JSON, verify they match the schema
 
 ## TODOs
-- [ ] Create `strategy_definitions/allocations/hrp_ward.json`
-- [ ] Create `strategy_definitions/allocations/trend_following.json`
-- [ ] Create `strategy_definitions/allocations/minimum_variance.json`
-- [ ] Create `strategy_definitions/allocations/risk_parity.json`
-- [ ] Create `strategy_definitions/allocations/momentum_top2.json`
-- [ ] Create `strategy_definitions/composed/hrp_with_constraints.json` (inline nested format)
-- [ ] Create `strategy_definitions/composed/trend_with_vol_12.json` (inline nested format)
-- [ ] Create `strategy_definitions/composed/trend_constrained_vol_target.json` (double-nested)
-- [ ] Verify loader discovers and builds all new files correctly
-- [ ] Delete all `*.yaml` files from `strategy_definitions/`
+- [x] Create `strategy_definitions/allocations/hrp_ward.json`
+- [x] Create `strategy_definitions/allocations/trend_following.json`
+- [x] Create `strategy_definitions/allocations/minimum_variance.json`
+- [x] Create `strategy_definitions/allocations/risk_parity.json`
+- [x] Create `strategy_definitions/allocations/momentum_top2.json`
+- [x] Create `strategy_definitions/composed/hrp_with_constraints.json` (inline nested format)
+- [x] Create `strategy_definitions/composed/trend_with_vol_12.json` (inline nested format)
+- [x] Create `strategy_definitions/composed/trend_constrained_vol_target.json` (double-nested)
+- [x] Verify loader discovers and builds all new files correctly
+- [x] Delete all `*.yaml` files from `strategy_definitions/`
 
 ## Notes

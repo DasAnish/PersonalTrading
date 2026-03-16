@@ -1,0 +1,18 @@
+{
+  "type": "composed",
+  "class": "ConstraintStrategy",
+  "name": "HRP (Ward) + Constraints 10%-30%",
+  "description": "HRP allocation with strict weight constraints enforcing 10% minimum and 30% maximum per position.",
+  "parameters": {
+    "min_weight": 0.10,
+    "max_weight": 0.30
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "HRPStrategy",
+    "parameters": {
+      "linkage_method": "ward"
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

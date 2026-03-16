@@ -67,7 +67,7 @@ To add a new strategy:
 1. Inherit from `AllocationStrategy` or `OverlayStrategy`
 2. Implement `calculate_weights(context: StrategyContext)`
 3. Implement `get_strategy_lookback()`
-4. Add YAML file to `strategy_definitions/` and register
+4. Add a JSON file to `strategy_definitions/` (see JSON Strategy Definitions below)
 
 ---
 
@@ -94,28 +94,33 @@ meta = EqualWeightStrategy(underlying=[hrp_30vol, trend_constrained])
 
 ---
 
-## YAML Strategy Definitions
+## JSON Strategy Definitions
 
-Stored in `strategy_definitions/`:
-- `assets/` — VUSA, SSLN, SGLN, IWRD
-- `allocations/` — hrp_single, hrp_ward, trend_following, equal_weight, minimum_variance, risk_parity, momentum_top2
+Stored in `strategy_definitions/` (JSON only — no YAML):
+- `assets/` — vusa, ssln, sgln, iwrd
+- `allocations/` — equal_weight, hrp_single, hrp_ward, trend_following, minimum_variance, risk_parity, momentum_top2
 - `overlays/` — vol_target_12/15/30pct, constraints_5_40/10_30, leverage_1x
-- `composed/` — trend_30/15vol, hrp_30/15vol, trend_constrained_vol_target
-- `portfolios/` — meta_trend_hrp_30/15vol, meta_multi_volatility
+- `composed/` — hrp_15/30vol, trend_15/30vol, hrp_with_constraints, trend_with_vol_12, trend_constrained_vol_target
+- `portfolios/` — meta_trend_hrp_15/30vol, meta_multi_volatility
 
-Custom strategy example (`strategy_definitions/allocations/my_momentum.yaml`):
-```yaml
-type: allocation
-class: TrendFollowingStrategy
-market: uk_etfs
-parameters:
-  lookback_days: 252
-  half_life_days: 30
-  smooth_window: 3
-  signal_threshold: 0.15
+**Schema**: allocation and composed definitions use `"underlying"` to specify assets inline — no separate market files needed.
+
+Custom strategy example (`strategy_definitions/allocations/my_momentum.json`):
+```json
+{
+  "type": "allocation",
+  "class": "TrendFollowingStrategy",
+  "name": "My Momentum",
+  "description": "Custom trend following with shorter lookback",
+  "parameters": {
+    "lookback_days": 252,
+    "half_life_days": 30,
+    "smooth_window": 3,
+    "signal_threshold": 0.15
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}
 ```
-
-See [strategy_definitions/CUSTOM_STRATEGIES.md](../strategy_definitions/CUSTOM_STRATEGIES.md) for full guide.
 
 List all available:
 ```bash

@@ -1,0 +1,10 @@
+{
+  "type": "allocation",
+  "class": "HRPStrategy",
+  "name": "HRP (Ward)",
+  "description": "Hierarchical Risk Parity optimization using ward linkage clustering. Ward linkage minimizes variance within clusters, creating more balanced and stable cluster structures than single linkage.",
+  "parameters": {
+    "linkage_method": "ward"
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

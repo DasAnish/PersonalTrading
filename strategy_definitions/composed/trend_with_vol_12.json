@@ -1,0 +1,22 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend Following + 12% Vol Target",
+  "description": "Trend Following allocation scaled to 12% annualized volatility target.",
+  "parameters": {
+    "target_vol": 0.12,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendFollowingStrategy",
+    "parameters": {
+      "lookback_days": 504,
+      "half_life_days": 60,
+      "smooth_window": 5,
+      "signal_threshold": 0.1,
+      "min_volatility": 0.001
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

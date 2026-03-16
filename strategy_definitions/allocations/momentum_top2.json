@@ -1,0 +1,11 @@
+{
+  "type": "allocation",
+  "class": "MomentumTopNStrategy",
+  "name": "Momentum Top-2",
+  "description": "Momentum strategy that selects the top 2 assets by 12-month trailing return and weights them by inverse volatility. Unselected assets receive zero weight.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 252
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

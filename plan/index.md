@@ -7,11 +7,11 @@
 
 | # | Phase | Status |
 |---|-------|--------|
-| 1 | [Fix Backtest Bugs](phase-01-fix-backtest-bugs.md) | ⬜ Not Started |
-| 2 | [Update StrategyLoader for JSON](phase-02-strategy-loader-json.md) | ⬜ Not Started |
-| 3 | [JSON Definitions + Remove YAML](phase-03-json-definitions-and-cleanup.md) | ⬜ Not Started |
-| 4 | [End-to-End Backtest Tests](phase-04-e2e-tests.md) | ⬜ Not Started |
-| 5 | [Update Documentation](phase-05-docs.md) | ⬜ Not Started |
+| 1 | [Fix Backtest Bugs](phase-01-fix-backtest-bugs.md) | ✅ Complete |
+| 2 | [Update StrategyLoader for JSON](phase-02-strategy-loader-json.md) | ✅ Complete |
+| 3 | [JSON Definitions + Remove YAML](phase-03-json-definitions-and-cleanup.md) | ✅ Complete |
+| 4 | [End-to-End Backtest Tests](phase-04-e2e-tests.md) | ✅ Complete |
+| 5 | [Update Documentation](phase-05-docs.md) | ✅ Complete |
 
 ## All TODOs
 
@@ -43,6 +43,7 @@
 
 ### Phase 4 — End-to-End Backtest Tests
 - [ ] Add `slow` marker to pytest config
+- [ ] Write `test_loader_builds_all_json_definitions`
 - [ ] Write `make_simulated_prices` helper
 - [ ] Write `test_equal_weight_nonzero_returns`
 - [ ] Write `test_trend_following_differs_from_equal_weight`

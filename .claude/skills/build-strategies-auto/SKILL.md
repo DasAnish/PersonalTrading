@@ -85,6 +85,22 @@ python scripts/run_backtest.py --strategy <slug_name>
 - **Success**: note the key metrics from stdout (total return, Sharpe, max drawdown)
 - **Failure**: read the error, fix it, run once more. If it fails again, skip this strategy, log the reason, and continue the loop.
 
+### Step 4b — Overfitting Check
+
+Run **immediately after a successful validate**. Skip if the strategy type is composed/portfolio (JSON-only compositions with N=1 trivially pass).
+
+For allocation strategies with tunable parameters, use at least 3 variants:
+```bash
+# Examples:
+python scripts/run_overfitting.py --strategy hrp --param linkage_method=single,complete,ward
+python scripts/run_overfitting.py --strategy momentum --param top_n=1,2,3
+python scripts/run_overfitting.py --strategy trend_following --param lookback_days=126,252,504
+# If no tunable params, use Mode 2 with N=1:
+python scripts/run_overfitting.py --strategy <strategy_key> --n-trials 1
+```
+
+Note the DSR and PBO verdict for the report. If the script errors, log and skip this step.
+
 ### Step 5 — Report and loop
 
 Print:
@@ -92,6 +108,7 @@ Print:
 ✓ Built: [Strategy Name]
   File: strategy_definitions/[path]/[name].json
   Return: X% | Sharpe: X.XX | Max DD: -X%
+  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]   ← include if Step 4b was run
 
 Next: researching the next strategy...
 ```

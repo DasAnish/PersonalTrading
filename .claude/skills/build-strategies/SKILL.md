@@ -88,6 +88,34 @@ Run: `python scripts/run_backtest.py --strategy <strategy_name>`
 - If it succeeds: report the key metrics (total return, Sharpe, max drawdown)
 - If it fails: read the error, fix it, and retry once. If it fails again, skip this strategy and log the issue, then continue the loop.
 
+### Step 4b — Overfitting Check
+
+Run this **immediately after a successful validate**, before reporting results.
+
+**Determine what to run based on strategy type**:
+
+- **JSON-only composed/portfolio strategies**: Skip overfitting check (N=1 trivially passes DSR; PBO requires multiple configs).
+- **Allocation strategies with a primary tunable parameter** (e.g. `linkage_method`, `lookback_days`, `top_n`): Run with at least 3 variants.
+- **New Python allocation class**: Run with 3 parameter variants if any exist, else skip.
+
+```bash
+# Example: new HRP variant
+python scripts/run_overfitting.py --strategy hrp --param linkage_method=single,complete,ward
+
+# Example: new momentum variant
+python scripts/run_overfitting.py --strategy momentum --param top_n=1,2,3
+
+# Example: no tunable params (use Mode 2 with N=1)
+python scripts/run_overfitting.py --strategy <strategy_key> --n-trials 1
+```
+
+**Interpret the result**:
+- **PASS** (DSR ≥ 0.95 and PBO ≤ 0.30): proceed to Step 5 normally.
+- **WARN** (DSR in [0.80, 0.95) or PBO in (0.30, 0.50]): proceed to Step 5 but include the warning in the report.
+- **FAIL** (DSR < 0.80 or PBO > 0.50): proceed to Step 5 but flag the strategy as **high risk of overfitting**. Do not skip — the strategy may still be valid, but the user should know.
+
+If `run_overfitting.py` errors (e.g. import error, insufficient data): log the error, skip Step 4b, and proceed to Step 5.
+
 ### Step 5 — Report
 
 Tell the user:
@@ -95,6 +123,7 @@ Tell the user:
 ✓ Built: [Strategy Name]
   File: strategy_definitions/[path]/[name].json
   Return: X% | Sharpe: X.XX | Max DD: -X%
+  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]   ← include if Step 4b was run
 
 Next: researching the next strategy...
 ```

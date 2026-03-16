@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
-from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data
+from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data, load_overfitting_analysis
 
 
 def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
@@ -234,6 +234,31 @@ def api_export(strategy_key: str):
             "Content-Disposition": f"attachment; filename={strategy_key}_{export_type}.csv"
         },
     )
+
+
+@bp.route("/api/strategy/<strategy_key>/overfitting")
+def api_overfitting(strategy_key: str):
+    """
+    Get overfitting analysis (DSR + PBO) for a strategy.
+
+    Returns the contents of overfitting_analysis.json if it exists.
+    Returns 404 with a helpful message if the analysis has not been run yet.
+    """
+    analysis = load_overfitting_analysis(strategy_key)
+    if analysis is None:
+        return (
+            jsonify(
+                {
+                    "error": "Overfitting analysis not found.",
+                    "hint": (
+                        f"Run: python scripts/run_overfitting.py "
+                        f"--strategy {strategy_key} --n-trials <N>"
+                    ),
+                }
+            ),
+            404,
+        )
+    return jsonify(analysis)
 
 
 @bp.route("/api/compare")

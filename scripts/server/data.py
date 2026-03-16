@@ -175,3 +175,21 @@ def get_transactions_data(strategy_data: dict, strategy_name: str = None) -> dic
 
     name = strategy_name or strategy_data.get("key", "Strategy")
     return {name: strategy_data["transactions"]}
+
+
+def load_overfitting_analysis(strategy_key: str) -> dict | None:
+    """
+    Load overfitting_analysis.json for a strategy.
+
+    Returns the parsed dict if the file exists, None otherwise.
+    A None result means the strategy has not yet been analysed.
+    """
+    path = RESULTS_DIR / "strategies" / strategy_key / "overfitting_analysis.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"   [!] Error loading overfitting_analysis.json for {strategy_key}: {e}")
+        return None

@@ -149,6 +149,7 @@
             <button class="tab-button" onclick="showTab('monthly', event)">Monthly Returns</button>
             <button class="tab-button" onclick="showTab('rolling', event)">Rolling Metrics</button>
             <button class="tab-button" onclick="showTab('transactions', event)">Transactions</button>
+            <button class="tab-button" id="overfittingTabBtn" onclick="showTab('overfitting', event)">Overfitting</button>
         </div>
 
         <div class="content">
@@ -241,8 +242,93 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Overfitting Tab -->
+            <div id="overfitting" class="tab-panel">
+                <h2>Overfitting Analysis</h2>
+                <div id="overfittingContent">
+                    <p class="loading">Loading overfitting analysis…</p>
+                </div>
+            </div>
         </div>
     </div>
+
+    <style>
+        .verdict-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+        .verdict-PASS { background: #d1fae5; color: #065f46; }
+        .verdict-WARN { background: #fef3c7; color: #92400e; }
+        .verdict-FAIL { background: #fee2e2; color: #991b1b; }
+
+        .overfitting-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+        .overfitting-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+        .overfitting-card h3 {
+            margin: 0 0 16px;
+            font-size: 1.1em;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+        .overfitting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95em;
+        }
+        .overfitting-row:last-child { border-bottom: none; }
+        .overfitting-row .label { color: #666; }
+        .overfitting-row .val { font-weight: 600; color: #333; }
+
+        .overfitting-not-run {
+            background: #f8f9ff;
+            border: 2px dashed #c7d2fe;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            color: #6366f1;
+        }
+        .overfitting-not-run code {
+            display: block;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 14px 18px;
+            border-radius: 6px;
+            margin: 16px auto;
+            font-size: 0.9em;
+            text-align: left;
+            max-width: 600px;
+        }
+        .overall-verdict {
+            text-align: center;
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .overall-PASS { background: #d1fae5; color: #065f46; }
+        .overall-WARN { background: #fef3c7; color: #92400e; }
+        .overall-FAIL { background: #fee2e2; color: #991b1b; }
+    </style>
 
     <script>
         const INITIAL_STRATEGY = {{ strategy_key | tojson }};
@@ -572,6 +658,234 @@
             document.getElementById(tabName).classList.add('active');
             if (event) event.target.classList.add('active');
             if (tabName === 'rolling') loadRollingMetrics();
+            if (tabName === 'overfitting') loadOverfittingAnalysis();
+        }
+
+        let overfittingLoaded = false;
+        let overfittingChart = null;
+
+        async function loadOverfittingAnalysis() {
+            if (overfittingLoaded) return;
+            const strategies = getStrategySelections();
+            if (!strategies.length) return;
+            const strategyKey = strategies[0];
+            const container = document.getElementById('overfittingContent');
+
+            try {
+                const resp = await fetch(`/api/strategy/${strategyKey}/overfitting`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    container.innerHTML = `
+                        <div class="overfitting-not-run">
+                            <h3>Overfitting analysis not yet run</h3>
+                            <p>Run the following command to analyse this strategy:</p>
+                            <code>python scripts/run_overfitting.py --strategy ${strategyKey} --n-trials &lt;N&gt;</code>
+                            <p style="margin-top:12px;font-size:0.9em;color:#888;">
+                                For a full sweep + PBO analysis use <code style="display:inline;background:#eee;color:#333;padding:2px 6px;border-radius:4px;">--param key=v1,v2,v3</code> instead.
+                            </p>
+                            ${err.hint ? `<p style="margin-top:8px;font-size:0.85em;color:#666;">${err.hint}</p>` : ''}
+                        </div>`;
+                    return;
+                }
+                const data = await resp.json();
+                renderOverfittingAnalysis(data, container, strategyKey);
+                overfittingLoaded = true;
+            } catch (e) {
+                container.innerHTML = `<p style="color:#dc2626;">Error loading overfitting data: ${e.message}</p>`;
+            }
+        }
+
+        function verdictBadge(verdict) {
+            return `<span class="verdict-badge verdict-${verdict}">${verdict}</span>`;
+        }
+
+        function renderOverfittingAnalysis(data, container, strategyKey) {
+            const dsr = data.dsr;
+            const pbo = data.pbo;
+
+            // Overall verdict
+            let verdicts = [];
+            if (dsr) verdicts.push(dsr.verdict);
+            if (pbo) verdicts.push(pbo.verdict);
+            let overall = 'N/A';
+            if (verdicts.length > 0) {
+                if (verdicts.every(v => v === 'PASS')) overall = 'PASS';
+                else if (verdicts.some(v => v === 'FAIL')) overall = 'FAIL';
+                else overall = 'WARN';
+            }
+
+            let html = `
+                <div class="overall-verdict overall-${overall}">
+                    Overall Verdict: ${overall}
+                    &nbsp;·&nbsp; N = ${data.n_param_combinations} combinations
+                    &nbsp;·&nbsp; Analysed: ${data.analysis_date ? data.analysis_date.substring(0,10) : 'unknown'}
+                </div>
+                <div class="overfitting-grid">`;
+
+            // DSR card
+            if (dsr) {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Deflated Sharpe Ratio (DSR)</h3>
+                        <div class="overfitting-row">
+                            <span class="label">DSR</span>
+                            <span class="val">${(dsr.dsr * 100).toFixed(1)}% &nbsp; ${verdictBadge(dsr.verdict)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Observed SR (annualised)</span>
+                            <span class="val">${dsr.observed_sharpe.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Reference SR₀ (deflated)</span>
+                            <span class="val">${dsr.sharpe_reference.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Return Periods (T)</span>
+                            <span class="val">${dsr.t_periods}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Skewness</span>
+                            <span class="val">${dsr.skewness.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Excess Kurtosis</span>
+                            <span class="val">${dsr.excess_kurtosis.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Pass threshold</span>
+                            <span class="val">&ge; ${(dsr.threshold_pass * 100).toFixed(0)}%</span>
+                        </div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Deflated Sharpe Ratio (DSR)</h3>
+                        <p style="color:#888;">DSR not computed.</p>
+                    </div>`;
+            }
+
+            // PBO card
+            if (pbo) {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Probability of Backtest Overfitting (PBO)</h3>
+                        <div class="overfitting-row">
+                            <span class="label">PBO</span>
+                            <span class="val">${(pbo.pbo * 100).toFixed(1)}% &nbsp; ${verdictBadge(pbo.verdict)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Prob. OOS Loss</span>
+                            <span class="val">${(pbo.prob_oos_loss * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">CSCV Partitions</span>
+                            <span class="val">${pbo.n_combinations.toLocaleString()}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">S subsets</span>
+                            <span class="val">${pbo.s_subsets}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">N configs</span>
+                            <span class="val">${pbo.n_configs}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Pass threshold</span>
+                            <span class="val">&le; ${(pbo.threshold_pass * 100).toFixed(0)}%</span>
+                        </div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Probability of Backtest Overfitting (PBO)</h3>
+                        <p style="color:#888;">PBO not computed — no return matrix available.<br>
+                        Use <code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;">--param</code> flag to enable PBO.</p>
+                    </div>`;
+            }
+
+            html += `</div>`;
+
+            // Logit score histogram (if PBO available)
+            if (pbo && pbo.logit_scores && pbo.logit_scores.length > 0) {
+                html += `
+                    <h3 style="margin-top:10px;">Logit Score Distribution</h3>
+                    <p style="color:#666;font-size:0.9em;margin-bottom:12px;">
+                        Distribution of logit(OOS rank) across all CSCV partitions.
+                        Scores &lt; 0 indicate IS-best underperformed OOS (contributes to PBO).
+                        A distribution centred well above 0 suggests low overfitting.
+                    </p>
+                    <div class="chart-container" style="height:280px;">
+                        <canvas id="logitHistChart"></canvas>
+                    </div>`;
+            }
+
+            // Errors
+            if (data.errors && data.errors.length > 0) {
+                html += `<div style="margin-top:16px;padding:12px;background:#fee2e2;border-radius:8px;">
+                    <strong>Errors:</strong><ul style="margin:6px 0 0 18px;">${data.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+                </div>`;
+            }
+
+            // Config panel
+            if (data.config && data.config.param_grid && Object.keys(data.config.param_grid).length > 0) {
+                const pg = data.config.param_grid;
+                html += `<details style="margin-top:20px;"><summary style="cursor:pointer;font-weight:600;color:#667eea;">Configuration Used</summary>
+                    <table class="metrics-table" style="margin-top:10px;">
+                        <thead><tr><th>Parameter</th><th>Values Tested</th></tr></thead>
+                        <tbody>${Object.entries(pg).map(([k,v]) => `<tr><td>${k}</td><td>${Array.isArray(v) ? v.join(', ') : v}</td></tr>`).join('')}</tbody>
+                    </table></details>`;
+            }
+
+            container.innerHTML = html;
+
+            // Render logit histogram
+            if (pbo && pbo.logit_scores && pbo.logit_scores.length > 0) {
+                renderLogitHistogram(pbo.logit_scores);
+            }
+        }
+
+        function renderLogitHistogram(logits) {
+            const canvas = document.getElementById('logitHistChart');
+            if (!canvas) return;
+            if (overfittingChart) { overfittingChart.destroy(); overfittingChart = null; }
+
+            const min = Math.min(...logits);
+            const max = Math.max(...logits);
+            const nBins = Math.min(30, Math.max(10, Math.round(Math.sqrt(logits.length))));
+            const binWidth = (max - min) / nBins;
+            const bins = Array(nBins).fill(0);
+            logits.forEach(v => {
+                const idx = Math.min(Math.floor((v - min) / binWidth), nBins - 1);
+                bins[idx]++;
+            });
+            const labels = bins.map((_, i) => (min + (i + 0.5) * binWidth).toFixed(2));
+            const colors = labels.map(l => parseFloat(l) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(102,126,234,0.6)');
+
+            overfittingChart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Logit Score Frequency',
+                        data: bins,
+                        backgroundColor: colors,
+                        borderColor: colors.map(c => c.replace('0.6', '1')),
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: items => `Logit ≈ ${items[0].label}` } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Logit Score (< 0 = overfitting)' } },
+                        y: { title: { display: true, text: 'Frequency' }, beginAtZero: true }
+                    }
+                }
+            });
         }
 
         async function loadMonthlyReturns(strategyKey) {

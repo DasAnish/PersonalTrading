@@ -11,7 +11,9 @@ You are running a continuous strategy research-and-build loop. You work on **one
 
 ## Context
 
-**Assets available**: VUSA (S&P 500), SSLN (silver), SGLN (gold), IWRD (world equities) — all GBP-hedged UK ETFs.
+**Assets available**: Read dynamically from `strategy_definitions/assets/` — each `.json` file in that folder is an investable asset. Read this folder at the start of every loop iteration to discover the current asset universe. Do not hardcode asset lists.
+
+Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), IWRD (world equities), EQQQ (NASDAQ-100), COMM (diversified commodities), AIGC (AI equities), IIND (MSCI India), IMEU (MSCI Europe), WCOA (coal), VUTY (US Treasury bonds), BRNT (Brent crude oil), CRUD (WTI crude oil).
 
 **Existing strategy classes** (in `strategies/`):
 - `HRPStrategy` — Hierarchical Risk Parity (`hrp.py`)
@@ -19,13 +21,20 @@ You are running a continuous strategy research-and-build loop. You work on **one
 - `EqualWeightStrategy` — equal weight allocation (`equal_weight.py`)
 - `MinimumVarianceStrategy` — mean-variance optimisation (`minimum_variance.py`)
 - `RiskParityStrategy` — equal marginal risk contribution (`risk_parity.py`)
-- `MomentumStrategy` — top-N momentum selection (`momentum.py`)
+- `MomentumTopNStrategy` — top-N momentum selection (`momentum.py`)
+- `TrendSignalMVOStrategy` — trend signal blended with mean-variance optimisation (`trend_signal_mvo.py`)
+- `MeanReversionStrategy` — mean reversion / contrarian allocation (`mean_reversion.py`)
+- `SkewnessWeightedStrategy` — skewness-weighted allocation (`skewness_weighted.py`)
+- `MetaPortfolioStrategy` — equal-weight meta-portfolio over sub-strategies (`meta_portfolio.py`)
+- `DualMomentumStrategy` — absolute + relative momentum with safe-asset fallback (`dual_momentum.py`)
+- `AdaptiveAssetAllocationStrategy` — momentum ranking + minimum variance (`adaptive_asset_allocation.py`)
+- `TrendSignalRPStrategy` — trend signal blended with risk parity (`trend_signal_rp.py`)
 - Overlays: `VolatilityTargetStrategy`, `ConstraintStrategy`, `LeverageStrategy` (`overlays.py`)
 
 **Existing strategy definitions** (in `strategy_definitions/`):
-- `allocations/`: equal_weight, hrp_single, hrp_ward, trend_following, minimum_variance, risk_parity, momentum_top2
-- `composed/`: hrp_15vol, hrp_30vol, trend_15vol, trend_30vol, hrp_with_constraints, trend_with_vol_12, trend_constrained_vol_target
-- `portfolios/`: meta_trend_hrp_15vol, meta_trend_hrp_30vol, meta_multi_volatility
+- `allocations/`: equal_weight, hrp_single, hrp_ward, hrp_complete, hrp_average, trend_following, trend_following_252, minimum_variance, risk_parity, momentum_top1, momentum_top2, momentum_top3, momentum_top2_6m, trend_signal_mvo, trend_signal_mvo_conservative, trend_signal_rp, mean_reversion, skewness_weighted, dual_momentum, dual_momentum_invested, adaptive_asset_allocation, adaptive_asset_allocation_top3
+- `composed/`: hrp_15vol, hrp_30vol, hrp_average_15vol, trend_15vol, trend_30vol, trend_with_vol_12, trend_constrained_vol_target, hrp_with_constraints, min_var_15vol, min_var_30vol, min_var_with_constraints, risk_parity_15vol, risk_parity_30vol, risk_parity_with_constraints, trend_signal_mvo_15vol, mean_reversion_15vol, aaa_top3_15vol, dual_momentum_15vol, momentum_top2_with_constraints
+- `portfolios/`: meta_trend_hrp_15vol, meta_trend_hrp_30vol, meta_multi_volatility, meta_defensive_core, meta_all_season, meta_momentum_ensemble, meta_high_sharpe, meta_contrarian, meta_risk_managed, meta_ultimate
 - `overlays/`: vol_target_12/15/30pct, constraints_5_40, constraints_10_30
 
 **Architecture rules**:
@@ -42,7 +51,7 @@ Repeat the following loop indefinitely until the user stops you:
 
 ### Step 1 — Survey what exists
 
-Read all JSON files in `strategy_definitions/` (allocations/, composed/, portfolios/, overlays/) to get the current full picture of what is already implemented. Do this at the start of every loop iteration so you never duplicate.
+Read all JSON files in `strategy_definitions/` — including `assets/`, `allocations/`, `composed/`, `portfolios/`, `overlays/` — to get the current full picture of what is already implemented and which assets are available. Do this at the start of every loop iteration so you never duplicate or reference an asset that doesn't exist.
 
 ### Step 2 — Select the next strategy to build
 
@@ -127,7 +136,7 @@ After every 3 strategies built, also print:
 - **One strategy at a time** — complete or skip before moving to the next
 - **Never place orders** — research only
 - **Never duplicate** — always re-read `strategy_definitions/` at the start of each iteration
-- **Only use VUSA, SSLN, SGLN, IWRD** — skip any idea that needs other assets
+- **Only use assets present in `strategy_definitions/assets/`** — skip any idea that needs assets not in that folder
 - **No sub-agents** — do all work inline; this is the unattended version
 - Stop immediately if the user says "stop", "pause", or "enough" and summarise what was built this session
 
@@ -146,6 +155,7 @@ After every 3 strategies built, also print:
   "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
 }
 ```
+Use asset keys matching filenames in `strategy_definitions/assets/` (e.g. `"assets/eqqq"`, `"assets/vuty"`).
 
 **Composed** (`strategy_definitions/composed/`):
 ```json

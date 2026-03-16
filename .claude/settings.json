@@ -30,7 +30,9 @@
       "Bash(do echo:*)",
       "Read(//c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/**)",
       "Bash(done)",
-      "Bash(sort -k1)"
+      "Bash(sort -k1)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebSearch"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

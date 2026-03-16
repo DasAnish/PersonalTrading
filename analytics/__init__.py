@@ -33,6 +33,16 @@ from .visualizations import (
     create_performance_table
 )
 
+from .overfitting import (
+    calculate_deflated_sharpe_ratio,
+    calculate_pbo,
+    run_overfitting_analysis,
+    overfitting_analysis_to_dict,
+    DSRResult,
+    PBOResult,
+    OverfittingAnalysis,
+)
+
 __all__ = [
     'calculate_returns',
     'calculate_cumulative_returns',
@@ -56,4 +66,11 @@ __all__ = [
     'plot_portfolio_comparison',
     'plot_transaction_analysis',
     'create_performance_table',
+    'calculate_deflated_sharpe_ratio',
+    'calculate_pbo',
+    'run_overfitting_analysis',
+    'overfitting_analysis_to_dict',
+    'DSRResult',
+    'PBOResult',
+    'OverfittingAnalysis',
 ]

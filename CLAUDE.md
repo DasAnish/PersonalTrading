@@ -35,6 +35,7 @@ plan/
 3. Run `/continueplan` at the start of each session to pick up where you left off
 4. Claude marks each TODO `[x]` and updates `state.md` as work completes
 5. When a phase finishes, `index.md` is updated and the next phase begins
+6. Commit the code changes between each phase
 
 ### Rules
 

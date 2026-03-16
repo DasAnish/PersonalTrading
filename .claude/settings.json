@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(pip install:*)",
       "Bash(claude mcp:*)",
@@ -9,15 +8,21 @@
       "Bash(npx claude:*)",
       "Bash(xargs grep:*)",
       "Read(//c/Users/dasan/.claude/**)",
-      "Bash(python scripts/*:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
       "Bash(python -m pytest*)",
       "Bash(pytest*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(python -c \":*)",
+      "WebFetch(domain:happy.engineering)"
     ],
+    "defaultMode": "acceptEdits",
     "additionalDirectories": [
       "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading",
       "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading\\.claude\\skills"

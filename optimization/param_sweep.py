@@ -16,7 +16,7 @@ Example:
 import itertools
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Any, Type
+from typing import Dict, FrozenSet, List, Any, Optional, Tuple, Type
 
 import pandas as pd
 import numpy as np
@@ -53,7 +53,8 @@ class ParameterSweep:
         metric: str = 'sharpe_ratio',
         initial_capital: float = 10000.0,
         transaction_cost_bps: float = 7.5,
-        rebalance_frequency: str = 'monthly'
+        rebalance_frequency: str = 'monthly',
+        store_returns: bool = False,
     ):
         """
         Args:
@@ -63,6 +64,8 @@ class ParameterSweep:
             initial_capital: Starting capital for backtests
             transaction_cost_bps: Transaction cost in basis points
             rebalance_frequency: Rebalancing frequency
+            store_returns: If True, store per-combination return series for PBO.
+                           Access via get_return_matrix() after run().
         """
         self.strategy_class = strategy_class
         self.param_grid = param_grid
@@ -70,6 +73,9 @@ class ParameterSweep:
         self.initial_capital = initial_capital
         self.transaction_cost_bps = transaction_cost_bps
         self.rebalance_frequency = rebalance_frequency
+        self.store_returns = store_returns
+        # Populated when store_returns=True; keyed by frozenset(params.items())
+        self.return_series_: Dict[FrozenSet, pd.Series] = {}
 
     def _generate_combinations(self) -> List[Dict[str, Any]]:
         """Generate all parameter combinations from grid."""
@@ -95,6 +101,111 @@ class ParameterSweep:
             'cvar_95': calculate_cvar(returns) * 100,
         }
 
+    def _run_single_combination(
+        self,
+        params: Dict[str, Any],
+        underlying: List[Strategy],
+        prices: pd.DataFrame,
+        backtest_prices: pd.DataFrame,
+        rebalance_dates: List,
+        lookback_days: int,
+    ) -> Optional[Tuple[Dict[str, float], pd.Series]]:
+        """
+        Run one parameter combination and return (metrics, values_series).
+
+        Returns None if the combination fails or has insufficient data.
+        The values_series is a pd.Series of portfolio total_value indexed by date.
+        """
+        from backtesting.portfolio_state import PortfolioState
+
+        strategy = self.strategy_class(underlying=underlying, **params)
+
+        actual_lookback = strategy.get_strategy_lookback()
+        total_lookback = max(lookback_days, actual_lookback)
+        if hasattr(strategy, 'smooth_window'):
+            total_lookback += strategy.smooth_window
+
+        portfolio = PortfolioState(
+            timestamp=rebalance_dates[0] if rebalance_dates else None,
+            cash=self.initial_capital,
+            positions={},
+            prices={}
+        )
+
+        history = []
+
+        for rebalance_date in rebalance_dates:
+            lookback_start = rebalance_date - pd.Timedelta(days=int(total_lookback * 1.5))
+            context_prices = prices[
+                (prices.index >= lookback_start) &
+                (prices.index <= rebalance_date)
+            ]
+
+            if len(context_prices) < 30:
+                continue
+
+            context = StrategyContext(
+                current_date=rebalance_date,
+                lookback_start=context_prices.index[0],
+                prices=context_prices
+            )
+
+            try:
+                weights = strategy.calculate_weights(context)
+                current_prices = backtest_prices.loc[rebalance_date]
+
+                portfolio.timestamp = rebalance_date
+                portfolio.execute_rebalance(
+                    target_weights=weights,
+                    prices=current_prices,
+                    transaction_cost_bps=self.transaction_cost_bps
+                )
+
+                history.append({
+                    'timestamp': rebalance_date,
+                    'total_value': portfolio.total_value()
+                })
+            except Exception:
+                continue
+
+        if len(history) < 2:
+            return None
+
+        values = pd.Series(
+            [h['total_value'] for h in history],
+            index=pd.to_datetime([h['timestamp'] for h in history])
+        )
+        metrics = self._calculate_all_metrics(values)
+        return metrics, values
+
+    def get_return_matrix(self) -> pd.DataFrame:
+        """
+        Build a return matrix for PBO from stored per-combination series.
+
+        Returns a DataFrame with shape (T, N) where each column is the
+        pct_change() returns of one parameter combination. Columns are
+        aligned on the shared rebalance dates (inner join).
+
+        Raises RuntimeError if store_returns=False.
+        """
+        if not self.store_returns:
+            raise RuntimeError(
+                "store_returns=False. Initialise ParameterSweep with "
+                "store_returns=True to collect return series."
+            )
+        if not self.return_series_:
+            raise RuntimeError("No return series stored. Call run() first.")
+
+        series_list = []
+        for key, values in self.return_series_.items():
+            # Convert portfolio values to pct returns
+            returns = values.pct_change().dropna()
+            col_name = str(dict(key))
+            series_list.append(returns.rename(col_name))
+
+        matrix = pd.concat(series_list, axis=1, join='inner')
+        return matrix
+
     def run(
         self,
         underlying: List[Strategy],
@@ -115,19 +226,21 @@ class ParameterSweep:
 
         Returns:
             DataFrame with one row per parameter combination,
-            columns = param names + metric names, sorted by target metric
+            columns = param names + metric names, sorted by target metric.
+            If store_returns=True, call get_return_matrix() afterwards for PBO.
         """
-        from backtesting.portfolio_state import PortfolioState
-
         combinations = self._generate_combinations()
         logger.info(f"Running {len(combinations)} parameter combinations")
+
+        if self.store_returns:
+            self.return_series_ = {}
 
         # Filter prices to relevant date range
         backtest_prices = prices[
             (prices.index >= start_date) & (prices.index <= end_date)
         ]
 
-        # Generate rebalance dates
+        # Generate rebalance dates (shared across all combinations)
         freq_map = {'monthly': 'ME', 'weekly': 'W', 'quarterly': 'QE', 'daily': 'D'}
         freq = freq_map.get(self.rebalance_frequency, 'ME')
         candidate_dates = pd.date_range(start=start_date, end=end_date, freq=freq)
@@ -138,84 +251,40 @@ class ParameterSweep:
                 rebalance_dates.append(future[0])
 
         results = []
+        n = len(combinations)
 
         for i, params in enumerate(combinations):
             try:
-                # Create strategy with these params
-                strategy = self.strategy_class(underlying=underlying, **params)
-
-                # Get strategy's actual lookback
-                actual_lookback = strategy.get_strategy_lookback()
-                total_lookback = max(lookback_days, actual_lookback)
-                if hasattr(strategy, 'smooth_window'):
-                    total_lookback += strategy.smooth_window
-
-                # Run simplified backtest
-                portfolio = PortfolioState(
-                    timestamp=start_date,
-                    cash=self.initial_capital,
-                    positions={},
-                    prices={}
+                outcome = self._run_single_combination(
+                    params=params,
+                    underlying=underlying,
+                    prices=prices,
+                    backtest_prices=backtest_prices,
+                    rebalance_dates=rebalance_dates,
+                    lookback_days=lookback_days,
                 )
 
-                history = []
-
-                for rebalance_date in rebalance_dates:
-                    # Create context with lookback
-                    lookback_start = rebalance_date - pd.Timedelta(days=int(total_lookback * 1.5))
-                    context_prices = prices[
-                        (prices.index >= lookback_start) &
-                        (prices.index <= rebalance_date)
-                    ]
-
-                    if len(context_prices) < 30:
-                        continue
-
-                    context = StrategyContext(
-                        current_date=rebalance_date,
-                        lookback_start=context_prices.index[0],
-                        prices=context_prices
+                if outcome is None:
+                    logger.warning(
+                        f"Combo {i+1}/{n} {params}: insufficient data, skipping"
                     )
-
-                    try:
-                        weights = strategy.calculate_weights(context)
-                        current_prices = backtest_prices.loc[rebalance_date]
-
-                        portfolio.timestamp = rebalance_date
-                        portfolio.execute_rebalance(
-                            target_weights=weights,
-                            prices=current_prices,
-                            transaction_cost_bps=self.transaction_cost_bps
-                        )
-
-                        history.append({
-                            'timestamp': rebalance_date,
-                            'total_value': portfolio.total_value()
-                        })
-                    except Exception:
-                        continue
-
-                if len(history) < 2:
-                    logger.warning(f"Combo {i+1}/{len(combinations)} {params}: insufficient data, skipping")
                     continue
 
-                values = pd.Series(
-                    [h['total_value'] for h in history],
-                    index=pd.to_datetime([h['timestamp'] for h in history])
-                )
+                metrics, values = outcome
 
-                metrics = self._calculate_all_metrics(values)
+                if self.store_returns:
+                    self.return_series_[frozenset(params.items())] = values
 
                 result_row = {**params, **metrics}
                 results.append(result_row)
 
                 logger.info(
-                    f"Combo {i+1}/{len(combinations)} {params}: "
+                    f"Combo {i+1}/{n} {params}: "
                     f"{self.metric}={metrics.get(self.metric, 0):.4f}"
                 )
 
             except Exception as e:
-                logger.error(f"Combo {i+1}/{len(combinations)} {params}: failed - {e}")
+                logger.error(f"Combo {i+1}/{n} {params}: failed - {e}")
                 continue
 
         if not results:

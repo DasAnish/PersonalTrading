@@ -195,12 +195,34 @@ def print_analysis_report(analysis: OverfittingAnalysis) -> None:
     else:
         print("\n--- PBO: SKIPPED (no return matrix) ---")
 
+    if analysis.kfold is not None:
+        k = analysis.kfold
+        print()
+        print("--- K-Fold Temporal Stability ---")
+        print(f"Folds (k):                 {k.n_folds}")
+        print(f"Fold Sharpes:              [{', '.join(f'{s:.2f}' for s in k.fold_sharpes)}]")
+        print(f"Mean / Std:                {k.mean_sharpe:.4f} / {k.std_sharpe:.4f}")
+        print(f"Worst Fold Sharpe:         {k.worst_fold_sharpe:.4f}")
+
+        verdict_icon = "✓" if k.verdict == "PASS" else ("⚠" if k.verdict == "WARN" else "✗")
+        threshold_str = f">= {k.threshold_pass}" if k.verdict == "PASS" else (
+            f">= {k.threshold_warn}" if k.verdict == "WARN" else f"< {k.threshold_warn}"
+        )
+        print(
+            f"Frac Positive: {k.fraction_positive:.1%}  "
+            f"{verdict_icon} {k.verdict} ({threshold_str})"
+        )
+    else:
+        print("\n--- K-Fold Stability: SKIPPED ---")
+
     # Overall verdict
     verdicts = []
     if analysis.dsr:
         verdicts.append(analysis.dsr.verdict)
     if analysis.pbo:
         verdicts.append(analysis.pbo.verdict)
+    if analysis.kfold:
+        verdicts.append(analysis.kfold.verdict)
 
     if verdicts:
         if all(v == "PASS" for v in verdicts):

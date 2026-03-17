@@ -13,6 +13,11 @@ Implements:
   Reference: Bailey et al. (2014), "The Probability of Backtest Overfitting"
   http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
 
+- K-Fold Temporal Stability: splits a single strategy's return series into
+  k equal time folds and measures how consistently positive the Sharpe ratio
+  is across all folds. Answers: "Is performance concentrated in one lucky
+  period, or does it hold across all time slices?"
+
 Adapted from the pypbo reference implementation (https://github.com/esvhd/pypbo).
 """
 from __future__ import annotations
@@ -99,6 +104,35 @@ class PBOResult:
 
 
 @dataclass
+class KFoldResult:
+    """Result of k-fold temporal stability analysis."""
+
+    n_folds: int
+    """Number of equal time folds the return series was split into."""
+
+    fold_sharpes: List[float]
+    """Annualised Sharpe ratio computed for each fold."""
+
+    mean_sharpe: float
+    """Mean of per-fold Sharpe ratios."""
+
+    std_sharpe: float
+    """Standard deviation of per-fold Sharpe ratios."""
+
+    fraction_positive: float
+    """Fraction of folds with Sharpe > 0. 1.0 = all folds positive."""
+
+    worst_fold_sharpe: float
+    """Lowest per-fold Sharpe (worst time period)."""
+
+    verdict: str
+    """PASS / WARN / FAIL based on fraction_positive thresholds."""
+
+    threshold_pass: float = 0.70
+    threshold_warn: float = 0.50
+
+
+@dataclass
 class OverfittingAnalysis:
     """Combined overfitting analysis output for a strategy."""
 
@@ -108,6 +142,7 @@ class OverfittingAnalysis:
     n_param_combinations: int
     analysis_date: str
     config: Dict[str, Any]
+    kfold: Optional[KFoldResult] = None
     errors: List[str] = field(default_factory=list)
 
 
@@ -431,6 +466,98 @@ def calculate_pbo(
 
 
 # ---------------------------------------------------------------------------
+# Public API: K-Fold Temporal Stability
+# ---------------------------------------------------------------------------
+
+
+def calculate_kfold_stability(
+    returns: pd.Series,
+    n_folds: int = 10,
+    periods_per_year: int = 12,
+    threshold_pass: float = 0.70,
+    threshold_warn: float = 0.50,
+) -> KFoldResult:
+    """
+    K-fold temporal stability analysis for a single strategy.
+
+    Splits the return series into ``n_folds`` equal consecutive time windows
+    and computes the annualised Sharpe ratio for each. Reports what fraction
+    of folds have positive Sharpe, making it easy to spot strategies that
+    only work in one lucky era.
+
+    Parameters
+    ----------
+    returns : pd.Series
+        Portfolio return series (percentage returns per period, no NaNs).
+    n_folds : int
+        Number of equal time folds (default 10).
+    periods_per_year : int
+        Annualisation factor: 12 for monthly, 252 for daily.
+    threshold_pass : float
+        fraction_positive >= this → PASS (default 0.70).
+    threshold_warn : float
+        fraction_positive >= this → WARN, else FAIL (default 0.50).
+
+    Returns
+    -------
+    KFoldResult
+
+    Raises
+    ------
+    ValueError
+        If the series has fewer than ``n_folds * 3`` periods (less than 3
+        data points per fold makes per-fold Sharpe unreliable).
+    """
+    arr = returns.dropna().values
+    t = len(arr)
+    min_periods = n_folds * 3
+    if t < min_periods:
+        raise ValueError(
+            f"Return series too short for {n_folds}-fold analysis "
+            f"(T={t}, need >= {min_periods})."
+        )
+
+    # Discard leading rows so T is divisible by n_folds (preserves recency)
+    residual = t % n_folds
+    if residual:
+        arr = arr[residual:]
+        t = len(arr)
+
+    fold_size = t // n_folds
+    fold_sharpes: List[float] = []
+
+    for i in range(n_folds):
+        fold = arr[i * fold_size : (i + 1) * fold_size]
+        sr_period = _sharpe_per_period(fold)
+        sr_annual = sr_period * math.sqrt(periods_per_year)
+        fold_sharpes.append(round(sr_annual, 4))
+
+    mean_sharpe = float(np.mean(fold_sharpes))
+    std_sharpe = float(np.std(fold_sharpes, ddof=1)) if n_folds > 1 else 0.0
+    fraction_positive = float(np.mean([1.0 if s > 0 else 0.0 for s in fold_sharpes]))
+    worst_fold_sharpe = float(np.min(fold_sharpes))
+
+    if fraction_positive >= threshold_pass:
+        verdict = "PASS"
+    elif fraction_positive >= threshold_warn:
+        verdict = "WARN"
+    else:
+        verdict = "FAIL"
+
+    return KFoldResult(
+        n_folds=n_folds,
+        fold_sharpes=fold_sharpes,
+        mean_sharpe=round(mean_sharpe, 4),
+        std_sharpe=round(std_sharpe, 4),
+        fraction_positive=round(fraction_positive, 4),
+        worst_fold_sharpe=worst_fold_sharpe,
+        verdict=verdict,
+        threshold_pass=threshold_pass,
+        threshold_warn=threshold_warn,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
 
@@ -448,6 +575,9 @@ def run_overfitting_analysis(
     pbo_threshold_pass: float = 0.30,
     pbo_threshold_warn: float = 0.50,
     oos_loss_threshold: float = 0.0,
+    n_folds: int = 10,
+    kfold_threshold_pass: float = 0.70,
+    kfold_threshold_warn: float = 0.50,
 ) -> OverfittingAnalysis:
     """
     Run DSR and (optionally) PBO for a strategy and return combined analysis.
@@ -476,6 +606,10 @@ def run_overfitting_analysis(
         PBO verdict thresholds.
     oos_loss_threshold : float
         Metric threshold for prob_oos_loss (0 for Sharpe).
+    n_folds : int
+        Number of equal time folds for k-fold temporal stability (default 10).
+    kfold_threshold_pass / kfold_threshold_warn : float
+        K-fold verdict thresholds based on fraction_positive.
 
     Returns
     -------
@@ -522,16 +656,32 @@ def run_overfitting_analysis(
     elif return_matrix is None:
         logger.info("return_matrix not provided; skipping PBO.")
 
+    kfold_result: Optional[KFoldResult] = None
+    try:
+        kfold_result = calculate_kfold_stability(
+            returns=strategy_returns,
+            n_folds=n_folds,
+            periods_per_year=periods_per_year,
+            threshold_pass=kfold_threshold_pass,
+            threshold_warn=kfold_threshold_warn,
+        )
+    except Exception as exc:
+        msg = f"K-fold stability calculation failed: {exc}"
+        logger.warning(msg)
+        errors.append(msg)
+
     return OverfittingAnalysis(
         strategy_key=strategy_key,
         dsr=dsr_result,
         pbo=pbo_result,
+        kfold=kfold_result,
         n_param_combinations=n_configs,
         analysis_date=datetime.now(timezone.utc).isoformat(),
         config={
             "param_grid": param_grid,
             "periods_per_year": periods_per_year,
             "s_subsets": s_subsets,
+            "n_folds": n_folds,
         },
         errors=errors,
     )
@@ -552,6 +702,7 @@ def overfitting_analysis_to_dict(analysis: OverfittingAnalysis) -> Dict[str, Any
         "errors": analysis.errors,
         "dsr": None,
         "pbo": None,
+        "kfold": None,
     }
 
     if analysis.dsr is not None:
@@ -581,6 +732,20 @@ def overfitting_analysis_to_dict(analysis: OverfittingAnalysis) -> Dict[str, Any
             "verdict": p.verdict,
             "threshold_pass": p.threshold_pass,
             "threshold_warn": p.threshold_warn,
+        }
+
+    if analysis.kfold is not None:
+        k = analysis.kfold
+        result["kfold"] = {
+            "n_folds": k.n_folds,
+            "fold_sharpes": k.fold_sharpes,
+            "mean_sharpe": k.mean_sharpe,
+            "std_sharpe": k.std_sharpe,
+            "fraction_positive": k.fraction_positive,
+            "worst_fold_sharpe": k.worst_fold_sharpe,
+            "verdict": k.verdict,
+            "threshold_pass": k.threshold_pass,
+            "threshold_warn": k.threshold_warn,
         }
 
     return result

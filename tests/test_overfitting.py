@@ -14,9 +14,11 @@ import pytest
 
 from analytics.overfitting import (
     DSRResult,
+    KFoldResult,
     OverfittingAnalysis,
     PBOResult,
     calculate_deflated_sharpe_ratio,
+    calculate_kfold_stability,
     calculate_pbo,
     overfitting_analysis_to_dict,
     run_overfitting_analysis,
@@ -503,3 +505,146 @@ class TestSerialization:
         )
         d = overfitting_analysis_to_dict(analysis)
         assert d["pbo"] is None
+
+
+# ---------------------------------------------------------------------------
+# K-Fold Temporal Stability tests
+# ---------------------------------------------------------------------------
+
+
+class TestKFoldStability:
+
+    def test_kfold_result_type(self):
+        """calculate_kfold_stability returns a KFoldResult."""
+        returns = make_monthly_returns(n=60)
+        result = calculate_kfold_stability(returns, n_folds=6)
+        assert isinstance(result, KFoldResult)
+
+    def test_kfold_fold_count(self):
+        """fold_sharpes has exactly n_folds entries."""
+        returns = make_monthly_returns(n=60)
+        result = calculate_kfold_stability(returns, n_folds=5)
+        assert len(result.fold_sharpes) == 5
+        assert result.n_folds == 5
+
+    def test_kfold_fraction_positive_consistent_strategy(self):
+        """A strongly positive returns series should have high fraction_positive."""
+        # Very high mean relative to std → all folds should have positive Sharpe
+        rng = np.random.default_rng(7)
+        idx = pd.date_range("2019-01-31", periods=120, freq="ME")
+        returns = pd.Series(rng.normal(0.05, 0.005, 120), index=idx)
+        result = calculate_kfold_stability(returns, n_folds=10)
+        assert result.fraction_positive == 1.0
+        assert result.verdict == "PASS"
+
+    def test_kfold_fraction_positive_negative_strategy(self):
+        """A strongly negative returns series should have fraction_positive == 0."""
+        idx = pd.date_range("2019-01-31", periods=60, freq="ME")
+        returns = pd.Series([-0.01] * 60, index=idx)
+        result = calculate_kfold_stability(returns, n_folds=10)
+        assert result.fraction_positive == 0.0
+        assert result.verdict == "FAIL"
+
+    def test_kfold_insufficient_periods_raises(self):
+        """Fewer than n_folds * 3 periods raises ValueError."""
+        returns = make_monthly_returns(n=20)
+        with pytest.raises(ValueError, match="too short"):
+            calculate_kfold_stability(returns, n_folds=10)
+
+    def test_kfold_verdict_pass(self):
+        """Fraction positive >= threshold_pass → PASS."""
+        idx = pd.date_range("2019-01-31", periods=100, freq="ME")
+        # 9 out of 10 folds positive → fraction_positive = 0.9 >= 0.7
+        rng = np.random.default_rng(0)
+        returns = pd.Series(rng.normal(0.02, 0.01, 100), index=idx)
+        result = calculate_kfold_stability(returns, n_folds=10, threshold_pass=0.7)
+        # All folds should be positive given strong mean
+        assert result.fraction_positive >= 0.7
+        assert result.verdict == "PASS"
+
+    def test_kfold_verdict_fail(self):
+        """Fraction positive < threshold_warn → FAIL."""
+        idx = pd.date_range("2019-01-31", periods=60, freq="ME")
+        # Mix of strongly positive and negative to guarantee low fraction
+        vals = [-0.05, -0.04, -0.03, -0.04, -0.05] * 12
+        returns = pd.Series(vals, index=idx)
+        result = calculate_kfold_stability(returns, n_folds=10, threshold_warn=0.5)
+        assert result.verdict == "FAIL"
+
+    def test_kfold_worst_fold_is_minimum(self):
+        """worst_fold_sharpe equals the minimum of fold_sharpes."""
+        returns = make_monthly_returns(n=60)
+        result = calculate_kfold_stability(returns, n_folds=6)
+        assert result.worst_fold_sharpe == min(result.fold_sharpes)
+
+    def test_kfold_in_overfitting_analysis(self):
+        """run_overfitting_analysis populates kfold field when series is long enough."""
+        returns = make_monthly_returns(n=60)
+        analysis = run_overfitting_analysis(
+            strategy_key="kfold_test",
+            strategy_returns=returns,
+            return_matrix=None,
+            param_grid={},
+            n_folds=6,
+        )
+        assert analysis.kfold is not None
+        assert isinstance(analysis.kfold, KFoldResult)
+        assert len(analysis.kfold.fold_sharpes) == 6
+
+    def test_kfold_skipped_when_series_too_short(self):
+        """k-fold is None (error logged) when series < n_folds * 3."""
+        returns = make_monthly_returns(n=15)
+        analysis = run_overfitting_analysis(
+            strategy_key="kfold_short",
+            strategy_returns=returns,
+            return_matrix=None,
+            param_grid={},
+            n_folds=10,
+        )
+        assert analysis.kfold is None
+        assert any("K-fold" in e for e in analysis.errors)
+
+    def test_kfold_to_dict_serializable(self):
+        """overfitting_analysis_to_dict kfold section is JSON-safe."""
+        returns = make_monthly_returns(n=60)
+        analysis = run_overfitting_analysis(
+            strategy_key="kfold_serial",
+            strategy_returns=returns,
+            return_matrix=None,
+            param_grid={},
+            n_folds=6,
+        )
+        d = overfitting_analysis_to_dict(analysis)
+        assert d["kfold"] is not None
+        serialised = json.dumps(d)
+        assert "kfold" in serialised
+
+    def test_kfold_to_dict_subkeys(self):
+        """K-fold sub-dict has all required keys."""
+        returns = make_monthly_returns(n=60)
+        analysis = run_overfitting_analysis(
+            strategy_key="kfold_keys",
+            strategy_returns=returns,
+            return_matrix=None,
+            param_grid={},
+            n_folds=6,
+        )
+        d = overfitting_analysis_to_dict(analysis)
+        expected_keys = {
+            "n_folds", "fold_sharpes", "mean_sharpe", "std_sharpe",
+            "fraction_positive", "worst_fold_sharpe", "verdict",
+            "threshold_pass", "threshold_warn",
+        }
+        assert expected_keys.issubset(set(d["kfold"].keys()))
+
+    def test_kfold_config_stored(self):
+        """n_folds is stored in the analysis config dict."""
+        returns = make_monthly_returns(n=60)
+        analysis = run_overfitting_analysis(
+            strategy_key="cfg_test",
+            strategy_returns=returns,
+            return_matrix=None,
+            param_grid={},
+            n_folds=7,
+        )
+        assert analysis.config["n_folds"] == 7

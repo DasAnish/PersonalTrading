@@ -14,6 +14,7 @@
 | **MCP tools (ib-trading server)** | [docs/mcp-tools.md](docs/mcp-tools.md) |
 | Project overview, components, IB connection, backtesting specs | [docs/project.md](docs/project.md) |
 | Strategy architecture, algorithms, composability | [docs/strategies.md](docs/strategies.md) |
+| Overfitting analysis (DSR, PBO, k-fold), scripts, output format | [docs/overfitting.md](docs/overfitting.md) |
 | CLI reference (all 4 modes + examples) | [docs/cli.md](docs/cli.md) |
 | Web dashboard usage & API | [docs/dashboard.md](docs/dashboard.md) |
 | Session log, next actions, known bugs | [docs/session_log.md](docs/session_log.md) |

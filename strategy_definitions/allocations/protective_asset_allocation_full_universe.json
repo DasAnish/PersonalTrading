@@ -1,0 +1,24 @@
+{
+  "type": "allocation",
+  "class": "ProtectiveAssetAllocationStrategy",
+  "name": "Protective Asset Allocation (Full Universe)",
+  "description": "Keller & Keuning PAA across all 13 assets: 12 risky assets (VUSA, EQQQ, AIGC, IIND, IMEU, IWRD, SSLN, SGLN, COMM, BRNT, CRUD, WCOA) and VUTY bonds as the safe asset. Protection factor scales with the proportion of risky assets below their 12-month SMA.",
+  "parameters": {
+    "lookback_days": 252
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
+}

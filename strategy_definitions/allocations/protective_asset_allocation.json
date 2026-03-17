@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "ProtectiveAssetAllocationStrategy",
+  "name": "Protective Asset Allocation",
+  "description": "Keller & Keuning PAA: allocates defensively by shifting weight from risky assets to bonds based on how many risky assets are above their 12-month SMA. Protection factor = (N_risky - N_above_SMA) / N_risky. Last asset (VUTY bonds) is the safe asset.",
+  "parameters": {
+    "lookback_days": 252
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/iwrd",
+    "assets/vuty"
+  ]
+}

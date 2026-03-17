@@ -1,0 +1,12 @@
+{
+  "type": "allocation",
+  "class": "VolatilityMomentumStrategy",
+  "name": "Volatility-Adjusted Momentum Top-2",
+  "description": "Selects the top 2 assets by risk-adjusted momentum (12-month return / 63-day realised volatility). Penalises high-volatility assets even with strong raw returns, favouring consistent outperformers over noisy ones. Weights by inverse volatility.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 252,
+    "vol_lookback_days": 63
+  },
+  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+}

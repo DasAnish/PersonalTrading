@@ -22,6 +22,13 @@ Core files: `strategies/core.py`, `strategies/__init__.py`
 | Minimum Variance | `strategies/minimum_variance.py` | lookback 252d, scipy SLSQP |
 | Risk Parity | `strategies/risk_parity.py` | equal marginal risk contribution |
 | Momentum Top-N | `strategies/momentum.py` | `top_n=2`, `lookback_days=252` |
+| Dual Momentum | `strategies/dual_momentum.py` | absolute + relative momentum |
+| Mean Reversion | `strategies/mean_reversion.py` | z-score based allocation |
+| Adaptive Asset Allocation | `strategies/adaptive_asset_allocation.py` | momentum + min-var hybrid |
+| Skewness Weighted | `strategies/skewness_weighted.py` | penalises negative skew |
+| Trend + MVO | `strategies/trend_signal_mvo.py` | trend signals into mean-variance |
+| Trend + Risk Parity | `strategies/trend_signal_rp.py` | trend signals into risk parity |
+| Meta Portfolio | `strategies/meta_portfolio.py` | combines multiple strategies |
 
 **Overlays**: `VolatilityTargetStrategy`, `ConstraintStrategy`, `LeverageStrategy` — see `strategies/overlays.py`
 
@@ -97,11 +104,11 @@ meta = EqualWeightStrategy(underlying=[hrp_30vol, trend_constrained])
 ## JSON Strategy Definitions
 
 Stored in `strategy_definitions/` (JSON only — no YAML):
-- `assets/` — vusa, ssln, sgln, iwrd
-- `allocations/` — equal_weight, hrp_single, hrp_ward, trend_following, minimum_variance, risk_parity, momentum_top2
+- `assets/` — vusa, ssln, sgln, iwrd, eqqq, brnt, crud, comm, comml, aigc, iind, imeu, wcoa, vuty
+- `allocations/` — equal_weight, hrp_single, hrp_ward, trend_following, minimum_variance, risk_parity, momentum_top2, + others
 - `overlays/` — vol_target_12/15/30pct, constraints_5_40/10_30, leverage_1x
 - `composed/` — hrp_15/30vol, trend_15/30vol, hrp_with_constraints, trend_with_vol_12, trend_constrained_vol_target
-- `portfolios/` — meta_trend_hrp_15/30vol, meta_multi_volatility
+- `portfolios/` — meta_trend_hrp_15/30vol, meta_multi_volatility, meta_ultimate, meta_all_season, + others
 
 **Schema**: allocation and composed definitions use `"underlying"` to specify assets inline — no separate market files needed.
 

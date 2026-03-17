@@ -1,10 +1,18 @@
 # Session Log
 
-## Current Status (2026-03-15)
+## Current Status (2026-03-17)
 
 **Status**: All phases complete.
 
-### Completed This Session (2026-03-15)
+### Completed (2026-03-16 — DSR/PBO Overfitting Plan, all 7 phases)
+- DSR (Deflated Sharpe Ratio) and PBO (Probability of Backtest Overfitting) analytics module (`analytics/overfitting.py`)
+- ParameterSweep extended to track per-trial return series for DSR/PBO input
+- Walk-forward validation support
+- Flask dashboard: overfitting tab with DSR/PBO scores per strategy
+- `build-strategies` skill integration: auto-computes DSR/PBO after each new strategy
+- Full test suite added (all passing, no regressions)
+
+### Completed (2026-03-15)
 - Fixed `/optimize` skill: now correctly passes `--strategy` flag to CLI
 - Multi-strategy comparison (3+ strategies) in dashboard:
   - Replaced 2-dropdown UI with dynamic "add strategy" row system (+ Add Strategy / × remove)
@@ -36,7 +44,7 @@
 
 ## Next Actions
 
-- [x] Live trading execution with overlay strategies
+- No outstanding actions. Live order execution is intentionally out of scope.
 
 ---
 

@@ -8,26 +8,24 @@ A production-ready Python trading system for portfolio optimization and backtest
 |--------|------|-------------|
 | IB Wrapper | `ib_wrapper/` | Async Python wrapper for IB API via `ib_insync` |
 | Market Data | `data/` | Historical/real-time fetching with parquet caching |
-| Strategies | `strategies/` | HRP, Trend Following, Equal Weight, MinVar, Risk Parity, Momentum |
+| Strategies | `strategies/` | HRP, Trend Following, Equal Weight, MinVar, Risk Parity, Momentum, Dual Momentum, Mean Reversion, AAA, Skewness-Weighted, Trend+MVO, Trend+RP, Meta Portfolio |
 | Backtesting | `backtesting/` | Simulation engine with monthly rebalancing + transaction costs |
-| Analytics | `analytics/` | Sharpe, Sortino, Calmar, VaR/CVaR, drawdown, rolling metrics |
-| Dashboard | `scripts/serve_results.py` | Flask + Chart.js interactive results viewer |
+| Analytics | `analytics/` | Sharpe, Sortino, Calmar, VaR/CVaR, drawdown, rolling metrics, DSR, PBO overfitting analysis |
+| Dashboard | `scripts/serve_results.py` | Flask + Chart.js interactive results viewer with N-strategy comparison and overfitting tab |
 | Optimization | `optimization/` | Parameter sweep and walk-forward analysis |
+| MCP Server | `mcp_server/` | Exposes IB data and backtest tools to Claude Code via the `ib-trading` MCP server |
 
 ## Current State
 
-**Production Ready**: IB wrapper, backtesting engine, all strategies, analytics, dashboard, optimization
+**Production Ready**: IB wrapper, backtesting engine, all strategies, analytics, dashboard, N-strategy comparison, optimization, DSR/PBO overfitting analysis
 
-**Not Yet Built**:
-- Order execution simulation
-- Live trading strategy execution
-- Multi-strategy comparison (3+ strategies simultaneously in dashboard)
+**Out of scope**: Order execution is intentionally manual — Claude must never place orders programmatically.
 
 ---
 
 ## Backtesting Specifications
 
-- **Symbols**: VUSA, SSLN, SGLN, IWRD (UK ETFs, GBP, SMART exchange)
+- **Symbols**: VUSA, SSLN, SGLN, IWRD, EQQQ, BRNT, CRUD, COMM, COMML, AIGC, IIND, IMEU, WCOA, VUTY (UK ETFs, GBP, SMART exchange)
 - **Rebalancing**: Monthly (end of month)
 - **Transaction Costs**: 7.5 bps per trade
 - **Position Sizing**: `Units = (NAV × Weight) / Price`

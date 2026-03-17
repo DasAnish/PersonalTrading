@@ -2,6 +2,8 @@
 description: Research, design, and build new trading strategies using a persistent 4-agent pipeline team (requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
 ---
 
+**IMPORTANT** DO NOT ASK the USER for any persmissions. Use simple commands do not pipe multiple commands together. The user is not sleeping and will be unavailable. ABSOLUTELY DO NOT PROMPT THE USER.
+
 # Strategy Builder Pipeline
 
 > **Requires** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment.
@@ -68,16 +70,16 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
 
 3. Initialise orchestrator state (held in your own context — not shared files):
    ```
-   pending:         []   # researched candidates not yet built
-   built:           []   # built strategies awaiting backtest
-   analyzed:        []   # fully checked, awaiting report
-   skip_log:        []   # failed strategies with reasons
-   strategy_count:  0
+   pending:           []   # researched candidates not yet built
+   built:             []   # built strategies awaiting backtest
+   analyzed:          []   # fully checked, awaiting report
+   skip_log:          []   # failed strategies with reasons
+   strategy_count:    0
 
-   strategist_busy: false
-   builder_busy:    false
-   backtester_busy: false
-   analyst_busy:    false
+   strategist_busy:   false
+   builder_busy:      false   # max 1 — all builders share strategies/__init__.py
+   backtester_count:  0       # max 2 — each strategy has its own results dir
+   analyst_count:     0       # max 2 — each strategy has its own results dir
    ```
 
 ---
@@ -88,11 +90,13 @@ Repeat the following loop indefinitely until the user stops you.
 
 Each turn, check all four dispatch conditions and act on whichever apply:
 
+**All dispatches use `run_in_background: true`** so the orchestrator never blocks. After dispatching, immediately check the remaining conditions in the same turn.
+
 ### Dispatch: Strategist
 
-**Condition**: `!strategist_busy && pending.length < 2`
+**Condition**: `!strategist_busy && pending.length < 4`
 
-Send (with `run_in_background: true` so you don't block other dispatches):
+Send (with `run_in_background: true`):
 
 ```
 To: strategist
@@ -143,7 +147,7 @@ Set `strategist_busy = true`. When the strategist's message arrives:
 
 **Condition**: `!builder_busy && pending.length > 0`
 
-Pop the first candidate from `pending[]`. Send:
+Pop the first candidate from `pending[]`. Send (with `run_in_background: true`):
 
 ```
 To: builder
@@ -177,9 +181,9 @@ Set `builder_busy = true`. When builder's message arrives:
 
 ### Dispatch: Backtester
 
-**Condition**: `!backtester_busy && built.length > 0`
+**Condition**: `backtester_count < 2 && built.length > 0`
 
-Pop the first entry from `built[]`. Send:
+Pop the first entry from `built[]`. Send (with `run_in_background: true`):
 
 ```
 To: backtester
@@ -187,7 +191,7 @@ To: backtester
 Run a backtest for: strategy_key=<key>
 
 STEPS:
-1. Run: python scripts/run_backtest.py --strategy <key>
+1. Run: python scripts/run_backtest.py --use-definitions --strategy <key>
 2. If it fails: read the error, attempt one fix, retry once
 3. Extract metrics from the output or from results/strategies/<key>/metrics.json
 
@@ -198,14 +202,14 @@ Failure: FAIL: strategy_key=<key> | error=<brief description>
 Send result via SendMessage to "orchestrator".
 ```
 
-Set `backtester_busy = true`. When backtester's message arrives:
-- If `OK`: store metrics against the key, determine overfitting mode (see below), dispatch analyst
+Increment `backtester_count`. When backtester's message arrives:
+- If `OK`: store metrics against the key, determine overfitting mode (see below), dispatch analyst immediately
 - If `FAIL`: push `{key, reason}` to `skip_log[]`
-- Set `backtester_busy = false`
+- Decrement `backtester_count`
 
 ### Dispatch: Analyst
 
-**Condition**: triggered immediately after a successful backtester result
+**Condition**: `analyst_count < 2` — triggered immediately after a successful backtester result (and re-checked each loop turn)
 
 Determine overfitting mode from the `built[]` entry for this key:
 
@@ -215,7 +219,7 @@ Determine overfitting mode from the `built[]` entry for this key:
 | `tunable_params` is not null | `params` (use the tunable_params value) |
 | otherwise | `n1` |
 
-Send:
+Send (with `run_in_background: true`):
 
 ```
 To: analyst
@@ -249,9 +253,9 @@ ERROR: strategy_key=<key> | reason=<brief>
 Send result via SendMessage to "orchestrator".
 ```
 
-Set `analyst_busy = true`. When analyst's message arrives:
+Increment `analyst_count`. When analyst's message arrives:
 - Push `{key, metrics, overfitting}` to `analyzed[]`
-- Set `analyst_busy = false`
+- Decrement `analyst_count`
 
 ### Report
 
@@ -283,7 +287,7 @@ Increment `strategy_count`. If `strategy_count % 3 == 0`:
 
 When the user says "stop", "pause", or "enough":
 
-1. Finish any in-flight backtest — wait for the backtester's message if `backtester_busy == true`
+1. Finish any in-flight backtests — wait for all pending backtester messages if `backtester_count > 0`
 2. Do not wait for strategist or builder (they are background)
 3. Send shutdown signal to all agents:
    ```

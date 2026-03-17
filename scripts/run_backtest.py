@@ -224,6 +224,63 @@ def get_all_available_strategies(use_definitions: bool = True) -> dict:
         return available
 
 
+def save_strategy_results(result_data: dict, strategy_key: str) -> None:
+    """
+    Save a single strategy's backtest results to results/strategies/<key>/
+    and merge it into strategies_index.json.
+
+    This mirrors the --all mode's per-strategy save so the dashboard index
+    is always up to date when individual strategies are backtested.
+    """
+    strategies_dir = RESULTS_DIR / 'strategies'
+    strategies_dir.mkdir(exist_ok=True)
+    strategy_dir = strategies_dir / strategy_key
+    strategy_dir.mkdir(exist_ok=True)
+
+    for filename, key in [
+        ('portfolio_history.json', 'portfolio_history'),
+        ('transactions.json', 'transactions'),
+        ('weights_history.json', 'weights_history'),
+        ('metrics.json', 'metrics'),
+        ('info.json', 'info'),
+    ]:
+        with open(strategy_dir / filename, 'w') as f:
+            json.dump(result_data[key], f, indent=2)
+
+    logger.info(f"✓ Saved results for {strategy_key} to {strategy_dir}")
+
+    # Merge into strategies_index.json
+    index_path = RESULTS_DIR / 'strategies_index.json'
+    if index_path.exists():
+        try:
+            with open(index_path, 'r') as f:
+                index_data = json.load(f)
+        except Exception:
+            index_data = {'strategies': {}, 'config': {}}
+    else:
+        index_data = {'strategies': {}, 'config': {}}
+
+    index_data['strategies'][strategy_key] = {
+        'path': str((strategy_dir).relative_to(RESULTS_DIR)),
+        'metrics': result_data['metrics'],
+        'info': result_data['info'],
+    }
+    index_data['run_date'] = datetime.now().isoformat()
+    index_data['total_strategies'] = len(index_data['strategies'])
+    index_data.setdefault('config', {
+        'symbols': SYMBOLS,
+        'currency': CURRENCY,
+        'initial_capital': INITIAL_CAPITAL,
+        'transaction_cost_bps': TRANSACTION_COST_BPS,
+        'rebalance_frequency': REBALANCE_FREQUENCY,
+        'lookback_days': LOOKBACK_DAYS,
+    })
+
+    with open(index_path, 'w') as f:
+        json.dump(index_data, f, indent=2)
+    logger.info(f"✓ strategies_index.json updated ({index_data['total_strategies']} strategies)")
+
+
 def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) -> dict:
     """
     Serialize backtest results to JSON-compatible format.
@@ -967,6 +1024,27 @@ async def main(args):
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
         logger.info(f"✓ Metadata saved to: {metadata_path}")
+
+        # Save primary strategy to per-strategy dir and update strategies_index.json
+        # so the dashboard picks it up without needing a full --all run.
+        if args.use_definitions:
+            strategy_key_for_index = args.composed_strategy or args.strategy
+            loader = StrategyLoader()
+            try:
+                definition = loader.load_definition(strategy_key_for_index)
+                strategy_info_for_index = {
+                    'key': strategy_key_for_index,
+                    'type': definition.get('type'),
+                    'class': definition.get('class'),
+                    'description': definition.get('description', ''),
+                    'parameters': definition.get('parameters', {}),
+                }
+            except Exception:
+                strategy_info_for_index = {'key': strategy_key_for_index}
+            serialized = serialize_backtest_results(
+                primary_results, strategy_key_for_index, strategy_info_for_index
+            )
+            save_strategy_results(serialized, strategy_key_for_index)
 
         # Create and save visualization
         logger.info("\nGenerating performance charts...")

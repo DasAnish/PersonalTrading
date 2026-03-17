@@ -51,7 +51,7 @@ Repeat the following loop indefinitely until the user stops you:
 
 ### Step 1 — Research (spawn a Research sub-agent)
 
-Spawn a **general-purpose sub-agent** with `model: "haiku"` to do the following research in parallel:
+Spawn a **general-purpose sub-agent** with `model: "haiku"` and **`mode: "bypassPermissions"`** to do the following research in parallel:
 1. Read all files in `strategy_definitions/` to understand what already exists — **including `strategy_definitions/assets/` to discover the current asset universe**
 2. Read `docs/strategies.md` for architecture context
 3. Search for ideas from well-known systematic trading approaches:
@@ -81,7 +81,7 @@ Tell the user: "Building: **[Strategy Name]** — [one sentence description]"
 
 **If JSON-only**: Write the JSON definition directly in `strategy_definitions/` — no sub-agent needed.
 
-**If new Python class needed**: Spawn a **general-purpose sub-agent** with `model: "haiku"` to:
+**If new Python class needed**: Spawn a **general-purpose sub-agent** with `model: "haiku"` and **`mode: "bypassPermissions"`** to:
 1. Read the relevant existing strategy file(s) for reference patterns
 2. Read `strategies/core.py` and `strategies/base.py` for the base class interface
 3. Write the new Python class in `strategies/`

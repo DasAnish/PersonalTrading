@@ -1,16 +1,20 @@
 ---
-description: Research, design, and build new trading strategies one at a time in a continuous loop using sub-agents
+description: Research, design, and build new trading strategies using a persistent 4-agent pipeline team (requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
 ---
 
-# Strategy Builder Loop
+# Strategy Builder Pipeline
 
-You are running a continuous strategy research-and-build loop. You work on **one strategy at a time**, using sub-agents to parallelise research and implementation where possible.
+> **Requires** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment.
+> For a simpler sub-agent variant (no teams), use `.claude/skills/build-strategies/SKILL.md`.
+> For unattended inline execution, use `.claude/skills/build-strategies-auto/SKILL.md`.
+>
+> Architecture reference: `docs/build-strategies-pipeline.md`
 
 ---
 
 ## Context
 
-**Assets available**: Read dynamically from `strategy_definitions/assets/` — each `.json` file in that folder is an investable asset. The Research sub-agent must read this folder at the start of every loop iteration to discover the current asset universe. Do not hardcode asset lists.
+**Assets available**: Read dynamically from `strategy_definitions/assets/` at each research iteration. Never hardcode asset lists.
 
 Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), IWRD (world equities), EQQQ (NASDAQ-100), COMM (diversified commodities), AIGC (AI equities), IIND (MSCI India), IMEU (MSCI Europe), WCOA (coal), VUTY (US Treasury bonds), BRNT (Brent crude oil), CRUD (WTI crude oil).
 
@@ -44,111 +48,272 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
 
 ---
 
-## Loop Procedure
+## Team Setup (run once at start)
 
-Repeat the following loop indefinitely until the user stops you:
+1. Create the team:
+   ```
+   TeamCreate(team_name="strategy-pipeline")
+   ```
 
-### Step 1 — Research (spawn a Research sub-agent)
+2. Spawn 4 persistent agents on the team using the Agent tool with `team_name="strategy-pipeline"`:
 
-Spawn a **general-purpose sub-agent** with `model: "haiku"` to do the following research in parallel:
-1. Read all files in `strategy_definitions/` to understand what already exists — **including `strategy_definitions/assets/` to discover the current asset universe**
-2. Read `docs/strategies.md` for architecture context
-3. Search for ideas from well-known systematic trading approaches:
-   - Dual Momentum (absolute + relative momentum)
-   - Protective Asset Allocation (trend + momentum hybrid)
-   - Adaptive Asset Allocation (rolling momentum + minimum variance)
-   - Mean reversion / carry strategies
-   - Multi-factor combinations
-   - New overlay compositions (different vol targets, lookback params, constraint combos)
+   | Name | Model | Role |
+   |------|-------|------|
+   | `strategist` | sonnet | Research and propose new strategy candidates |
+   | `builder` | haiku | Implement strategies (Python class + JSON definition) |
+   | `backtester` | haiku | Run `python scripts/run_backtest.py` and return metrics |
+   | `analyst` | haiku | Run `python scripts/run_overfitting.py` and return DSR/PBO |
+
+   Each agent is long-lived for the session — do not re-spawn them on each loop iteration.
+
+3. Initialise orchestrator state (held in your own context — not shared files):
+   ```
+   pending:         []   # researched candidates not yet built
+   built:           []   # built strategies awaiting backtest
+   analyzed:        []   # fully checked, awaiting report
+   skip_log:        []   # failed strategies with reasons
+   strategy_count:  0
+
+   strategist_busy: false
+   builder_busy:    false
+   backtester_busy: false
+   analyst_busy:    false
+   ```
+
+---
+
+## Pipeline Loop
+
+Repeat the following loop indefinitely until the user stops you.
+
+Each turn, check all four dispatch conditions and act on whichever apply:
+
+### Dispatch: Strategist
+
+**Condition**: `!strategist_busy && pending.length < 2`
+
+Send (with `run_in_background: true` so you don't block other dispatches):
+
+```
+To: strategist
+
+Research 3 new strategy candidates not yet implemented in this codebase.
+
+STEPS:
+1. Read all files in strategy_definitions/ (especially assets/ for the current asset universe)
+2. Read docs/strategies.md for architecture context
+3. Propose 3 candidates using these ideas as inspiration:
+   - New overlay compositions (different vol targets, lookback combos, constraint combinations)
    - Meta-portfolio combinations of existing strategies
-4. Return a **ranked shortlist of 3 candidate strategies** not yet implemented, with:
-   - Name and description
-   - Which existing classes it reuses vs. needs new Python code
-   - Whether it can be done via JSON only or needs new Python
-   - Estimated implementation complexity (Low/Medium/High)
+   - Parameter variants of existing allocation classes (different lookbacks, top_n, linkage methods)
+   - Novel allocation algorithms: carry, volatility timing, factor-based, low-beta, quality-weighted
+   - Trend + mean-reversion hybrids, regime-switching approaches
 
-### Step 2 — Select
+EXISTING STRATEGIES (do not suggest these):
+[paste the current contents of strategy_definitions/ subdirectory names]
 
-Pick the **top candidate** from the research agent's shortlist — favour:
-1. JSON-only strategies (no new Python needed) first
-2. Strategies that reuse existing classes with different parameters
-3. Novel allocation algorithms only when all JSON-only options are exhausted
+RETURN FORMAT — JSON array only, no prose:
+[
+  {
+    "name": "Human Readable Name",
+    "key": "file_slug",
+    "description": "one sentence",
+    "subfolder": "allocations|composed|portfolios",
+    "json_only": true,
+    "reuses_class": "ExistingClassName or null",
+    "new_python_class": "NewClassName or null",
+    "tunable_params": "param=v1,v2,v3 or null",
+    "complexity": "Low|Medium|High",
+    "priority": 1
+  }
+]
 
-Tell the user: "Building: **[Strategy Name]** — [one sentence description]"
-
-### Step 3 — Implement (spawn an Implementation sub-agent if new Python is needed)
-
-**If JSON-only**: Write the JSON definition directly in `strategy_definitions/` — no sub-agent needed.
-
-**If new Python class needed**: Spawn a **general-purpose sub-agent** with `model: "haiku"` to:
-1. Read the relevant existing strategy file(s) for reference patterns
-2. Read `strategies/core.py` and `strategies/base.py` for the base class interface
-3. Write the new Python class in `strategies/`
-4. Register it in `strategies/__init__.py`
-5. Return the completed code
-
-Then write the JSON definition yourself after the sub-agent completes.
-
-### Step 4 — Validate
-
-Run: `python scripts/run_backtest.py --strategy <strategy_name>`
-
-- If it succeeds: report the key metrics (total return, Sharpe, max drawdown)
-- If it fails: read the error, fix it, and retry once. If it fails again, skip this strategy and log the issue, then continue the loop.
-
-### Step 4b — Overfitting Check
-
-Run this **immediately after a successful validate**, before reporting results.
-
-**Determine what to run based on strategy type**:
-
-- **JSON-only composed/portfolio strategies**: Skip overfitting check (N=1 trivially passes DSR; PBO requires multiple configs).
-- **Allocation strategies with a primary tunable parameter** (e.g. `linkage_method`, `lookback_days`, `top_n`): Run with at least 3 variants.
-- **New Python allocation class**: Run with 3 parameter variants if any exist, else skip.
-
-```bash
-# Example: new HRP variant
-python scripts/run_overfitting.py --strategy hrp --param linkage_method=single,complete,ward
-
-# Example: new momentum variant
-python scripts/run_overfitting.py --strategy momentum --param top_n=1,2,3
-
-# Example: no tunable params (use Mode 2 with N=1)
-python scripts/run_overfitting.py --strategy <strategy_key> --n-trials 1
+Priority order: JSON-only (no new Python) first, then parameter variants, then new Python classes.
+Send your result back via SendMessage to "orchestrator".
 ```
 
-**Interpret the result**:
-- **PASS** (DSR ≥ 0.95 and PBO ≤ 0.30): proceed to Step 5 normally.
-- **WARN** (DSR in [0.80, 0.95) or PBO in (0.30, 0.50]): proceed to Step 5 but include the warning in the report.
-- **FAIL** (DSR < 0.80 or PBO > 0.50): proceed to Step 5 but flag the strategy as **high risk of overfitting**. Do not skip — the strategy may still be valid, but the user should know.
+Set `strategist_busy = true`. When the strategist's message arrives:
+- Parse the JSON array
+- Sort: `json_only=true` first, then by complexity ascending
+- Deduplicate: discard any candidate whose `key` already exists in `strategy_definitions/`
+- Push remaining to `pending[]`
+- Set `strategist_busy = false`
 
-If `run_overfitting.py` errors (e.g. import error, insufficient data): log the error, skip Step 4b, and proceed to Step 5.
+### Dispatch: Builder
 
-### Step 5 — Report
+**Condition**: `!builder_busy && pending.length > 0`
 
-Tell the user:
+Pop the first candidate from `pending[]`. Send:
+
+```
+To: builder
+
+Implement the following strategy:
+<paste candidate JSON object>
+
+STEPS:
+If json_only == true:
+  Write the JSON definition directly to strategy_definitions/<subfolder>/<key>.json.
+  Use existing files in that subfolder as schema templates.
+
+If json_only == false (new Python class needed):
+  1. Read the most similar existing strategy file in strategies/ for patterns
+  2. Read strategies/core.py for the base class interface
+  3. Write the new Python class to strategies/<snake_case_name>.py
+  4. Add the import and export to strategies/__init__.py
+  5. Write the JSON definition to strategy_definitions/<subfolder>/<key>.json
+
+RETURN FORMAT (plain text, one line):
+Success: DONE: strategy_key=<key> | file=strategy_definitions/<path> | json_only=<true/false> | tunable_params=<value or null>
+Failure: FAILED: strategy_key=<key> | reason=<brief description>
+
+Send result via SendMessage to "orchestrator".
+```
+
+Set `builder_busy = true`. When builder's message arrives:
+- If `DONE`: parse fields, push `{key, subfolder, json_only, tunable_params}` to `built[]`
+- If `FAILED`: push `{key, reason}` to `skip_log[]`
+- Set `builder_busy = false`
+
+### Dispatch: Backtester
+
+**Condition**: `!backtester_busy && built.length > 0`
+
+Pop the first entry from `built[]`. Send:
+
+```
+To: backtester
+
+Run a backtest for: strategy_key=<key>
+
+STEPS:
+1. Run: python scripts/run_backtest.py --strategy <key>
+2. If it fails: read the error, attempt one fix, retry once
+3. Extract metrics from the output or from results/strategies/<key>/metrics.json
+
+RETURN FORMAT (plain text, one line):
+Success: OK: strategy_key=<key> | return=X.X% | sharpe=X.XX | maxdd=-X.X%
+Failure: FAIL: strategy_key=<key> | error=<brief description>
+
+Send result via SendMessage to "orchestrator".
+```
+
+Set `backtester_busy = true`. When backtester's message arrives:
+- If `OK`: store metrics against the key, determine overfitting mode (see below), dispatch analyst
+- If `FAIL`: push `{key, reason}` to `skip_log[]`
+- Set `backtester_busy = false`
+
+### Dispatch: Analyst
+
+**Condition**: triggered immediately after a successful backtester result
+
+Determine overfitting mode from the `built[]` entry for this key:
+
+| Condition | Mode |
+|-----------|------|
+| `json_only && subfolder in ["composed", "portfolios"]` | `skip` |
+| `tunable_params` is not null | `params` (use the tunable_params value) |
+| otherwise | `n1` |
+
+Send:
+
+```
+To: analyst
+
+Run an overfitting check for: strategy_key=<key>
+Mode: <skip|params|n1>
+Params (if mode=params): <tunable_params value>
+
+STEPS:
+If mode == "skip":
+  Return: SKIP: strategy_key=<key>
+
+If mode == "params":
+  Run: python scripts/run_overfitting.py --strategy <key> --param <params>
+
+If mode == "n1":
+  Run: python scripts/run_overfitting.py --strategy <key> --n-trials 1
+
+Parse DSR and PBO from the output. Apply verdicts:
+  PASS: DSR >= 0.95 and PBO <= 0.30
+  WARN: DSR in [0.80, 0.95) or PBO in (0.30, 0.50]
+  FAIL: DSR < 0.80 or PBO > 0.50
+
+If the script errors: return ERROR with reason (do not skip reporting).
+
+RETURN FORMAT (plain text, one line):
+RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL
+SKIP: strategy_key=<key>
+ERROR: strategy_key=<key> | reason=<brief>
+
+Send result via SendMessage to "orchestrator".
+```
+
+Set `analyst_busy = true`. When analyst's message arrives:
+- Push `{key, metrics, overfitting}` to `analyzed[]`
+- Set `analyst_busy = false`
+
+### Report
+
+When `analyzed[]` has entries, pop each and report:
+
 ```
 ✓ Built: [Strategy Name]
   File: strategy_definitions/[path]/[name].json
   Return: X% | Sharpe: X.XX | Max DD: -X%
-  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]   ← include if Step 4b was run
+  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]   ← omit if skipped
 
-Next: researching the next strategy...
+Next: [what the pipeline is currently doing — e.g. "backtesting momentum_carry while researching next candidates..."]
 ```
 
-Then immediately return to Step 1.
+Increment `strategy_count`. If `strategy_count % 3 == 0`:
+> Suggest the user run `/backtest-all` and `/dashboard` to review all results.
+
+**For JSON-only composed/portfolio strategies** where mode was `skip`, the analyst never runs. Report after the backtest succeeds (do not wait for analyst):
+```
+✓ Built: [Strategy Name]
+  File: strategy_definitions/[path]/[name].json
+  Return: X% | Sharpe: X.XX | Max DD: -X%
+  Overfitting: N/A (composed/portfolio — single config)
+```
+
+---
+
+## Stop / Cleanup
+
+When the user says "stop", "pause", or "enough":
+
+1. Finish any in-flight backtest — wait for the backtester's message if `backtester_busy == true`
+2. Do not wait for strategist or builder (they are background)
+3. Send shutdown signal to all agents:
+   ```
+   SendMessage("strategist",  "Shutdown: stop after current task.")
+   SendMessage("builder",     "Shutdown: stop after current task.")
+   SendMessage("backtester",  "Shutdown: stop after current task.")
+   SendMessage("analyst",     "Shutdown: stop after current task.")
+   ```
+4. Call `TeamDelete(team_name="strategy-pipeline")`
+5. Print session summary:
+   ```
+   Session complete. Built N strategies:
+   - strategy_key: Sharpe=X.XX, DSR=X.XXX [PASS/WARN/FAIL]
+   - ...
+
+   Skipped M:
+   - strategy_key: <reason>
+   - ...
+   ```
 
 ---
 
 ## Rules
 
-- **One strategy at a time** — never start a new strategy until the current one is complete or explicitly skipped
 - **Never place orders** — this is research only
-- **Never duplicate** an existing strategy definition — always check what exists first
-- If the user says "stop", "pause", or "enough", stop the loop immediately and summarise what was built
-- If a strategy requires data or assets not present in `strategy_definitions/assets/`, skip it
-- Keep JSON definitions clean and consistent with existing schema — use the existing files as templates
-- After every 3 strategies built, suggest the user run `/backtest-all` and `/dashboard` to review results
+- **Never duplicate** an existing strategy definition — always check what exists before adding to `pending[]`
+- **One strategy at a time per stage** — the builder never holds two in-flight strategies simultaneously
+- If a strategy requires assets not present in `strategy_definitions/assets/`, discard it at the pending stage
+- Keep JSON definitions clean and consistent — use existing files in the same subfolder as schema templates
+- If the user says "stop", "pause", or "enough" — stop the loop and run the cleanup sequence above
 
 ---
 
@@ -165,7 +330,7 @@ Then immediately return to Step 1.
   "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
 }
 ```
-Use asset keys matching filenames in `strategy_definitions/assets/` (e.g. `"assets/eqqq"`, `"assets/vuty"`).
+Use asset keys matching filenames in `strategy_definitions/assets/`.
 
 **Composed (overlay applied to allocation)**:
 ```json

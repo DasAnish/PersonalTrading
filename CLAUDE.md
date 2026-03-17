@@ -10,12 +10,14 @@
 
 This project uses a **Get Stuff Done (GSD)** planning pattern. Every significant piece of work is captured as a structured plan before execution begins.
 
-### Skills
+### Commands
 
-| Skill | Usage | Description |
-|-------|-------|-------------|
+| Command | Usage | Description |
+|---------|-------|-------------|
 | `/clearplan` | `/clearplan <description>` | Start a new plan — clears `plan/` and scaffolds milestones, phase files, index, and state |
+| `/newplan` | `/newplan <description>` | Create a new plan and immediately begin executing the first phase |
 | `/continueplan` | `/continueplan` | Resume the active plan from the current TODO in the current phase |
+| `/build-strategies` | `/build-strategies` | Research and build new trading strategies in a continuous loop |
 
 ### Plan folder structure
 

@@ -69,8 +69,11 @@ STRATEGY_CLASSES = {
     "momentum": MomentumTopNStrategy,
 }
 
-SYMBOLS = ["VUSA", "SSLN", "SGLN", "IWRD"]
 CURRENCY = "GBP"
+SYMBOLS = sorted(
+    p.stem.upper()
+    for p in (Path(__file__).parent.parent / "strategy_definitions" / "assets").glob("*.json")
+)
 RESULTS_DIR = Path("results/strategies")
 
 

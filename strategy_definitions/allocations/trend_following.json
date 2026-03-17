@@ -2,7 +2,7 @@
   "type": "allocation",
   "class": "TrendFollowingStrategy",
   "name": "Trend Following",
-  "description": "Systematic trend following strategy based on momentum signals. Calculates 2-year momentum using EWMA, normalizes by asset volatility, smooths signals, and allocates inversely to volatility among strong signals.",
+  "description": "Systematic trend following across all 13 assets. Calculates 2-year momentum using EWMA, normalises by asset volatility, smooths signals, and allocates inversely to volatility among strong-signal assets. Captures commodity, bond, and equity trends simultaneously.",
   "parameters": {
     "lookback_days": 504,
     "half_life_days": 60,
@@ -10,5 +10,19 @@
     "signal_threshold": 0.1,
     "min_volatility": 0.001
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

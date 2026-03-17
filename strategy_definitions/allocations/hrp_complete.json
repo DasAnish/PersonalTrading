@@ -2,9 +2,23 @@
   "type": "allocation",
   "class": "HRPStrategy",
   "name": "HRP (Complete Linkage)",
-  "description": "Hierarchical Risk Parity using complete linkage clustering. Complete linkage merges clusters by their furthest-apart members, creating tighter and more compact cluster boundaries.",
+  "description": "Hierarchical Risk Parity across all 13 assets using complete linkage clustering. Complete linkage merges clusters by their furthest-apart members, creating tighter and more compact cluster boundaries.",
   "parameters": {
     "linkage_method": "complete"
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

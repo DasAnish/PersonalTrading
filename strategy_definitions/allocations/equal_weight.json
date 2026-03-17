@@ -2,6 +2,20 @@
   "type": "allocation",
   "class": "EqualWeightStrategy",
   "name": "Equal-Weight",
-  "description": "Equal weight across assets (1/N benchmark)",
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "description": "Equal weight across all 13 assets (1/N benchmark) spanning global equities (VUSA, EQQQ, AIGC, IIND, IMEU, IWRD), precious metals (SSLN, SGLN), commodities (COMM, BRNT, CRUD, WCOA), and bonds (VUTY).",
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

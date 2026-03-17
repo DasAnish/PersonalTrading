@@ -2,7 +2,21 @@
   "type": "allocation",
   "class": "RiskParityStrategy",
   "name": "Risk Parity",
-  "description": "Risk Parity optimizes for equal marginal risk contribution from each asset. Unlike HRP which uses hierarchical clustering, this directly solves the equal risk contribution problem.",
+  "description": "Risk Parity optimising equal marginal risk contribution across all 13 assets: global equities (VUSA, EQQQ, AIGC, IIND, IMEU, IWRD), precious metals (SSLN, SGLN), commodities (COMM, BRNT, CRUD, WCOA), and bonds (VUTY). Directly solves the equal risk contribution problem without hierarchical clustering.",
   "parameters": {},
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

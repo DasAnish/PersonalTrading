@@ -2,10 +2,24 @@
   "type": "allocation",
   "class": "MomentumTopNStrategy",
   "name": "Momentum Top-2 (3-Month)",
-  "description": "Momentum strategy selecting the top 2 assets by 3-month trailing return (63 days). Medium-term lookback sits between the short 1-month and medium 6-month horizons.",
+  "description": "Momentum strategy selecting the top 2 assets by 3-month trailing return (63 days) across all 13 assets. Medium-term lookback sits between the short 1-month and medium 6-month horizons.",
   "parameters": {
     "top_n": 2,
     "lookback_days": 63
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

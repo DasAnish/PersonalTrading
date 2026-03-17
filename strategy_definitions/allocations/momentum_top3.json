@@ -2,10 +2,24 @@
   "type": "allocation",
   "class": "MomentumTopNStrategy",
   "name": "Momentum Top-3",
-  "description": "Momentum strategy that selects the top 3 assets by 12-month trailing return and weights them by inverse volatility. Unselected assets receive zero weight.",
+  "description": "Momentum strategy selecting the top 3 assets by 12-month trailing return across all 13 assets (global equities, AI, commodities, precious metals, bonds), weighted by inverse volatility. Unselected assets receive zero weight.",
   "parameters": {
     "top_n": 3,
     "lookback_days": 252
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

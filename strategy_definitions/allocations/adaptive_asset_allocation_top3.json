@@ -2,12 +2,26 @@
   "type": "allocation",
   "class": "AdaptiveAssetAllocationStrategy",
   "name": "Adaptive Asset Allocation (Top-3)",
-  "description": "Adaptive Asset Allocation selecting top 3 assets by 6-month momentum, then minimum-variance weighted. More diversified than Top-2 with still-concentrated momentum screening.",
+  "description": "Keller & Keuning two-step approach across all 13 assets: rank by 6-month momentum, select the top 3, then apply minimum-variance optimisation within that subset. More diversified than Top-2 with still-concentrated momentum screening.",
   "parameters": {
     "top_n": 3,
     "lookback_days": 126,
     "min_weight": 0.05,
-    "max_weight": 0.60
+    "max_weight": 0.6
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

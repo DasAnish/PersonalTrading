@@ -2,10 +2,24 @@
   "type": "allocation",
   "class": "MomentumTopNStrategy",
   "name": "Momentum Top-1",
-  "description": "Momentum strategy that concentrates entirely in the single top-ranked asset by 12-month trailing return. Maximum concentration, zero diversification.",
+  "description": "Momentum strategy that concentrates entirely in the single top-ranked asset by 12-month trailing return across all 13 assets. Maximum concentration, zero diversification.",
   "parameters": {
     "top_n": 1,
     "lookback_days": 252
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

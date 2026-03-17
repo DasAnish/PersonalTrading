@@ -2,10 +2,24 @@
   "type": "allocation",
   "class": "MomentumTopNStrategy",
   "name": "Momentum Top-2 (1-Month)",
-  "description": "Momentum strategy selecting the top 2 assets by 1-month trailing return (21 days). Very short lookback captures recent trend reversals and fast momentum signals.",
+  "description": "Momentum strategy selecting the top 2 assets by 1-month trailing return (21 days) across all 13 assets. Very short lookback captures recent trend reversals and fast momentum signals.",
   "parameters": {
     "top_n": 2,
     "lookback_days": 21
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

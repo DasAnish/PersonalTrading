@@ -53,8 +53,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 RESULTS_DIR = Path("results/strategies")
-SYMBOLS = ["VUSA", "SSLN", "SGLN", "IWRD"]
 CURRENCY = "GBP"
+SYMBOLS = sorted(
+    p.stem.upper()
+    for p in (Path(__file__).parent.parent / "strategy_definitions" / "assets").glob("*.json")
+)
 
 # Parameter grids for PBO sweeps per base strategy family
 PBO_PARAM_GRIDS: Dict[str, dict] = {

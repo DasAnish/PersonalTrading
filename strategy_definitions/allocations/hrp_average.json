@@ -2,9 +2,23 @@
   "type": "allocation",
   "class": "HRPStrategy",
   "name": "HRP (Average Linkage)",
-  "description": "Hierarchical Risk Parity using average linkage clustering. Average linkage merges clusters based on mean pairwise distance, balancing between single and complete linkage extremes.",
+  "description": "Hierarchical Risk Parity across all 13 assets using average linkage clustering. Average linkage merges clusters based on mean pairwise distance, balancing between single and complete linkage extremes.",
   "parameters": {
     "linkage_method": "average"
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

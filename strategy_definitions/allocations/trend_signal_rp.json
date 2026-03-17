@@ -2,12 +2,26 @@
   "type": "allocation",
   "class": "TrendSignalRPStrategy",
   "name": "Trend-Signal Risk Parity",
-  "description": "Hybrid of trend following and risk parity. EWMA momentum signals determine proportional risk budgets (stronger trend = larger risk share). The risk-budgeting solver allocates weights to achieve these signal-proportional risk contributions. Combines trend direction with correlation-aware portfolio construction.",
+  "description": "Hybrid of trend following and risk parity across all 13 assets. EWMA momentum signals determine proportional risk budgets (stronger trend = larger risk share). The risk-budgeting solver allocates weights to achieve signal-proportional risk contributions, combining trend direction with correlation-aware portfolio construction.",
   "parameters": {
     "lookback_days": 252,
     "half_life_days": 60,
     "min_risk_budget": 0.1,
     "signal_threshold": 0.05
   },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

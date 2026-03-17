@@ -90,20 +90,34 @@ def get_available_strategies() -> list:
 # Market universe convenience classes (used by YAML strategy definitions)
 # ---------------------------------------------------------------------------
 
+def _load_uk_etf_assets() -> list:
+    """Dynamically load all UK ETFs from strategy_definitions/assets/*.json."""
+    import json
+    from pathlib import Path
+
+    assets_dir = Path(__file__).parent.parent / 'strategy_definitions' / 'assets'
+    result = []
+    for path in sorted(assets_dir.glob('*.json')):
+        with open(path) as f:
+            defn = json.load(f)
+        params = defn.get('parameters', {})
+        result.append(AssetStrategy(
+            symbol=params.get('symbol', path.stem.upper()),
+            currency=params.get('currency', 'GBP'),
+            exchange=params.get('exchange', 'SMART'),
+        ))
+    return result
+
+
 class UKETFsMarket(list):
-    """UK ETF universe: VUSA, SSLN, SGLN, IWRD (GBP).
+    """UK ETF universe: all assets defined in strategy_definitions/assets/ (GBP).
 
     Behaves exactly like List[AssetStrategy] so it can be passed as the
     `underlying` parameter of any AllocationStrategy.
     """
 
     def __init__(self):
-        super().__init__([
-            AssetStrategy('VUSA', currency='GBP'),
-            AssetStrategy('SSLN', currency='GBP'),
-            AssetStrategy('SGLN', currency='GBP'),
-            AssetStrategy('IWRD', currency='GBP'),
-        ])
+        super().__init__(_load_uk_etf_assets())
 
 
 class USEquitiesMarket(list):

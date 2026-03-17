@@ -1,8 +1,24 @@
 {
   "type": "allocation",
   "class": "HRPStrategy",
-  "name": "HRP-Single",
-  "description": "Hierarchical Risk Parity with single linkage",
-  "parameters": {"linkage_method": "single"},
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  "name": "HRP (Single Linkage)",
+  "description": "Hierarchical Risk Parity across all 13 assets using single linkage clustering. Single linkage merges clusters by their closest members, producing chain-like cluster structures.",
+  "parameters": {
+    "linkage_method": "single"
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
 }

@@ -57,7 +57,7 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
    TeamCreate(team_name="strategy-pipeline")
    ```
 
-2. Spawn 4 persistent agents on the team using the Agent tool with `team_name="strategy-pipeline"`:
+2. Spawn 4 persistent agents on the team using the Agent tool with `team_name="strategy-pipeline"` and **`mode: "bypassPermissions"`** on every spawn:
 
    | Name | Model | Role |
    |------|-------|------|
@@ -67,6 +67,7 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
    | `analyst` | haiku | Run `python scripts/run_overfitting.py` and return DSR/PBO |
 
    Each agent is long-lived for the session — do not re-spawn them on each loop iteration.
+   Always set `mode: "bypassPermissions"` on every Agent spawn and every SendMessage call so agents never pause to prompt the user.
 
 3. Initialise orchestrator state (held in your own context — not shared files):
    ```
@@ -88,9 +89,9 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
 
 Repeat the following loop indefinitely until the user stops you.
 
-Each turn, check all four dispatch conditions and act on whichever apply:
+Each turn, evaluate **all four dispatch conditions simultaneously**. Any condition that is met must be dispatched in the **same response** — do not wait for one dispatch to complete before checking the next. Issue all eligible dispatches as parallel tool calls within a single response turn.
 
-**All dispatches use `run_in_background: true`** so the orchestrator never blocks. After dispatching, immediately check the remaining conditions in the same turn.
+**All dispatches use `run_in_background: true` and `mode: "bypassPermissions"`** so agents never block or prompt the user. After dispatching all eligible agents in one turn, wait for the next incoming message before re-evaluating.
 
 ### Dispatch: Strategist
 

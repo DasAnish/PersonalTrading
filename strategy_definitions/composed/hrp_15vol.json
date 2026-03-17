@@ -20,5 +20,11 @@
       "assets/sgln",
       "assets/iwrd"
     ]
-  }
+  },
+  "tags": [
+    "hrp",
+    "core-4",
+    "vol-15",
+    "risk-managed"
+  ]
 }

@@ -7,5 +7,10 @@
   "underlying": [
     "composed/trend_signal_rp_15vol",
     "composed/skewness_weighted_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "trend-following",
+    "skewness"
   ]
 }

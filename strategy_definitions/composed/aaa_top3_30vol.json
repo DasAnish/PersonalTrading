@@ -1,0 +1,33 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Adaptive Asset Allocation Top-3 + 30% Vol Target",
+  "description": "Keller & Keuning two-step approach: rank assets by 6-month momentum, select top 3, then apply minimum-variance optimisation within that subset. Scaled to 30% annualised volatility. Slightly more diversified than the Top-2 variant while still maintaining momentum-driven concentration.",
+  "parameters": {
+    "target_vol": 0.3,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "AdaptiveAssetAllocationStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 126,
+      "min_weight": 0.05,
+      "max_weight": 0.6
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "aaa",
+    "momentum",
+    "min-variance",
+    "core-4",
+    "vol-30"
+  ]
+}

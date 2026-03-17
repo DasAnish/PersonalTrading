@@ -1,0 +1,34 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Dual Momentum (Fully Invested) + 15% Vol Target",
+  "description": "Dual Momentum top-2 variant that stays fully invested by redistributing filtered allocations to passing assets rather than holding cash. Scaled to 15% annualised volatility for consistent risk budgeting. Combines trend-filtering with full equity exposure.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "DualMomentumStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 252,
+      "abs_threshold": 0.0,
+      "cash_redistribute": true
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "dual-momentum",
+    "momentum",
+    "trend-filter",
+    "core-4",
+    "vol-15",
+    "fully-invested"
+  ]
+}

@@ -9,5 +9,10 @@
     "portfolios/meta_all_season",
     "composed/min_var_with_constraints",
     "composed/risk_parity_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "diversified",
+    "all-weather"
   ]
 }

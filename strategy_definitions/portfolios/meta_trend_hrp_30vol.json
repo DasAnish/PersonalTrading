@@ -7,5 +7,11 @@
   "underlying": [
     "composed/trend_30vol",
     "composed/hrp_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "trend-following",
+    "hrp",
+    "vol-30"
   ]
 }

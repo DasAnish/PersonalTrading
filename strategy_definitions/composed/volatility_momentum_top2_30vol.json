@@ -1,0 +1,20 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Volatility-Adjusted Momentum Top-2 + 30% Vol Target",
+  "description": "Selects top 2 assets by risk-adjusted momentum (12-month return / 63-day vol), weights by inverse volatility, then scales to 30% annualised volatility. Higher vol budget amplifies the Sharpe-momentum signal.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "VolatilityMomentumStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 252,
+      "vol_lookback_days": 63
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

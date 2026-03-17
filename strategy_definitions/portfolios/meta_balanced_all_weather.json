@@ -1,0 +1,19 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Balanced All-Weather",
+  "description": "Equal-weight ensemble spanning four orthogonal strategy families: momentum (AAA Top-2 15vol), contrarian (Mean Reversion 30vol), trend-signal (Trend-Signal MVO Conservative 15vol), and risk-parity (Risk Parity 15vol). Designed to perform across different market regimes by blending signals with low pairwise correlation.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_top2_15vol",
+    "composed/mean_reversion_30vol",
+    "composed/trend_signal_mvo_conservative_15vol",
+    "composed/risk_parity_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "all-weather",
+    "contrarian",
+    "risk-managed"
+  ]
+}

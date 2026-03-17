@@ -9,5 +9,10 @@
     "composed/risk_parity_15vol",
     "composed/trend_signal_rp_15vol",
     "composed/aaa_top3_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "diversified",
+    "tactical"
   ]
 }

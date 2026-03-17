@@ -9,5 +9,9 @@
     "composed/risk_parity_15vol",
     "allocations/hrp_average",
     "portfolios/meta_all_season"
+  ],
+  "tags": [
+    "ensemble",
+    "diversified"
   ]
 }

@@ -5,12 +5,22 @@
   "description": "Minimum Variance with 5%-40% position constraints to prevent degenerate corner solutions and ensure minimum diversification.",
   "parameters": {
     "min_weight": 0.05,
-    "max_weight": 0.40
+    "max_weight": 0.4
   },
   "underlying": {
     "type": "allocation",
     "class": "MinimumVarianceStrategy",
     "parameters": {},
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "min-variance",
+    "core-4",
+    "constrained"
+  ]
 }

@@ -10,5 +10,10 @@
     "composed/trend_15vol",
     "composed/min_var_15vol",
     "composed/risk_parity_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "risk-managed",
+    "diversified"
   ]
 }

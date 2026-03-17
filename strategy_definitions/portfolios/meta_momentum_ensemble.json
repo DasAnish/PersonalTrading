@@ -9,5 +9,9 @@
     "allocations/momentum_top2",
     "allocations/momentum_top3",
     "allocations/momentum_top2_6m"
+  ],
+  "tags": [
+    "ensemble",
+    "momentum"
   ]
 }

@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Contrarian Suite",
+  "description": "Equal-weight ensemble of contrarian-oriented strategies: Skewness-Weighted 15vol (tail-risk avoidance), Skewness-Weighted 30vol, Mean Reversion 15vol (short-term reversal), and Mean Reversion 30vol. Combines two distinct contrarian signals across both conservative and aggressive vol budgets.",
+  "parameters": {},
+  "underlying": [
+    "composed/skewness_weighted_15vol",
+    "composed/skewness_weighted_30vol",
+    "composed/mean_reversion_15vol",
+    "composed/mean_reversion_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "contrarian",
+    "mean-reversion"
+  ]
+}

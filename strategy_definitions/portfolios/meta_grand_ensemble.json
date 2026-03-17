@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Grand Ensemble",
+  "description": "Equal-weight combination of the four highest-quality meta-portfolios from this build session: Contrarian Suite (Sharpe 7.0), Balanced All-Weather (Sharpe 6.6), Trend+AAA Blend (Sharpe 6.0), and Momentum Multi-Lookback (Sharpe 5.7). A meta-of-metas combining momentum, contrarian, trend-signal, and adaptive allocation for maximum diversification.",
+  "parameters": {},
+  "underlying": [
+    "portfolios/meta_contrarian_suite",
+    "portfolios/meta_balanced_all_weather",
+    "portfolios/meta_trend_aaa_blend_15vol",
+    "portfolios/meta_momentum_multi_lookback_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "diversified",
+    "all-weather"
+  ]
+}

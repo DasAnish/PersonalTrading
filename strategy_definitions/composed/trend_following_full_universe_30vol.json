@@ -1,0 +1,41 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend Following Full Universe + 30% Vol Target",
+  "description": "Systematic trend following across all 13 assets (global equities, AI, commodities, precious metals, bonds) scaled to 30% annualised volatility target. 2-year EWMA momentum with volatility-normalised signals; higher vol budget allows more aggressive position sizing during strong trends.",
+  "parameters": {
+    "target_vol": 0.3,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendFollowingStrategy",
+    "parameters": {
+      "lookback_days": 504,
+      "half_life_days": 60,
+      "smooth_window": 5,
+      "signal_threshold": 0.1,
+      "min_volatility": 0.001
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "trend-following",
+    "full-universe",
+    "vol-30"
+  ]
+}

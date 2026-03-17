@@ -16,6 +16,17 @@
       "risk_aversion": 1.0,
       "signal_threshold": 0.05
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "trend-signal",
+    "mvo",
+    "core-4",
+    "vol-15"
+  ]
 }

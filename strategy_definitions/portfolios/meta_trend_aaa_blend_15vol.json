@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Trend + AAA Blend (15% Vol)",
+  "description": "Equal-weight blend of trend-following strategies (EWMA trend, Trend-Signal MVO) and Adaptive Asset Allocation, each at 15% vol target. Combines time-series momentum (trend) with cross-sectional momentum + min-var (AAA) for complementary signal diversification.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_15vol",
+    "composed/trend_signal_mvo_15vol",
+    "composed/aaa_top3_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "trend-following",
+    "aaa",
+    "vol-15"
+  ]
+}

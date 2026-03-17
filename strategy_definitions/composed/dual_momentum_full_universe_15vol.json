@@ -31,5 +31,12 @@
       "assets/wcoa",
       "assets/vuty"
     ]
-  }
+  },
+  "tags": [
+    "dual-momentum",
+    "momentum",
+    "trend-filter",
+    "full-universe",
+    "vol-15"
+  ]
 }

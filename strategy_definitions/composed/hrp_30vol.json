@@ -4,7 +4,7 @@
   "name": "HRP (Ward) + 30% Vol Target",
   "description": "Hierarchical Risk Parity with Ward linkage and 30% volatility targeting",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
@@ -20,5 +20,11 @@
       "assets/sgln",
       "assets/iwrd"
     ]
-  }
+  },
+  "tags": [
+    "hrp",
+    "core-4",
+    "vol-30",
+    "risk-managed"
+  ]
 }

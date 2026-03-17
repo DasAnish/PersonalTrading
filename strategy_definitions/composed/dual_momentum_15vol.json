@@ -16,6 +16,18 @@
       "abs_threshold": 0.0,
       "cash_redistribute": false
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "dual-momentum",
+    "momentum",
+    "trend-filter",
+    "core-4",
+    "vol-15"
+  ]
 }

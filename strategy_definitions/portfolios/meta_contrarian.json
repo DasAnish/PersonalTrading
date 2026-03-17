@@ -7,5 +7,10 @@
   "underlying": [
     "allocations/mean_reversion",
     "allocations/skewness_weighted"
+  ],
+  "tags": [
+    "ensemble",
+    "contrarian",
+    "mean-reversion"
   ]
 }

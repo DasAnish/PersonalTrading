@@ -14,6 +14,17 @@
       "lookback_days": 20,
       "vol_lookback_days": 63
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "mean-reversion",
+    "contrarian",
+    "core-4",
+    "vol-15"
+  ]
 }

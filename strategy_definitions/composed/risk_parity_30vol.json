@@ -4,13 +4,24 @@
   "name": "Risk Parity + 30% Vol Target",
   "description": "Risk Parity allocation scaled to target 30% annualised volatility. High-octane variant of risk parity with leveraged exposure.",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
     "type": "allocation",
     "class": "RiskParityStrategy",
     "parameters": {},
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "risk-parity",
+    "core-4",
+    "vol-30",
+    "risk-managed"
+  ]
 }

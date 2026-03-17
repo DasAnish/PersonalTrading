@@ -13,6 +13,17 @@
     "parameters": {
       "linkage_method": "average"
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "hrp",
+    "core-4",
+    "vol-15",
+    "risk-managed"
+  ]
 }

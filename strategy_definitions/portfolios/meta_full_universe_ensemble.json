@@ -9,5 +9,10 @@
     "allocations/risk_parity_full_universe",
     "allocations/trend_following_full_universe",
     "allocations/minimum_variance_full_universe"
+  ],
+  "tags": [
+    "ensemble",
+    "full-universe",
+    "diversified"
   ]
 }

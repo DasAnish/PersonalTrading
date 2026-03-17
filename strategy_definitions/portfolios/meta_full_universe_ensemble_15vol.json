@@ -8,5 +8,11 @@
     "composed/hrp_full_universe_15vol",
     "composed/risk_parity_full_universe_15vol",
     "composed/trend_following_full_universe_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "full-universe",
+    "vol-15",
+    "diversified"
   ]
 }

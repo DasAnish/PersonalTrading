@@ -9,5 +9,10 @@
     "allocations/momentum_top2_3m",
     "allocations/momentum_top2_6m",
     "allocations/momentum_top2"
+  ],
+  "tags": [
+    "ensemble",
+    "momentum",
+    "multi-lookback"
   ]
 }

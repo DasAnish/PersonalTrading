@@ -1,0 +1,29 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-3 + 15% Vol Target",
+  "description": "Selects the top 3 assets by 12-month trailing return, weighted by inverse volatility, scaled to 15% annualised volatility. Provides broader momentum diversification than Top-2 while keeping vol-adjusted exposure.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 63
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 252
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "momentum",
+    "core-4",
+    "vol-15"
+  ]
+}

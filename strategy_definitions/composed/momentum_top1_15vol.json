@@ -1,0 +1,30 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-1 + 15% Vol Target",
+  "description": "Maximum concentration in the single top-ranked asset by 12-month trailing return, scaled to 15% annualised volatility. The vol overlay tempers the extreme concentration risk of single-asset momentum while preserving the directional bet.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 63
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 1,
+      "lookback_days": 252
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "momentum",
+    "core-4",
+    "vol-15",
+    "concentrated"
+  ]
+}

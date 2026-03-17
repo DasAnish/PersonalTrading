@@ -1,0 +1,33 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Dual Momentum + 30% Vol Target",
+  "description": "Dual Momentum (relative + absolute filter, top-2) scaled to 30% annualised volatility. Higher vol budget allows more aggressive exposure during trending markets while the absolute momentum filter still protects against sustained downtrends.",
+  "parameters": {
+    "target_vol": 0.3,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "DualMomentumStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 252,
+      "abs_threshold": 0.0,
+      "cash_redistribute": false
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "dual-momentum",
+    "momentum",
+    "trend-filter",
+    "core-4",
+    "vol-30"
+  ]
+}

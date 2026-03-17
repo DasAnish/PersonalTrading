@@ -1,0 +1,33 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal MVO Conservative + 15% Vol Target",
+  "description": "Conservative Trend-Signal MVO (risk aversion lambda=3) scaled to 15% annualised volatility. Higher lambda produces a more diversified, lower-drawdown portfolio than the standard variant; vol overlay adds consistent risk budgeting on top.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendSignalMVOStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "risk_aversion": 3.0,
+      "signal_threshold": 0.05
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "trend-signal",
+    "mvo",
+    "core-4",
+    "vol-15",
+    "conservative"
+  ]
+}

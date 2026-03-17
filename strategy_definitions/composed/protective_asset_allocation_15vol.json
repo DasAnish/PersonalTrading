@@ -1,0 +1,31 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Protective Asset Allocation + 15% Vol Target",
+  "description": "Keller & Keuning PAA with 15% vol overlay: allocates to risky assets (VUSA, SSLN, SGLN, IWRD) proportionally to how many pass their 12-month SMA trend test, shifting remaining weight to VUTY bonds. Vol overlay provides an additional layer of drawdown control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "ProtectiveAssetAllocationStrategy",
+    "parameters": {
+      "lookback_days": 252
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "paa",
+    "core-4",
+    "vol-15",
+    "defensive",
+    "trend-filter"
+  ]
+}

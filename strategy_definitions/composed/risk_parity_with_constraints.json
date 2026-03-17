@@ -4,13 +4,23 @@
   "name": "Risk Parity + Constraints 10%-30%",
   "description": "Risk Parity with 10%-30% position constraints. Tighter bounds than standard constraints for a more balanced allocation.",
   "parameters": {
-    "min_weight": 0.10,
-    "max_weight": 0.30
+    "min_weight": 0.1,
+    "max_weight": 0.3
   },
   "underlying": {
     "type": "allocation",
     "class": "RiskParityStrategy",
     "parameters": {},
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "risk-parity",
+    "core-4",
+    "constrained"
+  ]
 }

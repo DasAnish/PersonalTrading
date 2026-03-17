@@ -1,0 +1,38 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "HRP Full Universe + 30% Vol Target",
+  "description": "Hierarchical Risk Parity (Ward linkage) across all 13 assets scaled to 30% annualised volatility target. Higher vol budget vs the 15% variant allows more aggressive exposure while retaining HRP's correlation-aware diversification across equities, AI, commodities, precious metals, and bonds.",
+  "parameters": {
+    "target_vol": 0.3,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "HRPStrategy",
+    "parameters": {
+      "linkage_method": "ward"
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "hrp",
+    "full-universe",
+    "vol-30",
+    "risk-managed"
+  ]
+}

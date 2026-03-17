@@ -4,7 +4,7 @@
   "name": "Trend Following + 30% Vol Target",
   "description": "Trend Following strategy with 30% volatility targeting overlay",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
@@ -24,5 +24,10 @@
       "assets/sgln",
       "assets/iwrd"
     ]
-  }
+  },
+  "tags": [
+    "trend-following",
+    "core-4",
+    "vol-30"
+  ]
 }

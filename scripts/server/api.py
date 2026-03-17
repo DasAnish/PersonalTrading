@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
-from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data, load_overfitting_analysis
+from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data, load_overfitting_analysis, load_strategy_tags
 
 
 def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
@@ -81,6 +81,7 @@ def api_strategies_summary():
                 "key": key,
                 "name": info.get("name", key),
                 "description": info.get("description", ""),
+                "tags": load_strategy_tags(key),
                 "sharpe_ratio": metrics.get("sharpe_ratio"),
                 "cagr": cagr,
                 "max_drawdown": max_drawdown,

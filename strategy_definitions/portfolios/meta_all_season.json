@@ -9,5 +9,10 @@
     "allocations/risk_parity",
     "composed/min_var_with_constraints",
     "allocations/hrp_average"
+  ],
+  "tags": [
+    "ensemble",
+    "all-weather",
+    "risk-managed"
   ]
 }

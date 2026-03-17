@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Mean Reversion Suite",
+  "description": "Equal-weight ensemble of all mean reversion variants: core (15% and 30% vol), full universe (15% and 30% vol). Diversifies across asset scope and volatility budget while maintaining a pure contrarian/mean-reverting thesis across all configurations.",
+  "parameters": {},
+  "underlying": [
+    "composed/mean_reversion_15vol",
+    "composed/mean_reversion_30vol",
+    "composed/mean_reversion_full_universe_15vol",
+    "composed/mean_reversion_full_universe_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "mean-reversion",
+    "contrarian"
+  ]
+}

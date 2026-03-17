@@ -1,0 +1,26 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Equal-Weight + 15% Vol Target",
+  "description": "1/N equal-weight baseline scaled to 15% annualised volatility. Serves as a key benchmark — many smarter allocations struggle to beat a well-managed equal-weight baseline after costs. Vol-targeting reduces crash exposure while preserving the simplicity of 1/N.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 63
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "EqualWeightStrategy",
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "equal-weight",
+    "core-4",
+    "vol-15",
+    "benchmark"
+  ]
+}

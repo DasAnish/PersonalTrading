@@ -14,8 +14,20 @@
       "top_n": 3,
       "lookback_days": 126,
       "min_weight": 0.05,
-      "max_weight": 0.60
+      "max_weight": 0.6
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "aaa",
+    "momentum",
+    "min-variance",
+    "core-4",
+    "vol-15"
+  ]
 }

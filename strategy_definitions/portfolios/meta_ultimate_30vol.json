@@ -1,0 +1,19 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Ultimate 30vol",
+  "description": "The best risk-adjusted 30vol strategies across all signal types: AAA Top-3 30vol (Sharpe 8.8, low DD), Mean Reversion 30vol (Sharpe 7.1), Momentum Top-3 30vol (Sharpe 6.4), AAA Full Universe 30vol (Sharpe 6.0, lowest DD at -5.7%), and HRP Commodity Theme 30vol (Sharpe 5.4). Combines adaptive, contrarian, momentum, and risk-based signals at the 30% vol budget level.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_top3_30vol",
+    "composed/mean_reversion_30vol",
+    "composed/momentum_top3_30vol",
+    "composed/aaa_full_universe_30vol",
+    "composed/hrp_commodity_theme_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "diversified",
+    "vol-30"
+  ]
+}

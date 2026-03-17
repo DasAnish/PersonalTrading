@@ -1,0 +1,21 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: High-Sharpe Session Ensemble",
+  "description": "Equal-weight blend of the highest-Sharpe strategies identified in this build session: AAA Top-2 (Sharpe 5.3), Momentum Multi-Lookback (Sharpe 5.7), Trend+AAA Blend (Sharpe 6.0), and Mean Reversion 30vol (Sharpe 7.1). Combines momentum, adaptive allocation, and contrarian signals for diversified high-quality returns.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_top2_15vol",
+    "composed/momentum_top2_6m_15vol",
+    "portfolios/meta_momentum_multi_lookback_15vol",
+    "portfolios/meta_trend_aaa_blend_15vol",
+    "composed/mean_reversion_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "momentum",
+    "aaa",
+    "mean-reversion",
+    "trend-following"
+  ]
+}

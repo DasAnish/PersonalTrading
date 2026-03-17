@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Commodity Suite",
+  "description": "Equal-weight ensemble of commodity-focused strategies: Commodity Momentum Top-2 at 15vol and 30vol, HRP Commodity Theme at 15vol and 30vol. Combines momentum-driven and risk-parity approaches within the commodity universe across both vol budgets for diversified hard-asset exposure.",
+  "parameters": {},
+  "underlying": [
+    "composed/momentum_commodity_top2_15vol",
+    "composed/momentum_commodity_top2_30vol",
+    "composed/hrp_commodity_theme_15vol",
+    "composed/hrp_commodity_theme_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "commodity",
+    "inflation-hedge"
+  ]
+}

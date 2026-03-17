@@ -1,0 +1,19 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Momentum Multi-Lookback (15% Vol)",
+  "description": "Equal-weight ensemble of top-2 momentum strategies across four lookback horizons (1-month, 3-month, 6-month, 12-month), each scaled to 15% volatility. Diversifies across signal frequencies to reduce lookback-selection risk while maintaining momentum exposure.",
+  "parameters": {},
+  "underlying": [
+    "composed/momentum_top2_1m_15vol",
+    "composed/momentum_top2_3m_15vol",
+    "composed/momentum_top2_6m_15vol",
+    "composed/momentum_top2_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "momentum",
+    "multi-lookback",
+    "vol-15"
+  ]
+}

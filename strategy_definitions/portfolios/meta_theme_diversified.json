@@ -1,0 +1,20 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Theme Diversified",
+  "description": "Equal-weight blend of four themed HRP strategies: Growth Theme 15vol, Growth Theme 30vol, Commodity Theme 15vol, Commodity Theme 30vol. Combines equity growth and real asset exposure across both conservative and aggressive vol budgets for thematic diversification with built-in regime flexibility.",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_growth_theme_15vol",
+    "composed/hrp_growth_theme_30vol",
+    "composed/hrp_commodity_theme_15vol",
+    "composed/hrp_commodity_theme_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "growth",
+    "commodity",
+    "hrp",
+    "diversified"
+  ]
+}

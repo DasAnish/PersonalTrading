@@ -8,5 +8,11 @@
     "composed/min_var_with_constraints",
     "composed/risk_parity_15vol",
     "allocations/mean_reversion"
+  ],
+  "tags": [
+    "ensemble",
+    "defensive",
+    "risk-managed",
+    "conservative"
   ]
 }

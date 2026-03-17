@@ -16,6 +16,17 @@
       "min_risk_budget": 0.1,
       "signal_threshold": 0.05
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "trend-signal",
+    "risk-parity",
+    "core-4",
+    "vol-15"
+  ]
 }

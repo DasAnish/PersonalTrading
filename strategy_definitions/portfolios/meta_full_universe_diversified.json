@@ -1,0 +1,19 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Full Universe Diversified",
+  "description": "Equal-weight ensemble of full-universe strategies across multiple approaches and vol targets: HRP 15vol, AAA 15vol, AAA 30vol, Dual Momentum 15vol, Mean Reversion 30vol. Combines structural diversification (all 13 assets) with signal diversity (risk-parity, adaptive, momentum, contrarian) and vol-budget diversity.",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_full_universe_15vol",
+    "composed/aaa_full_universe_15vol",
+    "composed/aaa_full_universe_30vol",
+    "composed/dual_momentum_full_universe_15vol",
+    "composed/mean_reversion_full_universe_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "full-universe",
+    "diversified"
+  ]
+}

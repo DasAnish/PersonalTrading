@@ -12,7 +12,7 @@
     "class": "ConstraintStrategy",
     "parameters": {
       "min_weight": 0.05,
-      "max_weight": 0.40
+      "max_weight": 0.4
     },
     "underlying": {
       "type": "allocation",
@@ -24,7 +24,18 @@
         "signal_threshold": 0.1,
         "min_volatility": 0.001
       },
-      "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+      "underlying": [
+        "assets/vusa",
+        "assets/ssln",
+        "assets/sgln",
+        "assets/iwrd"
+      ]
     }
-  }
+  },
+  "tags": [
+    "trend-following",
+    "core-4",
+    "constrained",
+    "conservative"
+  ]
 }

@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Adaptive Asset Allocation Ensemble (15% Vol)",
+  "description": "Equal-weight ensemble of three Adaptive Asset Allocation variants at 15% vol: top-2 selection (concentrated), top-3 selection (balanced), and full universe (broad). Combines the Keller & Keuning two-step approach across concentration levels to diversify selection-parameter risk.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_top2_15vol",
+    "composed/aaa_top3_15vol",
+    "composed/aaa_full_universe_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "aaa",
+    "momentum",
+    "vol-15"
+  ]
+}

@@ -4,8 +4,8 @@
   "name": "Momentum Top-2 + Constraints 10%-60%",
   "description": "Momentum Top-2 with a 10%-60% position constraint. Prevents full concentration in one asset while keeping the momentum tilt. Reduces max drawdown vs unconstrained momentum.",
   "parameters": {
-    "min_weight": 0.10,
-    "max_weight": 0.60
+    "min_weight": 0.1,
+    "max_weight": 0.6
   },
   "underlying": {
     "type": "allocation",
@@ -14,6 +14,16 @@
       "top_n": 2,
       "lookback_days": 252
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "momentum",
+    "core-4",
+    "constrained"
+  ]
 }

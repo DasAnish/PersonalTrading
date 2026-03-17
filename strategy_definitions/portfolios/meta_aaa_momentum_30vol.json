@@ -1,0 +1,19 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: AAA + Momentum 30vol",
+  "description": "Equal-weight blend of the highest-performing 30vol momentum and adaptive allocation strategies: AAA Top-3 30vol (Sharpe 8.8), AAA Full Universe 30vol (Sharpe 6.0), Momentum Top-3 30vol (Sharpe 6.4), and Momentum 6-Month 30vol (Sharpe 5.3). Concentrates in the most return-efficient 30vol momentum approaches.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_top3_30vol",
+    "composed/aaa_full_universe_30vol",
+    "composed/momentum_top3_30vol",
+    "composed/momentum_top2_6m_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "aaa",
+    "momentum",
+    "vol-30"
+  ]
+}

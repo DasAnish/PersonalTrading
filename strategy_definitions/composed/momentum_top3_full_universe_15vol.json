@@ -1,0 +1,38 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-3 Full Universe + 15% Vol Target",
+  "description": "Selects the top 3 assets by 12-month trailing return from all 13 assets (global equities, AI, commodities, precious metals, bonds), weights by inverse volatility, then scales to 15% annualised volatility. Expands the momentum opportunity set to capture cross-asset leadership rotations.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 252
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "momentum",
+    "full-universe",
+    "vol-15"
+  ]
+}

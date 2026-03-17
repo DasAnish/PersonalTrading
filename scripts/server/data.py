@@ -9,6 +9,25 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).parent.parent.parent
 RESULTS_DIR = BASE_DIR / "results"
+STRATEGY_DEFS_DIR = BASE_DIR / "strategy_definitions"
+
+
+def load_strategy_tags(strategy_key: str) -> list[str]:
+    """Load tags from a strategy definition JSON file.
+
+    Searches composed/ and portfolios/ subdirectories for <key>.json.
+    Returns an empty list if the file is not found or has no tags.
+    """
+    for subdir in ("composed", "portfolios", "allocations"):
+        path = STRATEGY_DEFS_DIR / subdir / f"{strategy_key}.json"
+        if path.exists():
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return data.get("tags", [])
+            except Exception:
+                return []
+    return []
 
 def load_strategies_index() -> dict | None:
     """

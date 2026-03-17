@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Momentum + Contrarian Blend",
+  "description": "Equal-weight blend of the best momentum and contrarian strategies: AAA Top-3 30vol (Sharpe 8.8), Momentum 6-Month 30vol (Sharpe 5.3), Mean Reversion 30vol (Sharpe 7.1), and Skewness-Weighted 30vol (Sharpe 4.9). Momentum and contrarian signals are weakly correlated, so blending them reduces drawdowns and smooths returns across different market regimes.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_top3_30vol",
+    "composed/momentum_top2_6m_30vol",
+    "composed/mean_reversion_30vol",
+    "composed/skewness_weighted_30vol"
+  ],
+  "tags": [
+    "ensemble",
+    "momentum",
+    "contrarian"
+  ]
+}

@@ -11,6 +11,17 @@
     "type": "allocation",
     "class": "RiskParityStrategy",
     "parameters": {},
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "risk-parity",
+    "core-4",
+    "vol-15",
+    "risk-managed"
+  ]
 }

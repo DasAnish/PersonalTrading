@@ -26,5 +26,11 @@
       "assets/wcoa",
       "assets/vuty"
     ]
-  }
+  },
+  "tags": [
+    "risk-parity",
+    "full-universe",
+    "vol-15",
+    "risk-managed"
+  ]
 }

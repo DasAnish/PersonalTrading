@@ -14,7 +14,7 @@
       "top_n": 4,
       "lookback_days": 126,
       "min_weight": 0.025,
-      "max_weight": 0.40
+      "max_weight": 0.4
     },
     "underlying": [
       "assets/vusa",
@@ -31,5 +31,12 @@
       "assets/wcoa",
       "assets/vuty"
     ]
-  }
+  },
+  "tags": [
+    "aaa",
+    "momentum",
+    "min-variance",
+    "full-universe",
+    "vol-15"
+  ]
 }

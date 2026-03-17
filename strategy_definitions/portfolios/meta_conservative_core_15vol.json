@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Conservative Core (15% Vol)",
+  "description": "Equal-weight blend of defensively-oriented strategies at 15% vol: Trend-Signal MVO Conservative (high risk aversion), Minimum Variance Full Universe, and Risk Parity. Prioritises drawdown control and capital preservation over maximum return.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_signal_mvo_conservative_15vol",
+    "composed/min_var_full_universe_15vol",
+    "composed/risk_parity_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "vol-15",
+    "conservative",
+    "risk-managed"
+  ]
+}

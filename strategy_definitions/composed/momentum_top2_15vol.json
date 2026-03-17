@@ -1,0 +1,29 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-2 + 15% Vol Target",
+  "description": "Equal-weight allocation to the top-2 assets by 12-month trailing return, scaled to 15% annualised volatility. Balances momentum concentration with diversification across two assets, with the vol overlay managing drawdown risk.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 63
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 252
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "momentum",
+    "core-4",
+    "vol-15"
+  ]
+}

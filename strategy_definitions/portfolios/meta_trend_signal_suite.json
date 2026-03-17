@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Trend Signal Suite",
+  "description": "Equal-weight ensemble of all trend-signal hybrid variants at 15% vol: Trend-Signal MVO (standard lambda=1), Trend-Signal MVO Conservative (lambda=3), and Trend-Signal Risk Parity. Combines three different portfolio construction backends driven by the same EWMA trend signal, diversifying optimisation-method risk.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_signal_mvo_15vol",
+    "composed/trend_signal_mvo_conservative_15vol",
+    "composed/trend_signal_rp_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "trend-signal",
+    "mvo",
+    "risk-parity"
+  ]
+}

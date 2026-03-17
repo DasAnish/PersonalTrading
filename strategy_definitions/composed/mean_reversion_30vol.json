@@ -1,0 +1,30 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Mean Reversion + 30% Vol Target",
+  "description": "Contrarian mean-reversion allocation (overweights recent underperformers, underweights outperformers) scaled to 30% annualised volatility target. Higher vol budget allows the contrarian signal to express itself more fully without excessive leverage constraints.",
+  "parameters": {
+    "target_vol": 0.3,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MeanReversionStrategy",
+    "parameters": {
+      "lookback_days": 20,
+      "vol_lookback_days": 63
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "mean-reversion",
+    "contrarian",
+    "core-4",
+    "vol-30"
+  ]
+}

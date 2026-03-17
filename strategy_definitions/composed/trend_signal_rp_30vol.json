@@ -1,0 +1,21 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal Risk Parity + 30% Vol Target",
+  "description": "Trend-Signal Risk Parity scaled to 30% annualised volatility target. Aggressive variant allowing controlled leverage. EWMA momentum signals determine proportional risk budgets while the vol overlay manages drawdown exposure.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendSignalRPStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "min_risk_budget": 0.1,
+      "signal_threshold": 0.05
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

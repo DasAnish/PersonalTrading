@@ -1,0 +1,25 @@
+{
+  "type": "allocation",
+  "class": "MomentumTopNStrategy",
+  "name": "Momentum Top-3 Full Universe",
+  "description": "Momentum strategy selecting the top 3 assets by 12-month trailing return across all 13 assets (global equities, AI tech, commodities, precious metals, bonds). Weights selected assets by inverse volatility; unselected receive zero weight. Expands opportunity set from 4 to 13 assets to capture cross-asset momentum leadership.",
+  "parameters": {
+    "top_n": 3,
+    "lookback_days": 252
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
+}

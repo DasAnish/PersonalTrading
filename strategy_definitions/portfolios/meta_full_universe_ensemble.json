@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Full Universe Ensemble",
+  "description": "Equal-weight meta-portfolio blending four full-universe allocation methodologies: HRP Ward (hierarchical clustering), Risk Parity (equal-risk budgeting), Trend Following (momentum-driven), and Minimum Variance (volatility minimization). Pure allocation-philosophy diversification across all 13 assets with no volatility targeting overlay.",
+  "parameters": {},
+  "underlying": [
+    "allocations/hrp_full_universe",
+    "allocations/risk_parity_full_universe",
+    "allocations/trend_following_full_universe",
+    "allocations/minimum_variance_full_universe"
+  ]
+}

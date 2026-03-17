@@ -1,0 +1,26 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Commodity Momentum Top-2 + 15% Vol Target",
+  "description": "Momentum Top-2 within the commodity universe (SSLN, SGLN, COMM, BRNT, CRUD, WCOA) by 6-month trailing return, scaled to 15% annualised volatility. Captures commodity momentum signals with consistent risk management.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 126
+    },
+    "underlying": [
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa"
+    ]
+  }
+}

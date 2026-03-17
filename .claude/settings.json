@@ -32,7 +32,18 @@
       "Bash(done)",
       "Bash(sort -k1)",
       "WebFetch(domain:en.wikipedia.org)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cat /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/assets/*.json)",
+      "Bash(grep -l \"EQQQ\\\\|COMM\\\\|AIGC\\\\|IIND\\\\|IMEU\\\\|WCOA\\\\|VUTY\\\\|BRNT\\\\|CRUD\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/*.json /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/portfolios/*.json)",
+      "Bash(grep -l \"trend_signal_rp\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
+      "Bash(grep -l \"hrp_full_universe\\\\|momentum_top3_full_universe\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
+      "Bash(grep -l \"hrp_full_universe\\\\|momentum_top3_full_universe\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/portfolios/*.json)",
+      "Bash(grep -l \"adaptive_asset_allocation\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
+      "Bash(grep -l \"mean_reversion\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
+      "Bash(grep -l \"full_universe\\\\|AIGC\\\\|EQQQ\\\\|COMM\\\\|IIND\\\\|IMEU\\\\|WCOA\\\\|VUTY\\\\|BRNT\\\\|CRUD\" C:UsersdasanOneDriveDesktopProjectsPersonalTradingstrategy_definitionsallocations/*.json)",
+      "Bash(grep -l \"full_universe\\\\|13.*asset\" \"C:\\\\Users\\\\dasan\\\\OneDrive\\\\Desktop\\\\Projects\\\\PersonalTrading\\\\strategy_definitions\\\\composed\"/*.json)",
+      "Bash(cat /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
+      "Bash(grep -l \"defensive\\\\|bond\\\\|VUTY\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/*.json)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

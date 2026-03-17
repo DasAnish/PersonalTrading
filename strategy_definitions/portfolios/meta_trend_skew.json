@@ -1,0 +1,11 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Trend-Skew Signal",
+  "description": "Equal-weight blend of Trend-Signal Risk Parity (15% vol) and Skewness-Weighted (15% vol). Favours assets that are both trending AND not crash-prone: the trend component allocates to momentum leaders while the skew component reduces exposure to left-skewed assets. Together they filter for quality trend signals with low tail risk.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_signal_rp_15vol",
+    "composed/skewness_weighted_15vol"
+  ]
+}

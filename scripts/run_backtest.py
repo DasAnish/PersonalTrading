@@ -390,6 +390,15 @@ def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
             (prices.index <= rebalance_date)
         ]
 
+        # Filter to only the symbols this strategy cares about
+        try:
+            strategy_symbols = strategy.get_symbols()
+            available = [s for s in strategy_symbols if s in sliced.columns]
+            if available:
+                sliced = sliced[available]
+        except Exception:
+            pass  # fall back to full price frame if get_symbols() fails
+
         if sliced.empty or len(sliced) < 5:
             continue
 
@@ -807,14 +816,13 @@ async def main(args):
         engine = BacktestEngine(
             initial_capital=INITIAL_CAPITAL,
             transaction_cost_bps=TRANSACTION_COST_BPS,
-            rebalance_frequency=REBALANCE_FREQUENCY,
-            lookback_days=LOOKBACK_DAYS
+            rebalance_frequency=REBALANCE_FREQUENCY
         )
 
         # Run primary strategy backtest
         logger.info(f"\nRunning {strategy_display} backtest...")
-        primary_results = _run_strategy(
-            engine, primary_strategy, prices, backtest_start, backtest_end
+        primary_results = _run_single_backtest(
+            primary_strategy, prices, backtest_start, backtest_end, engine
         )
 
         # Generate metrics
@@ -826,8 +834,8 @@ async def main(args):
 
         # Run benchmark strategy backtest
         logger.info(f"\nRunning {benchmark_display} backtest...")
-        benchmark_results = _run_strategy(
-            engine, benchmark_strategy, prices, backtest_start, backtest_end
+        benchmark_results = _run_single_backtest(
+            benchmark_strategy, prices, backtest_start, backtest_end, engine
         )
 
         # Generate metrics

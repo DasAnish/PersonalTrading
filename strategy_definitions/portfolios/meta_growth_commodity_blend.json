@@ -1,0 +1,11 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Growth vs Commodity Blend",
+  "description": "Equal-weight blend of HRP Growth Theme (15% vol) for equity/tech growth exposure and HRP Commodity Theme (15% vol) for hard-asset inflation protection. Creates a two-pillar portfolio balancing secular growth with commodity diversification.",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_growth_theme_15vol",
+    "composed/hrp_commodity_theme_15vol"
+  ]
+}

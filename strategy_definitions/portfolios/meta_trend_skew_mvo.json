@@ -1,0 +1,11 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Trend-Skew Signal (MVO Variant)",
+  "description": "Equal-weight blend of Trend-Signal MVO (15% vol) and Skewness-Weighted (15% vol). Uses mean-variance optimisation for the trend component rather than risk parity, blending efficient-frontier allocation with skew-aware tail-risk filtering.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_signal_mvo_15vol",
+    "composed/skewness_weighted_15vol"
+  ]
+}

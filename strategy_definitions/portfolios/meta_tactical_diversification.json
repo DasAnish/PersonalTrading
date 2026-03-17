@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Tactical Diversification",
+  "description": "Equal-weight blend of four allocators each scaled to 15% volatility target: HRP Single (hierarchical clustering), Risk Parity (equal-risk budgeting), Trend-Signal Risk Parity (momentum-driven risk budgets), and Adaptive Asset Allocation Top-3 (momentum selection + min-variance). Diversifies across both allocation methodology and volatility regimes.",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_15vol",
+    "composed/risk_parity_15vol",
+    "composed/trend_signal_rp_15vol",
+    "composed/aaa_top3_15vol"
+  ]
+}

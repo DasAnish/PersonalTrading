@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "HRPStrategy",
+  "name": "HRP Growth Theme",
+  "description": "Hierarchical Risk Parity (Ward linkage) applied to growth-oriented assets: US equities (VUSA), Nasdaq-100 tech (EQQQ), AI/ML theme (AIGC), India growth (IIND), and MSCI Europe (IMEU). Concentrates on secular growth exposure while using HRP clustering to diversify across geographies and sectors within the growth universe.",
+  "parameters": {
+    "linkage_method": "ward"
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu"
+  ]
+}

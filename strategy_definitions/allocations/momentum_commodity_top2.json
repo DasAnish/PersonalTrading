@@ -1,0 +1,18 @@
+{
+  "type": "allocation",
+  "class": "MomentumTopNStrategy",
+  "name": "Commodity Momentum Top-2",
+  "description": "Momentum strategy selecting the top 2 commodities by 6-month trailing return from precious metals (SSLN silver, SGLN gold), broad commodities (COMM), and energy (BRNT, CRUD, WCOA). Inverse-volatility weighting among selected assets. Pure commodity play capturing momentum within hard assets for inflation-regime protection.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 126
+  },
+  "underlying": [
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa"
+  ]
+}

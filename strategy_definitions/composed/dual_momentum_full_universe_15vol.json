@@ -1,0 +1,35 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Dual Momentum Full Universe + 15% Vol",
+  "description": "Dual Momentum (top-2 by 12-month relative momentum + absolute momentum filter) applied to all 13 assets, scaled to 15% annualised volatility target. Tests whether Dual Momentum's regime-filter advantage scales beyond the 4-asset core to a broader cross-asset universe.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "DualMomentumStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 252,
+      "abs_threshold": 0.0,
+      "cash_redistribute": false
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  }
+}

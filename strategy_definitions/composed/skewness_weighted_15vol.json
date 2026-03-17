@@ -1,0 +1,20 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Skewness-Weighted + 15% Vol Target",
+  "description": "Skewness-weighted allocation (tilted away from left-skewed/crash-risk assets) scaled to 15% annualised volatility target. Combines tail-risk awareness with consistent portfolio volatility control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "SkewnessWeightedStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "skew_tilt": 0.5,
+      "min_weight": 0.05
+    },
+    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
+  }
+}

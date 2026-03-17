@@ -1,0 +1,12 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Full Universe Vol-Targeted Ensemble",
+  "description": "Equal-weight blend of three full-universe strategies each scaled to 15% volatility: HRP Ward (hierarchical clustering), Risk Parity (equal-risk budgeting), and Trend Following (momentum-driven). Allocation-philosophy diversification across all 13 assets with consistent risk control.",
+  "parameters": {},
+  "underlying": [
+    "composed/hrp_full_universe_15vol",
+    "composed/risk_parity_full_universe_15vol",
+    "composed/trend_following_full_universe_15vol"
+  ]
+}

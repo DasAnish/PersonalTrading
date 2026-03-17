@@ -1,0 +1,11 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Commodity Momentum + Trend-Skew",
+  "description": "Equal-weight blend of Commodity Momentum Top-2 (15% vol) and Trend-Signal Risk Parity (15% vol). Pairs hard-asset momentum (inflation-regime capture) with quality trend signals filtered by skewness-aware risk parity. Two complementary alpha sources: commodity supply/demand momentum + cross-asset trending with tail-risk awareness.",
+  "parameters": {},
+  "underlying": [
+    "composed/momentum_commodity_top2_15vol",
+    "composed/trend_signal_rp_15vol"
+  ]
+}

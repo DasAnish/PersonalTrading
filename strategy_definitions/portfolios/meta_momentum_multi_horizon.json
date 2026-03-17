@@ -1,0 +1,13 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Multi-Horizon Momentum",
+  "description": "Equal-weight blend of Top-2 momentum strategies across four lookback windows: 1-month, 3-month, 6-month, and 12-month. Fixes concentration at top-2 and diversifies purely across horizons to reduce whipsaw from any single lookback period.",
+  "parameters": {},
+  "underlying": [
+    "allocations/momentum_top2_1m",
+    "allocations/momentum_top2_3m",
+    "allocations/momentum_top2_6m",
+    "allocations/momentum_top2"
+  ]
+}

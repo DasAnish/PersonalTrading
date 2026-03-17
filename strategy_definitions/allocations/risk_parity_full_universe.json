@@ -1,0 +1,22 @@
+{
+  "type": "allocation",
+  "class": "RiskParityStrategy",
+  "name": "Risk Parity Full Universe",
+  "description": "Risk Parity optimizing equal marginal risk contribution across all 13 assets: global equities (VUSA, EQQQ, AIGC, IIND, IMEU, IWRD), precious metals (SSLN, SGLN), commodities (COMM, BRNT, CRUD, WCOA), and bonds (VUTY). Extends risk-parity's balanced risk budgeting to the full investable universe.",
+  "parameters": {},
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ]
+}

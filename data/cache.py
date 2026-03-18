@@ -77,8 +77,17 @@ class HistoricalDataCache:
         cache_path = self._get_cache_path(symbol, start_date, end_date)
 
         if not cache_path.exists():
-            logger.debug(f"Cache miss: {cache_path.name}")
-            return pd.DataFrame()
+            # Fuzzy fallback: find most recently modified file for this symbol
+            candidates = sorted(
+                self.cache_dir.glob(f"{symbol}_*.parquet"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if not candidates:
+                logger.debug(f"Cache miss: {cache_path.name}")
+                return pd.DataFrame()
+            cache_path = candidates[0]
+            logger.debug(f"Cache fuzzy hit: {cache_path.name}")
 
         # Check cache age
         cache_age = datetime.now() - datetime.fromtimestamp(cache_path.stat().st_mtime)

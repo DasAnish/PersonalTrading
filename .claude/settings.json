@@ -1,54 +1,24 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "permissions": {
     "allow": [
-      "Bash(pip install:*)",
-      "Bash(claude mcp:*)",
-      "Bash(claude.exe mcp:*)",
-      "Bash(where claude:*)",
-      "Bash(npx claude:*)",
-      "Bash(xargs grep:*)",
-      "Read(//c/Users/dasan/.claude/**)",
-      "Bash(python:*)",
-      "Bash(python3:*)",
-      "Bash(python -m pytest*)",
-      "Bash(pytest*)",
-      "Bash(ls:*)",
-      "Bash(find:*)",
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(python -c \":*)",
-      "WebFetch(domain:happy.engineering)",
-      "mcp__ib-trading__get_historical_data",
-      "Bash(find /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js \\\\\\))",
-      "Bash(netstat -ano)",
-      "mcp__ib-trading__get_multiple_historical_data",
-      "Bash(pip show:*)",
-      "Bash(for f:*)",
-      "Bash(do echo:*)",
+      "Bash(*)",
+      "Read(//c/Users/dasan/**)",
       "Read(//c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/**)",
-      "Bash(done)",
-      "Bash(sort -k1)",
+      "WebFetch(domain:happy.engineering)",
       "WebFetch(domain:en.wikipedia.org)",
       "WebSearch",
-      "Bash(cat /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/assets/*.json)",
-      "Bash(grep -l \"EQQQ\\\\|COMM\\\\|AIGC\\\\|IIND\\\\|IMEU\\\\|WCOA\\\\|VUTY\\\\|BRNT\\\\|CRUD\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/*.json /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/portfolios/*.json)",
-      "Bash(grep -l \"trend_signal_rp\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
-      "Bash(grep -l \"hrp_full_universe\\\\|momentum_top3_full_universe\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
-      "Bash(grep -l \"hrp_full_universe\\\\|momentum_top3_full_universe\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/portfolios/*.json)",
-      "Bash(grep -l \"adaptive_asset_allocation\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
-      "Bash(grep -l \"mean_reversion\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
-      "Bash(grep -l \"full_universe\\\\|AIGC\\\\|EQQQ\\\\|COMM\\\\|IIND\\\\|IMEU\\\\|WCOA\\\\|VUTY\\\\|BRNT\\\\|CRUD\" C:UsersdasanOneDriveDesktopProjectsPersonalTradingstrategy_definitionsallocations/*.json)",
-      "Bash(grep -l \"full_universe\\\\|13.*asset\" \"C:\\\\Users\\\\dasan\\\\OneDrive\\\\Desktop\\\\Projects\\\\PersonalTrading\\\\strategy_definitions\\\\composed\"/*.json)",
-      "Bash(cat /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/composed/*.json)",
-      "Bash(grep -l \"defensive\\\\|bond\\\\|VUTY\" /c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/*.json)"
+      "mcp__ib-trading__get_historical_data",
+      "mcp__ib-trading__get_multiple_historical_data",
+      "mcp__ib-trading__list_strategies"
     ],
-    "defaultMode": "acceptEdits",
+    "defaultMode": "bypassPermissions",
     "additionalDirectories": [
       "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading",
-      "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading\\.claude\\skills"
+      "c:\\Users\\dasan\\OneDrive\\Desktop\\Projects\\PersonalTrading\\.claude\\skills",
+      "\\tmp"
     ]
   }
 }

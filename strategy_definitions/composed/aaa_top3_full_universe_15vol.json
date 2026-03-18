@@ -1,0 +1,43 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "AAA Top-3 Full Universe 15% Vol",
+  "description": "Adaptive Asset Allocation with top-3 momentum selection across all 13 assets and minimum-variance optimisation, scaled to 15% annualised volatility target. Broader universe increases diversification while concentrated top-3 picks capture strongest momentum.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "AdaptiveAssetAllocationStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 126,
+      "min_weight": 0.05,
+      "max_weight": 0.6
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd",
+      "assets/eqqq",
+      "assets/brnt",
+      "assets/crud",
+      "assets/comm",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "aaa",
+    "momentum",
+    "min-variance",
+    "full-universe",
+    "top-3",
+    "vol-15"
+  ]
+}

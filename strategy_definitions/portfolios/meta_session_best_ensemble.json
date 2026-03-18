@@ -1,0 +1,20 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Session Best Ensemble",
+  "description": "Equal-weight meta-portfolio of the three highest-Sharpe strategies built this session: PAA + Trend-Signal Blend (5.52), Full Universe Trend Signal Suite (4.44), and Mean Reversion with Constraints (4.38). Diversifies across defensive regime-filtering, momentum-trend signals, and contrarian approaches.",
+  "parameters": {},
+  "underlying": [
+    "portfolios/meta_paa_trend_signal_blend_15vol",
+    "portfolios/meta_full_universe_trend_signal_suite",
+    "composed/mean_reversion_with_constraints"
+  ],
+  "tags": [
+    "ensemble",
+    "best-of-session",
+    "paa",
+    "trend-signal",
+    "mean-reversion",
+    "vol-15"
+  ]
+}

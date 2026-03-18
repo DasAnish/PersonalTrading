@@ -1,0 +1,42 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal Risk Parity Full Universe + 15% Vol Target",
+  "description": "EWMA trend signals used as proportional risk budgets in a risk parity framework across all 13 assets scaled to 15% annualised volatility target. Combines momentum-aware risk budgeting with full-universe diversification across equities, AI, commodities, precious metals, and bonds.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendSignalRPStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "min_risk_budget": 0.1,
+      "signal_threshold": 0.05
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "trend-signal",
+    "risk-parity",
+    "full-universe",
+    "vol-15",
+    "risk-managed"
+  ]
+}

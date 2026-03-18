@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: PAA + Trend-Signal Blend",
+  "description": "Equal-weight meta-portfolio combining Protective Asset Allocation (defensive SMA regime filter) with Trend-Signal MVO (offensive covariance-optimised momentum), both at 15% vol target",
+  "parameters": {},
+  "underlying": [
+    "composed/protective_asset_allocation_15vol",
+    "composed/trend_signal_mvo_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "paa",
+    "trend-signal",
+    "mvo",
+    "vol-15"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal MVO Full Universe + 15% Vol Target",
+  "description": "EWMA trend signals fed into mean-variance optimisation across all 13 assets scaled to 15% annualised volatility target. Combines momentum-aware allocation with full-universe diversification across equities, AI, commodities, precious metals, and bonds.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendSignalMVOStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "risk_aversion": 1.0,
+      "signal_threshold": 0.05
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "trend-signal",
+    "mvo",
+    "full-universe",
+    "vol-15",
+    "risk-managed"
+  ]
+}

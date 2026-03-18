@@ -1,0 +1,20 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Constrained Strategies Ensemble",
+  "description": "Equal-weight meta-portfolio of three constrained strategies: Trend-Signal MVO, Skewness-Weighted, and Mean Reversion, all with 10%-30% position constraints and 15% vol target. Diversifies across signal types (momentum, tail-risk, contrarian) while enforcing consistent position limits.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_signal_mvo_with_constraints",
+    "composed/skewness_weighted_with_constraints",
+    "composed/mean_reversion_with_constraints"
+  ],
+  "tags": [
+    "ensemble",
+    "constrained",
+    "trend-signal",
+    "skewness",
+    "mean-reversion",
+    "vol-15"
+  ]
+}

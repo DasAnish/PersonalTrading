@@ -1,0 +1,21 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Full Universe Trend Signal Suite",
+  "description": "Equal-weight ensemble of all three full-universe trend-signal approaches at 15% vol: Trend Following, Trend-Signal MVO, and Trend-Signal Risk Parity. Diversifies across trend-capture methodologies while maintaining broad cross-asset exposure.",
+  "parameters": {},
+  "underlying": [
+    "composed/trend_following_full_universe_15vol",
+    "composed/trend_signal_mvo_full_universe_15vol",
+    "composed/trend_signal_rp_full_universe_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "full-universe",
+    "trend-following",
+    "trend-signal",
+    "mvo",
+    "risk-parity",
+    "vol-15"
+  ]
+}

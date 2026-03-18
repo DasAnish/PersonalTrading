@@ -1,0 +1,41 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal MVO + Constraints 10%-30% + 15% Vol Target",
+  "description": "Trend-Signal MVO wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Prevents degenerate MVO corner solutions while maintaining momentum-aware allocation and consistent risk control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.10,
+      "max_weight": 0.30
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "TrendSignalMVOStrategy",
+      "parameters": {
+        "lookback_days": 252,
+        "half_life_days": 60,
+        "risk_aversion": 1.0,
+        "signal_threshold": 0.05
+      },
+      "underlying": [
+        "assets/vusa",
+        "assets/ssln",
+        "assets/sgln",
+        "assets/iwrd"
+      ]
+    }
+  },
+  "tags": [
+    "trend-signal",
+    "mvo",
+    "core-4",
+    "constrained",
+    "vol-15"
+  ]
+}

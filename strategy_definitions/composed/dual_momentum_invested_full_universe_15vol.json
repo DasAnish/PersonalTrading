@@ -1,0 +1,43 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Dual Momentum Invested Full Universe + 15% Vol Target",
+  "description": "Fully-invested dual momentum (top-2 by 12-month relative momentum + absolute momentum filter, cash redistributed to passing assets) applied to all 13 assets, scaled to 15% annualised volatility target. Combines trend-filtering with full equity exposure across the complete cross-asset universe.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "DualMomentumStrategy",
+    "parameters": {
+      "top_n": 2,
+      "lookback_days": 252,
+      "abs_threshold": 0.0,
+      "cash_redistribute": true
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "dual-momentum",
+    "momentum",
+    "trend-filter",
+    "full-universe",
+    "vol-15",
+    "fully-invested"
+  ]
+}

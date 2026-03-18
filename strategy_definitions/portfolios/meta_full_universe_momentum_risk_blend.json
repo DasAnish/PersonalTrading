@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Full Universe Momentum + Risk Blend",
+  "description": "Equal-weight blend of AAA full universe 15vol (momentum screening + min-var) and risk parity full universe 15vol (equal risk contribution). Balances offensive momentum-driven allocation with defensive equal-risk-budget diversification across all 13 assets.",
+  "parameters": {},
+  "underlying": [
+    "composed/aaa_full_universe_15vol",
+    "composed/risk_parity_full_universe_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "full-universe",
+    "aaa",
+    "risk-parity",
+    "vol-15"
+  ]
+}

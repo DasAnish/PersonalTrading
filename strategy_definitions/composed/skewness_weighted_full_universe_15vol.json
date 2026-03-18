@@ -1,0 +1,40 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Skewness-Weighted Full Universe + 15% Vol Target",
+  "description": "Skewness-weighted allocation across all 13 assets (penalising left-skewed/crash-risk assets) scaled to 15% annualised volatility target. Combines tail-risk awareness with full-universe diversification across equities, AI, commodities, precious metals, and bonds.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "SkewnessWeightedStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "skew_tilt": 0.5,
+      "min_weight": 0.05
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "skewness",
+    "full-universe",
+    "vol-15",
+    "risk-managed"
+  ]
+}

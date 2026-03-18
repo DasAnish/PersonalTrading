@@ -1,0 +1,39 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Skewness-Weighted + Constraints 10%-30% + 15% Vol Target",
+  "description": "Skewness-weighted allocation wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Prevents extreme concentration from skew tilts while maintaining tail-risk awareness and consistent risk control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.10,
+      "max_weight": 0.30
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "SkewnessWeightedStrategy",
+      "parameters": {
+        "lookback_days": 252,
+        "skew_tilt": 0.5,
+        "min_weight": 0.05
+      },
+      "underlying": [
+        "assets/vusa",
+        "assets/ssln",
+        "assets/sgln",
+        "assets/iwrd"
+      ]
+    }
+  },
+  "tags": [
+    "skewness",
+    "core-4",
+    "constrained",
+    "vol-15"
+  ]
+}

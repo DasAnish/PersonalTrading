@@ -1,0 +1,39 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "HRP Average-Linkage Full Universe + 15% Vol Target",
+  "description": "Hierarchical Risk Parity with average-linkage clustering across all 13 assets scaled to 15% annualised volatility target. Average linkage produces more balanced cluster sizes than Ward, combining full-universe diversification with consistent risk control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "HRPStrategy",
+    "parameters": {
+      "linkage_method": "average"
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "hrp",
+    "average-linkage",
+    "full-universe",
+    "vol-15",
+    "risk-managed"
+  ]
+}

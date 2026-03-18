@@ -1,0 +1,42 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "AAA + Constraints 10%-30% + 15% Vol Target",
+  "description": "Adaptive Asset Allocation (momentum screening + min-var optimisation) wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Prevents extreme AAA concentration while maintaining momentum-driven asset selection and consistent risk control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.10,
+      "max_weight": 0.30
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "AdaptiveAssetAllocationStrategy",
+      "parameters": {
+        "top_n": 2,
+        "lookback_days": 126,
+        "min_weight": 0.05,
+        "max_weight": 0.6
+      },
+      "underlying": [
+        "assets/vusa",
+        "assets/ssln",
+        "assets/sgln",
+        "assets/iwrd"
+      ]
+    }
+  },
+  "tags": [
+    "aaa",
+    "momentum",
+    "min-variance",
+    "core-4",
+    "constrained",
+    "vol-15"
+  ]
+}

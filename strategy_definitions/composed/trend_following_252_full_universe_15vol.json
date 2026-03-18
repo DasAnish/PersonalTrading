@@ -1,0 +1,42 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend Following 252d Full Universe + 15% Vol Target",
+  "description": "Systematic trend following with shorter 1-year (252-day) lookback across all 13 assets scaled to 15% annualised volatility target. More responsive to recent momentum shifts than the standard 2-year variant, with vol overlay to reduce leverage in high-volatility regimes.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendFollowingStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "smooth_window": 5,
+      "signal_threshold": 0.1,
+      "min_volatility": 0.001
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "trend-following",
+    "full-universe",
+    "vol-15",
+    "short-lookback"
+  ]
+}

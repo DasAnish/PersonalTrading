@@ -1,0 +1,21 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Full Universe Risk-Optimised Ensemble",
+  "description": "Equal-weight blend of three full-universe risk-aware strategies at 15% vol: Min-Var, Risk Parity, and HRP. Diversifies across optimisation methodologies to reduce model risk while maintaining broad cross-asset exposure.",
+  "parameters": {},
+  "underlying": [
+    "composed/min_var_full_universe_15vol",
+    "composed/risk_parity_full_universe_15vol",
+    "composed/hrp_full_universe_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "full-universe",
+    "min-var",
+    "risk-parity",
+    "hrp",
+    "vol-15",
+    "risk-managed"
+  ]
+}

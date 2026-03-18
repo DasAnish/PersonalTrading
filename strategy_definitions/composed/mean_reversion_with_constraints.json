@@ -1,0 +1,39 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Mean Reversion + Constraints 10%-30% + 15% Vol Target",
+  "description": "Short-term mean reversion (20-day) wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Prevents extreme contrarian concentration while maintaining reversal signal capture and consistent risk control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 63
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.10,
+      "max_weight": 0.30
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "MeanReversionStrategy",
+      "parameters": {
+        "lookback_days": 20,
+        "vol_lookback_days": 63
+      },
+      "underlying": [
+        "assets/vusa",
+        "assets/ssln",
+        "assets/sgln",
+        "assets/iwrd"
+      ]
+    }
+  },
+  "tags": [
+    "mean-reversion",
+    "contrarian",
+    "core-4",
+    "constrained",
+    "vol-15"
+  ]
+}

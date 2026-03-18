@@ -25,6 +25,8 @@ Core files: `strategies/core.py`, `strategies/__init__.py`
 | Dual Momentum | `strategies/dual_momentum.py` | absolute + relative momentum |
 | Mean Reversion | `strategies/mean_reversion.py` | z-score based allocation |
 | Adaptive Asset Allocation | `strategies/adaptive_asset_allocation.py` | momentum + min-var hybrid |
+| Protective Asset Allocation | `strategies/protective_asset_allocation.py` | defensive/protective allocation |
+| Volatility Momentum | `strategies/volatility_momentum.py` | vol-adjusted momentum, `top_n=2` |
 | Skewness Weighted | `strategies/skewness_weighted.py` | penalises negative skew |
 | Trend + MVO | `strategies/trend_signal_mvo.py` | trend signals into mean-variance |
 | Trend + Risk Parity | `strategies/trend_signal_rp.py` | trend signals into risk parity |

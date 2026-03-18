@@ -212,3 +212,22 @@ def load_overfitting_analysis(strategy_key: str) -> dict | None:
     except Exception as e:
         print(f"   [!] Error loading overfitting_analysis.json for {strategy_key}: {e}")
         return None
+
+
+def load_stress_test(strategy_key: str) -> dict | None:
+    """
+    Load stress_test.json for a strategy.
+
+    Returns the parsed dict if the file exists, None otherwise.
+    A None result means the strategy has not yet been stress-tested
+    (run with --stress-test flag).
+    """
+    path = RESULTS_DIR / "strategies" / strategy_key / "stress_test.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"   [!] Error loading stress_test.json for {strategy_key}: {e}")
+        return None

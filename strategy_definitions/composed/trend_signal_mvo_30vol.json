@@ -1,0 +1,33 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend-Signal MVO + 30% Vol Target",
+  "description": "Trend-Signal MVO (lambda=1) scaled to 30% annualised volatility target. Blends EWMA trend momentum signals with mean-variance optimisation; the 30% vol overlay allows more leverage for aggressive risk profiles compared to the 15% variant.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendSignalMVOStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "half_life_days": 60,
+      "risk_aversion": 1.0,
+      "signal_threshold": 0.05
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "trend-signal",
+    "mvo",
+    "core-4",
+    "vol-30",
+    "aggressive"
+  ]
+}

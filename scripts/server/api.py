@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
-from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data, load_overfitting_analysis, load_strategy_tags
+from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data, load_overfitting_analysis, load_strategy_tags, load_stress_test
 
 
 def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
@@ -260,6 +260,30 @@ def api_overfitting(strategy_key: str):
             404,
         )
     return jsonify(analysis)
+
+
+@bp.route("/api/strategy/<strategy_key>/stress_test")
+def api_stress_test(strategy_key: str):
+    """
+    Get stress-test results for a strategy.
+
+    Returns the contents of stress_test.json if it exists.
+    Returns 404 with a hint if the backtest was not run with --stress-test.
+    """
+    data = load_stress_test(strategy_key)
+    if data is None:
+        return (
+            jsonify(
+                {
+                    "error": "Stress test results not found.",
+                    "hint": (
+                        f"Run: python scripts/run_backtest.py --all --stress-test"
+                    ),
+                }
+            ),
+            404,
+        )
+    return jsonify(data)
 
 
 @bp.route("/api/compare")

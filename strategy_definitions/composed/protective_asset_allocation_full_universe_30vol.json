@@ -1,0 +1,39 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Protective Asset Allocation Full Universe + 30% Vol Target",
+  "description": "Keller & Keuning PAA across all 12 risky assets plus VUTY bonds as the safe asset, scaled to 30% annualised volatility. Trend-filters 12 assets and allocates defensively to bonds when assets fall below their SMA; the 30% vol target provides more room for upside capture compared to the 15% variant.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "ProtectiveAssetAllocationStrategy",
+    "parameters": {
+      "lookback_days": 252
+    },
+    "underlying": [
+      "assets/vusa",
+      "assets/eqqq",
+      "assets/aigc",
+      "assets/iind",
+      "assets/imeu",
+      "assets/iwrd",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/comm",
+      "assets/brnt",
+      "assets/crud",
+      "assets/wcoa",
+      "assets/vuty"
+    ]
+  },
+  "tags": [
+    "paa",
+    "full-universe",
+    "vol-30",
+    "aggressive",
+    "trend-filter"
+  ]
+}

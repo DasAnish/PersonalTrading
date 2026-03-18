@@ -32,6 +32,7 @@ Analytics utilities used by the backtesting engine to compute and visualise perf
 |------|-------------|
 | `__init__.py` | Package marker |
 | `metrics.py` | Sharpe, Sortino, Calmar, VaR/CVaR, max drawdown, rolling metrics |
+| `overfitting.py` | DSR (Deflated Sharpe Ratio), PBO (Probability of Backtest Overfitting), k-fold temporal stability analysis |
 | `visualizations.py` | Matplotlib chart helpers (equity curve, drawdown, weights) |
 
 ---
@@ -179,6 +180,9 @@ Entry-point scripts invoked from the command line.
 |------|-------------|
 | `run_backtest.py` | Main backtest runner — four modes: `--all`, `--strategy`, `--compare`, `--optimize` |
 | `run_optimization.py` | Parameter sweep and walk-forward runner |
+| `run_overfitting.py` | Overfitting analysis CLI — runs DSR, PBO, k-fold for a single strategy |
+| `run_all_overfitting.py` | Batch overfitting analysis across all 80+ strategy definitions |
+| `add_strategy_tags.py` | Tag management tool for strategy metadata |
 | `run_hrp_backtest.py` | Legacy single-strategy HRP backtest script |
 | `test_hrp_backtest.py` | Legacy manual test for HRP output |
 | `serve_results.py` | Thin entry point — imports `server.app.create_app()` and starts Flask on port 5000 |
@@ -212,6 +216,15 @@ Strategy implementations. All strategies implement `get_weights(context) → dic
 | `hrp.py` | `HRPStrategy` — Hierarchical Risk Parity using scipy clustering |
 | `minimum_variance.py` | `MinimumVarianceStrategy` — scipy.optimize.minimize on portfolio variance |
 | `momentum.py` | `MomentumStrategy` — top-N by trailing return |
+| `dual_momentum.py` | `DualMomentumStrategy` — absolute + relative momentum |
+| `mean_reversion.py` | `MeanReversionStrategy` — z-score based allocation |
+| `adaptive_asset_allocation.py` | `AdaptiveAssetAllocationStrategy` — momentum + min-var hybrid |
+| `protective_asset_allocation.py` | `ProtectiveAssetAllocationStrategy` — defensive/protective allocation |
+| `volatility_momentum.py` | `VolatilityMomentumStrategy` — volatility-adjusted momentum |
+| `skewness_weighted.py` | `SkewnessWeightedStrategy` — penalises negative skew |
+| `trend_signal_mvo.py` | `TrendSignalMVOStrategy` — trend signals into mean-variance optimisation |
+| `trend_signal_rp.py` | `TrendSignalRPStrategy` — trend signals into risk parity |
+| `meta_portfolio.py` | `MetaPortfolioStrategy` — combines multiple strategies as sub-strategies |
 | `overlays.py` | `VolatilityTargetStrategy`, `ConstraintStrategy`, `LeverageStrategy` — weight transformations applied after allocation |
 | `risk_parity.py` | `RiskParityStrategy` — inverse-volatility weighting |
 | `trend_following.py` | `TrendFollowingStrategy` — EWMA momentum with signal half-life |
@@ -228,7 +241,7 @@ Declarative JSON strategy definitions. The loader in `strategies/strategy_loader
 |------|-------------|
 | `README.md` | Guide to writing and composing strategy definitions |
 | `CUSTOM_STRATEGIES.md` | Notes on adding new custom strategies |
-| `assets/` | Individual instrument definitions (VUSA, SSLN, SGLN, IWRD) |
+| `assets/` | Individual instrument definitions (VUSA, SSLN, SGLN, IWRD, EQQQ, BRNT, CRUD, COMM, COMML, AIGC, IIND, IMEU, WCOA, VUTY) — 14 UK ETFs |
 | `allocations/` | Weight-calculation strategies (HRP, trend following, equal weight, momentum, risk parity, minimum variance) |
 | `overlays/` | Weight-transformation overlays (volatility targets at 12/15/30%, box constraints) |
 | `composed/` | Multi-layer strategies — an allocation wrapped in one or more overlays |
@@ -249,7 +262,8 @@ Pytest test suite.
 | `test_connection.py` | IB connection tests (skipped if IB Gateway not running) |
 | `test_core_architecture.py` | Unit tests for the strategy ABC hierarchy and `StrategyContext` |
 | `test_market_data.py` | Tests for `MarketDataService` and `HistoricalDataCache` |
-| `test_optimization.py` | Tests for `param_sweep` and `walk_forward` |
+| `test_optimization.py` | Tests for `param_sweep` and `walk_forward` (12 tests) |
+| `test_overfitting.py` | Tests for DSR, PBO, and k-fold overfitting analysis (49 tests) |
 | `test_portfolio.py` | Tests for `PortfolioState` accounting |
 | `test_strategies.py` | Unit tests for each strategy implementation |
 
@@ -275,11 +289,14 @@ Claude Code configuration for this project.
 |------|-------------|
 | `settings.json` | Shared Claude Code settings (auto-approved commands, permissions) |
 | `settings.local.json` | Local overrides (not committed) |
+| `commands/build-strategies.md` | `/build-strategies` command — research and build new strategies using a 4-agent pipeline |
+| `commands/clearplan.md` | `/clearplan` command — reset and scaffold the GSD plan |
+| `commands/continueplan.md` | `/continueplan` command — resume the active plan |
+| `commands/newplan.md` | `/newplan` command — create and immediately begin a new plan |
 | `skills/backtest/SKILL.md` | `/backtest` skill — run a single named strategy backtest |
 | `skills/backtest-all/SKILL.md` | `/backtest-all` skill — run all strategy definitions |
-| `skills/clearplan/SKILL.md` | `/clearplan` skill — reset and scaffold the GSD plan |
-| `skills/continueplan/SKILL.md` | `/continueplan` skill — resume the active plan |
-| `skills/newplan/SKILL.md` | `/newplan` skill — create and immediately begin a new plan |
+| `skills/build-strategies/SKILL.md` | `/build-strategies` skill (team variant, requires agent teams env var) |
+| `skills/build-strategies-auto/SKILL.md` | `/build-strategies-auto` skill — unattended strategy builder loop |
 | `skills/dashboard/SKILL.md` | `/dashboard` skill — start the Flask dashboard |
 | `skills/optimize/SKILL.md` | `/optimize` skill — run parameter sweep on a strategy |
 | `skills/rebalance/SKILL.md` | `/rebalance` skill — generate a rebalance report (no orders sent) |

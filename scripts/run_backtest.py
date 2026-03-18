@@ -37,6 +37,7 @@ from backtesting import BacktestEngine, BacktestResults, PortfolioState
 
 # Analytics imports
 from analytics import generate_metrics_summary, plot_portfolio_comparison, create_performance_table
+from analytics.stress_testing import run_stress_test
 
 # Data management imports
 from data import HistoricalDataCache, align_dataframes, validate_data_quality
@@ -822,6 +823,26 @@ async def main(args):
             with open(info_json_path, 'w') as f:
                 json.dump(result_data['info'], f, indent=2)
 
+            # Stress test (optional)
+            if args.stress_test:
+                try:
+                    ph = result_data['portfolio_history']
+                    values_series = pd.Series(
+                        {entry['date']: entry['total_value'] for entry in ph}
+                    )
+                    values_series.index = pd.to_datetime(values_series.index)
+                    values_series = values_series.sort_index()
+                    report = run_stress_test(
+                        values_series,
+                        strategy_name=result_data['info'].get('name', strategy_key),
+                    )
+                    stress_path = strategy_dir / 'stress_test.json'
+                    with open(stress_path, 'w') as f:
+                        json.dump(report.to_dict(), f, indent=2)
+                    logger.info(f"  ✓ Stress test saved for {strategy_key}")
+                except Exception as exc:
+                    logger.warning(f"  ⚠ Stress test failed for {strategy_key}: {exc}")
+
             logger.info(f"✓ Saved results for {strategy_key} to {strategy_dir}")
 
             # Add to index
@@ -1130,6 +1151,15 @@ List Available Strategies:
         action='store_true',
         help='Force fresh data from Interactive Brokers (skip cache). '
              'Useful for getting the latest market data.'
+    )
+
+    # Stress test flag
+    parser.add_argument(
+        '--stress-test',
+        action='store_true',
+        help='After running backtest(s), compute stress-period metrics and '
+             'leave-one-crisis-out scenario removal. Saves stress_test.json '
+             'alongside other result files (--all mode) or prints to stdout.'
     )
 
     # Strategy-specific parameters (dynamically generated for registry mode)

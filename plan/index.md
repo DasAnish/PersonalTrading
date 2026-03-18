@@ -1,62 +1,55 @@
-# Plan: DSR & PBO Overfitting Analysis
+# Plan: Analysis Depth — Stress Testing, CPCV, Block Bootstrap, Scenario Removal, Live Risk Dashboard
 
-**Created**: 2026-03-16
+**Created**: 2026-03-17
 **Status**: In Progress
 
 ## Milestones
 
 | # | Phase | Status |
 |---|-------|--------|
-| 1 | [Setup & Reference Library](phase-01-setup-reference.md) | ✅ Done |
-| 2 | [Core Analytics Module](phase-02-core-analytics.md) | 🔄 In Progress |
-| 3 | [Extend ParameterSweep](phase-03-param-sweep.md) | ⬜ Not Started |
-| 4 | [Top-Level CLI Script](phase-04-cli-script.md) | ⬜ Not Started |
-| 5 | [Flask Dashboard Integration](phase-05-dashboard.md) | ⬜ Not Started |
-| 6 | [Build-Strategies Skill Integration](phase-06-skill.md) | ⬜ Not Started |
-| 7 | [Tests](phase-07-tests.md) | ⬜ Not Started |
+| 1 | [Stress Testing Framework](phase-01-stress-testing.md) | ✅ Done |
+| 2 | [Scenario Removal (Leave-One-Crisis-Out)](phase-02-scenario-removal.md) | ⬜ Not Started |
+| 3 | [CPCV (Combinatorial Purged Cross-Validation)](phase-03-cpcv.md) | ⬜ Not Started |
+| 4 | [Block Bootstrap](phase-04-block-bootstrap.md) | ⬜ Not Started |
+| 5 | [Forward-Looking Live Risk Dashboard](phase-05-live-risk-dashboard.md) | ⬜ Not Started |
 
 ## All TODOs
 
-### Phase 1 — Setup & Reference Library
-- [x] Clone pypbo reference repo
-- [x] Read pypbo source (pbo.py, metrics.py)
-- [x] Document key functions to adapt
+### Phase 1 — Stress Testing Framework
+- [ ] Define crisis periods as named constants in `analytics/stress_testing.py`
+- [ ] Implement `StressTester` class with crisis slicing and metrics (Sharpe, max DD, recovery days, return)
+- [ ] Add `--stress-test` flag to `run_backtest.py`
+- [ ] Write `tests/test_stress_testing.py`
+- [ ] Add "Stress Periods" tab to Flask dashboard strategy detail page
+- [ ] Add stress data to strategy JSON output
 
-### Phase 2 — Core Analytics Module
-- [ ] Implement DSRResult, PBOResult, OverfittingAnalysis dataclasses
-- [ ] Implement calculate_deflated_sharpe_ratio()
-- [ ] Implement calculate_pbo()
-- [ ] Implement run_overfitting_analysis() orchestrator
-- [ ] Implement overfitting_analysis_to_dict()
-- [ ] Export from analytics/__init__.py
+### Phase 2 — Scenario Removal (Leave-One-Crisis-Out)
+- [ ] Implement `run_leave_one_out()` in `analytics/stress_testing.py`
+- [ ] Compute Sharpe contribution (delta) per crisis period
+- [ ] Add `--scenario-removal` CLI flag
+- [ ] Write tests for scenario removal
+- [ ] Add "Scenario Removal" sub-section to dashboard Stress Periods tab
 
-### Phase 3 — Extend ParameterSweep
-- [ ] Add store_returns flag and return_series_ dict
-- [ ] Extract _run_single_combination() method
-- [ ] Add get_return_matrix() method
-- [ ] Verify no regression in WalkForwardAnalysis
+### Phase 3 — CPCV (Combinatorial Purged Cross-Validation)
+- [ ] Implement `analytics/cpcv.py` with `CPCVEngine`
+- [ ] Compute OOS Sharpe distribution and summary statistics
+- [ ] Integrate with `BacktestEngine`
+- [ ] Add `--method cpcv` flag to `run_overfitting.py`
+- [ ] Write `tests/test_cpcv.py`
+- [ ] Add CPCV results to JSON output and dashboard Overfitting tab
 
-### Phase 4 — Top-Level CLI Script
-- [ ] CLI argument parsing
-- [ ] Mode 1: sweep + overfitting in one pass
-- [ ] Mode 2: DSR-only from existing portfolio_history.json
-- [ ] resolve_strategy_class(), print_analysis_report(), save_analysis()
-- [ ] Edge case handling
+### Phase 4 — Block Bootstrap
+- [ ] Implement `analytics/bootstrap.py` with `BlockBootstrap`
+- [ ] Implement stationary block bootstrap (geometric block length)
+- [ ] Run N bootstrap iterations, collect metric distributions
+- [ ] Add `--method bootstrap` flag to `run_overfitting.py`
+- [ ] Write `tests/test_bootstrap.py`
+- [ ] Add bootstrap results to JSON output and dashboard Overfitting tab
 
-### Phase 5 — Flask Dashboard Integration
-- [ ] load_overfitting_analysis() in data.py
-- [ ] /api/strategy/<key>/overfitting endpoint in api.py
-- [ ] Pass overfitting data to strategy detail template in routes.py
-- [ ] Overfitting tab in strategy detail template (DSR, PBO, logit chart)
-
-### Phase 6 — Build-Strategies Skill Integration
-- [ ] Update build-strategies/SKILL.md with Step 4b
-- [ ] Update build-strategies-auto/SKILL.md with Step 4b
-
-### Phase 7 — Tests
-- [ ] DSR unit tests
-- [ ] PBO unit tests
-- [ ] ParameterSweep with store_returns tests
-- [ ] End-to-end integration test
-- [ ] Serialisation test
-- [ ] Full test suite (no regressions)
+### Phase 5 — Forward-Looking Live Risk Dashboard
+- [ ] Create `scripts/server/risk.py` blueprint with `/live-risk` route
+- [ ] Compute live risk metrics (VaR, CVaR, correlation, HHI)
+- [ ] Add drift report (current weights vs strategy target)
+- [ ] Write `templates/live_risk.html`
+- [ ] Register blueprint and add nav link in `app.py`
+- [ ] Graceful fallback when IB Gateway offline

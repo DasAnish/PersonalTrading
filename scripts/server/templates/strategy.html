@@ -150,6 +150,8 @@
             <button class="tab-button" onclick="showTab('rolling', event)">Rolling Metrics</button>
             <button class="tab-button" onclick="showTab('transactions', event)">Transactions</button>
             <button class="tab-button" id="overfittingTabBtn" onclick="showTab('overfitting', event)">Overfitting</button>
+            <button class="tab-button" onclick="showTab('stress', event)">Stress Periods</button>
+            <button class="tab-button" onclick="showTab('attribution', event)">Attribution</button>
         </div>
 
         <div class="content">
@@ -248,6 +250,34 @@
                 <h2>Overfitting Analysis</h2>
                 <div id="overfittingContent">
                     <p class="loading">Loading overfitting analysis…</p>
+                </div>
+            </div>
+
+            <!-- Stress Periods Tab -->
+            <div id="stress" class="tab-panel">
+                <h2>Stress Period Analysis</h2>
+                <p style="color:#555; font-size:0.9em; margin-bottom:24px;">
+                    Strategy performance during major historical crises, and
+                    <strong>leave-one-crisis-out</strong> Sharpe delta: how much
+                    each event contributed to overall performance.
+                </p>
+                <div id="stressContent"><p class="loading">Loading stress analysis…</p></div>
+            </div>
+
+            <!-- Attribution Tab -->
+            <div id="attribution" class="tab-panel">
+                <h2>Performance Attribution</h2>
+                <p style="color:#555; font-size:0.9em; margin-bottom:24px;">
+                    Daily return contribution of each asset to total portfolio return.
+                    Computed as Σ(Δasset_value / prior_total_value) over all periods.
+                </p>
+                <div id="attributionContent">
+                    <h3>Total Return Contribution</h3>
+                    <div class="chart-container" style="height:350px;"><canvas id="attributionBarChart"></canvas></div>
+                    <h3 style="margin-top:30px;">Cumulative Attribution Over Time</h3>
+                    <div class="chart-container"><canvas id="attributionLineChart"></canvas></div>
+                    <h3 style="margin-top:30px;">Attribution Summary</h3>
+                    <div id="attributionTable"></div>
                 </div>
             </div>
         </div>
@@ -470,6 +500,7 @@
             }).join('');
             descContainer.innerHTML = descHtml;
 
+            attributionRendered = false;
             displayMetrics(dataList, strategies);
             displayPortfolioChart(dataList, strategies);
             displayDrawdownChart(dataList, strategies);
@@ -574,8 +605,10 @@
         }
 
         function displayWeightsChart(data1, name1) {
-            const weightsData = (data1 && data1.weights_history) || [];
-            if (!weightsData || weightsData.length === 0) {
+            // Derive actual weights from portfolio_history so cash is included naturally.
+            // weights_history only stores target allocations (sum = 100%, no cash column).
+            const history = (data1 && data1.portfolio_history) || [];
+            if (history.length === 0) {
                 document.getElementById('weightsChart').parentElement.innerHTML = '<p>Weights data not available</p>';
                 return;
             }
@@ -583,27 +616,40 @@
             const ctx = document.getElementById('weightsChart').getContext('2d');
             if (charts.weights) charts.weights.destroy();
 
-            const dates = weightsData.map(w => w.date || w.timestamp).slice(0, 100);
-            const firstEntry = weightsData[0] || {};
-            const symbols = Object.keys(firstEntry).filter(k => k !== 'date' && k !== 'timestamp');
-            const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899', '#10b981', '#f97316'];
+            const assetKeys = Object.keys(history[0])
+                .filter(k => k.endsWith('_value') && k !== 'total_value');
+            const symbols = assetKeys.map(k => k.replace('_value', ''));
+            const dates = history.map(r => r.date || r.timestamp).slice(0, 100);
+            const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899', '#10b981', '#f97316',
+                            '#6366f1', '#14b8a6', '#84cc16', '#f43f5e'];
 
-            const datasets = symbols.map((symbol, idx) => {
-                const values = weightsData.map(w => {
-                    const val = w[symbol] || 0;
-                    return val > 1 ? val : val * 100;
-                }).slice(0, 100);
+            const datasets = symbols.map((symbol, idx) => ({
+                label: symbol,
+                data: history.map(r => {
+                    const total = r.total_value;
+                    return total ? ((r[`${symbol}_value`] || 0) / total) * 100 : 0;
+                }).slice(0, 100),
+                backgroundColor: colors[idx % colors.length],
+                borderColor: colors[idx % colors.length],
+                pointRadius: 0,
+                borderWidth: 1,
+                fill: true,
+                tension: 0.3,
+            }));
 
-                return {
-                    label: symbol,
-                    data: values,
-                    backgroundColor: colors[idx % colors.length],
-                    borderColor: colors[idx % colors.length],
-                    pointRadius: 0,
-                    borderWidth: 1,
-                    fill: true,
-                    tension: 0.3,
-                };
+            // Cash as the final segment — neutral grey so it's visually distinct
+            datasets.push({
+                label: 'Cash',
+                data: history.map(r => {
+                    const total = r.total_value;
+                    return total ? ((r.cash || 0) / total) * 100 : 0;
+                }).slice(0, 100),
+                backgroundColor: '#d1d5db',
+                borderColor: '#9ca3af',
+                pointRadius: 0,
+                borderWidth: 1,
+                fill: true,
+                tension: 0.3,
             });
 
             charts.weights = new Chart(ctx, {
@@ -659,10 +705,18 @@
             if (event) event.target.classList.add('active');
             if (tabName === 'rolling') loadRollingMetrics();
             if (tabName === 'overfitting') loadOverfittingAnalysis();
+            if (tabName === 'stress') loadStressTest();
+            if (tabName === 'attribution') {
+                const strategies = getStrategySelections();
+                if (!attributionRendered && strategies.length && loadedData[strategies[0]]) {
+                    displayAttributionTab(loadedData[strategies[0]]);
+                }
+            }
         }
 
         let overfittingLoaded = false;
         let overfittingChart = null;
+        let attributionRendered = false;
 
         async function loadOverfittingAnalysis() {
             if (overfittingLoaded) return;
@@ -888,6 +942,90 @@
             });
         }
 
+        let stressLoaded = false;
+
+        async function loadStressTest() {
+            if (stressLoaded) return;
+            const strategies = getStrategySelections();
+            if (!strategies.length) return;
+            const strategyKey = strategies[0];
+            const container = document.getElementById('stressContent');
+            try {
+                const resp = await fetch(`/api/strategy/${strategyKey}/stress_test`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    container.innerHTML = `
+                        <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:20px;">
+                            <strong>Stress test not yet run.</strong><br>
+                            <code style="display:block;margin-top:8px;font-size:0.85em;">${err.hint || 'python scripts/run_backtest.py --all --stress-test'}</code>
+                        </div>`;
+                    return;
+                }
+                const data = await resp.json();
+                stressLoaded = true;
+                renderStressTest(container, data);
+            } catch (e) {
+                container.innerHTML = `<p style="color:#dc2626;">Error loading stress test: ${e.message}</p>`;
+            }
+        }
+
+        function renderStressTest(container, data) {
+            const pct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+            const color = v => v >= 0 ? '#059669' : '#dc2626';
+            const deltaColor = v => v > 0.1 ? '#dc2626' : v < -0.1 ? '#059669' : '#6b7280';
+
+            // Crisis metrics table
+            let crisisRows = data.crisis_metrics.map(m => {
+                const noData = !m.has_data;
+                return `<tr style="${noData ? 'color:#9ca3af;' : ''}">
+                    <td><strong>${m.crisis_name}</strong><br><span style="font-size:0.8em;color:#6b7280;">${m.crisis_description || ''}</span></td>
+                    <td>${noData ? '—' : `<span style="color:${color(m.total_return_pct)}">${pct(m.total_return_pct)}</span>`}</td>
+                    <td>${noData ? '—' : `<span style="color:#dc2626">${pct(m.max_drawdown_pct)}</span>`}</td>
+                    <td>${noData ? '—' : m.recovery_days === -1 ? 'Not recovered' : m.recovery_days + 'd'}</td>
+                    <td>${noData ? '—' : m.sharpe.toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+
+            // Scenario removal table
+            let removalRows = data.scenario_removal.map(r => {
+                const dc = deltaColor(r.sharpe_delta);
+                const arrow = r.sharpe_delta > 0.05 ? '▲' : r.sharpe_delta < -0.05 ? '▼' : '≈';
+                return `<tr>
+                    <td><strong>${r.crisis_name}</strong></td>
+                    <td>${r.full_sharpe.toFixed(3)}</td>
+                    <td>${r.loo_sharpe.toFixed(3)}</td>
+                    <td style="color:${dc};font-weight:600;">${arrow} ${r.sharpe_delta > 0 ? '+' : ''}${r.sharpe_delta.toFixed(3)}</td>
+                    <td style="font-size:0.85em;color:#6b7280;">
+                        ${r.sharpe_delta > 0.1 ? 'Strategy depended on this event' :
+                          r.sharpe_delta < -0.1 ? 'Strategy hurt by this event' : 'Neutral impact'}
+                    </td>
+                </tr>`;
+            }).join('');
+
+            container.innerHTML = `
+                <h3>Performance During Crisis Periods</h3>
+                <table class="metrics-table" style="margin-bottom:40px;">
+                    <thead><tr>
+                        <th>Crisis Period</th><th>Total Return</th><th>Max Drawdown</th>
+                        <th>Recovery</th><th>Sharpe</th>
+                    </tr></thead>
+                    <tbody>${crisisRows}</tbody>
+                </table>
+
+                <h3>Leave-One-Crisis-Out Analysis</h3>
+                <p style="color:#555;font-size:0.9em;margin-bottom:16px;">
+                    Sharpe delta = Full-history Sharpe minus leave-one-out Sharpe.
+                    A large positive delta means the strategy relied heavily on that crisis period.
+                </p>
+                <table class="metrics-table">
+                    <thead><tr>
+                        <th>Removed Period</th><th>Full Sharpe</th>
+                        <th>LOO Sharpe</th><th>Δ Sharpe</th><th>Interpretation</th>
+                    </tr></thead>
+                    <tbody>${removalRows || '<tr><td colspan="5" style="color:#9ca3af;">No scenario removal data</td></tr>'}</tbody>
+                </table>`;
+        }
+
         async function loadMonthlyReturns(strategyKey) {
             try {
                 const response = await fetch(`/api/strategy/${strategyKey}/monthly_returns`);
@@ -988,6 +1126,153 @@
             } catch (error) {
                 console.error('Error loading rolling metrics:', error);
             }
+        }
+
+        function computeAttribution(history) {
+            if (!history || history.length < 2) return null;
+
+            const first = history[0];
+            // Exclude cash: it earns no interest, and the naive Δvalue method would
+            // show large negative spikes on buy days (cash outflows) that cancel with
+            // the purchased asset's inflow — just noise, not a real return contribution.
+            const assetKeys = Object.keys(first).filter(k => k.endsWith('_value'));
+            const assetNames = assetKeys.map(k => k.replace('_value', ''));
+
+            const running = {};
+            const cumulative = {};
+            assetNames.forEach(a => { running[a] = 0; cumulative[a] = []; });
+
+            const dates = [];
+            for (let t = 1; t < history.length; t++) {
+                const prev = history[t - 1];
+                const curr = history[t];
+                const prevTotal = prev.total_value;
+                if (!prevTotal) continue;
+                dates.push(curr.date);
+
+                for (const asset of assetNames) {
+                    const delta = (curr[`${asset}_value`] || 0) - (prev[`${asset}_value`] || 0);
+                    running[asset] += delta / prevTotal;
+                    cumulative[asset].push(running[asset] * 100);
+                }
+            }
+
+            const totalContrib = {};
+            for (const a of assetNames) {
+                const arr = cumulative[a];
+                totalContrib[a] = arr.length > 0 ? arr[arr.length - 1] : 0;
+            }
+
+            const sorted = Object.entries(totalContrib)
+                .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+
+            return { dates, cumulative, totalContrib, sorted, allNames: assetNames };
+        }
+
+        function displayAttributionTab(data) {
+            if (!data || !data.portfolio_history) return;
+
+            const attr = computeAttribution(data.portfolio_history);
+            if (!attr) {
+                document.getElementById('attributionContent').innerHTML =
+                    '<p style="color:#888;">Not enough data for attribution analysis.</p>';
+                return;
+            }
+
+            // Horizontal bar chart — total contribution per asset
+            const barCtx = document.getElementById('attributionBarChart').getContext('2d');
+            if (charts.attributionBar) charts.attributionBar.destroy();
+
+            const barLabels = attr.sorted.map(([a]) => a);
+            const barData = attr.sorted.map(([, v]) => parseFloat(v.toFixed(2)));
+            const barColors = barData.map(v =>
+                v >= 0 ? 'rgba(102,126,234,0.75)' : 'rgba(239,68,68,0.75)');
+
+            charts.attributionBar = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: barLabels,
+                    datasets: [{
+                        label: 'Return Contribution (%)',
+                        data: barData,
+                        backgroundColor: barColors,
+                        borderColor: barColors.map(c => c.replace('0.75', '1')),
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: { label: ctx => ` ${ctx.parsed.x >= 0 ? '+' : ''}${ctx.parsed.x.toFixed(2)}%` }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Contribution to Total Return (%)' },
+                            ticks: { callback: v => v + '%' }
+                        }
+                    }
+                }
+            });
+
+            // Line chart — cumulative attribution over time
+            const lineCtx = document.getElementById('attributionLineChart').getContext('2d');
+            if (charts.attributionLine) charts.attributionLine.destroy();
+
+            const lineColors = ['#667eea','#f59e0b','#10b981','#ec4899','#f97316',
+                                '#6366f1','#14b8a6','#ef4444','#84cc16','#764ba2'];
+            const activeAssets = attr.allNames
+                .filter(a => Math.abs(attr.totalContrib[a]) > 0.01);
+
+            const lineDatasets = activeAssets.map((asset, i) => ({
+                label: asset,
+                data: attr.cumulative[asset],
+                borderColor: lineColors[i % lineColors.length],
+                backgroundColor: 'transparent',
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2,
+            }));
+
+            charts.attributionLine = new Chart(lineCtx, {
+                type: 'line',
+                data: { labels: attr.dates, datasets: lineDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Cumulative Contribution (%)' },
+                            ticks: { callback: v => v.toFixed(1) + '%' }
+                        }
+                    }
+                }
+            });
+
+            // Summary table
+            const tableEl = document.getElementById('attributionTable');
+            let html = `<table class="metrics-table">
+                <thead><tr><th>Asset</th><th>Total Contribution</th></tr></thead><tbody>`;
+            for (const [asset, contrib] of attr.sorted) {
+                const positive = contrib >= 0;
+                const color = positive ? '#065f46' : '#991b1b';
+                const bg = positive ? '#d1fae5' : '#fee2e2';
+                html += `<tr>
+                    <td><strong>${asset}</strong></td>
+                    <td style="color:${color};background:${bg};text-align:center;font-weight:600;">
+                        ${positive ? '+' : ''}${contrib.toFixed(2)}%
+                    </td>
+                </tr>`;
+            }
+            html += '</tbody></table>';
+            tableEl.innerHTML = html;
+
+            attributionRendered = true;
         }
 
         function exportCSV(type) {

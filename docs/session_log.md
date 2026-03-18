@@ -2,7 +2,16 @@
 
 ## Current Status (2026-03-17)
 
-**Status**: All phases complete.
+**Status**: All phases complete. No outstanding tasks.
+
+### Completed (2026-03-17)
+- Added `ProtectiveAssetAllocationStrategy` (`strategies/protective_asset_allocation.py`)
+- Added `VolatilityMomentumStrategy` (`strategies/volatility_momentum.py`) with `top_n` parameter
+- Strategy tags system added (`add_strategy_tags.py`) with search/filter UI on the overview dashboard page
+- k-fold temporal stability analysis added to `analytics/overfitting.py`
+- Batch overfitting runner `run_all_overfitting.py` for all 80+ strategy definitions
+- `/build-strategies` redesigned as a persistent 4-agent team pipeline (`.claude/commands/build-strategies.md`)
+- `/build-strategies-auto` added as unattended single-agent variant
 
 ### Completed (2026-03-16 — DSR/PBO Overfitting Plan, all 7 phases)
 - DSR (Deflated Sharpe Ratio) and PBO (Probability of Backtest Overfitting) analytics module (`analytics/overfitting.py`)

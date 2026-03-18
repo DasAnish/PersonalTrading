@@ -8,7 +8,7 @@ A production-ready Python trading system for portfolio optimization and backtest
 |--------|------|-------------|
 | IB Wrapper | `ib_wrapper/` | Async Python wrapper for IB API via `ib_insync` |
 | Market Data | `data/` | Historical/real-time fetching with parquet caching |
-| Strategies | `strategies/` | HRP, Trend Following, Equal Weight, MinVar, Risk Parity, Momentum, Dual Momentum, Mean Reversion, AAA, Skewness-Weighted, Trend+MVO, Trend+RP, Meta Portfolio |
+| Strategies | `strategies/` | HRP, Trend Following, Equal Weight, MinVar, Risk Parity, Momentum, Dual Momentum, Mean Reversion, AAA, Protective Asset Allocation, Volatility Momentum, Skewness-Weighted, Trend+MVO, Trend+RP, Meta Portfolio |
 | Backtesting | `backtesting/` | Simulation engine with monthly rebalancing + transaction costs |
 | Analytics | `analytics/` | Sharpe, Sortino, Calmar, VaR/CVaR, drawdown, rolling metrics, DSR, PBO overfitting analysis |
 | Dashboard | `scripts/serve_results.py` | Flask + Chart.js interactive results viewer with N-strategy comparison and overfitting tab |

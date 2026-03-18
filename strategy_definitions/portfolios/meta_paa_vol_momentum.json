@@ -1,0 +1,18 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: PAA + Volatility Momentum Blend",
+  "description": "Equal-weight ensemble of Protective Asset Allocation (15% vol) and Volatility-Adjusted Momentum Top-2 (15% vol). PAA uses SMA trend filters to defensively shift into bonds; VolMom selects assets by risk-adjusted momentum. The two mechanisms complement each other — PAA is defensive, VolMom is selective — providing diversification across protective strategies.",
+  "parameters": {},
+  "underlying": [
+    "composed/protective_asset_allocation_15vol",
+    "composed/volatility_momentum_top2_15vol"
+  ],
+  "tags": [
+    "ensemble",
+    "paa",
+    "vol-momentum",
+    "defensive",
+    "vol-15"
+  ]
+}

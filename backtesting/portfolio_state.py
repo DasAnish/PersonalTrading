@@ -37,8 +37,7 @@ class PortfolioState:
             Total portfolio value in currency units
         """
         positions_value = sum(
-            qty * self.prices.get(symbol, 0.0)
-            for symbol, qty in self.positions.items()
+            qty * self.prices.get(symbol, 0.0) for symbol, qty in self.positions.items()
         )
         return self.cash + positions_value
 
@@ -58,7 +57,7 @@ class PortfolioState:
         self,
         target_weights: pd.Series,
         prices: pd.Series,
-        transaction_cost_bps: float = 7.5
+        transaction_cost_bps: float = 7.5,
     ) -> List[Transaction]:
         """
         Execute a portfolio rebalance to achieve target weights.
@@ -78,8 +77,16 @@ class PortfolioState:
             List of Transaction objects executed
 
         Raises:
+            TypeError: If target_weights or prices is not a pandas Series
             ValueError: If insufficient cash to execute rebalance
         """
+        if not isinstance(target_weights, pd.Series):
+            raise TypeError(
+                f"target_weights must be a pandas Series, got {type(target_weights)}"
+            )
+        if not isinstance(prices, pd.Series):
+            raise TypeError(f"prices must be a pandas Series, got {type(prices)}")
+
         # Get current portfolio value
         net_value = self.total_value()
 
@@ -102,7 +109,9 @@ class PortfolioState:
         # Generate transactions: target - current
         transactions = []
         total_cost = 0.0
-        total_buy_cost = 0.0  # Track total cost of buys (excluding costs, which are paid separately)
+        total_buy_cost = (
+            0.0  # Track total cost of buys (excluding costs, which are paid separately)
+        )
 
         for symbol in target_weights.index:
             current_qty = original_positions.get(symbol, 0.0)
@@ -130,7 +139,7 @@ class PortfolioState:
                 quantity=trade_qty,
                 price=price,
                 cost_bps=transaction_cost_bps,
-                total_cost=cost
+                total_cost=cost,
             )
             transactions.append(transaction)
 
@@ -139,8 +148,12 @@ class PortfolioState:
 
         # Check if we have enough cash for all trades (buys cost cash + transaction costs)
         # Sells generate cash, so net cash needed = buys - sells + costs
-        net_cash_needed = sum(t.quantity * t.price for t in transactions if t.quantity > 0)
-        net_cash_available = self.cash + sum(-t.quantity * t.price for t in transactions if t.quantity < 0)
+        net_cash_needed = sum(
+            t.quantity * t.price for t in transactions if t.quantity > 0
+        )
+        net_cash_available = self.cash + sum(
+            -t.quantity * t.price for t in transactions if t.quantity < 0
+        )
 
         if net_cash_needed + total_cost > net_cash_available:
             # Insufficient cash - need to scale down buys
@@ -166,7 +179,9 @@ class PortfolioState:
                 price = prices[symbol]
                 trade_qty = round(trade_qty)
 
-                cost = calculate_transaction_cost(trade_qty, price, transaction_cost_bps)
+                cost = calculate_transaction_cost(
+                    trade_qty, price, transaction_cost_bps
+                )
                 total_cost += cost
 
                 transaction = Transaction(
@@ -175,7 +190,7 @@ class PortfolioState:
                     quantity=trade_qty,
                     price=price,
                     cost_bps=transaction_cost_bps,
-                    total_cost=cost
+                    total_cost=cost,
                 )
                 transactions.append(transaction)
                 self.positions[symbol] = current_qty + trade_qty
@@ -214,7 +229,9 @@ class PortfolioState:
                 if abs(scaled_qty) < 0.5:
                     continue
 
-                cost = calculate_transaction_cost(scaled_qty, price, transaction_cost_bps)
+                cost = calculate_transaction_cost(
+                    scaled_qty, price, transaction_cost_bps
+                )
                 total_cost += cost
 
                 transaction = Transaction(
@@ -223,7 +240,7 @@ class PortfolioState:
                     quantity=scaled_qty,
                     price=price,
                     cost_bps=transaction_cost_bps,
-                    total_cost=cost
+                    total_cost=cost,
                 )
                 buy_transactions.append(transaction)
                 self.positions[symbol] = current_qty + scaled_qty
@@ -232,14 +249,14 @@ class PortfolioState:
 
         # Calculate cash impact: -sum(quantity * price) - costs
         cash_impact = sum(t.quantity * t.price for t in transactions)
-        self.cash -= (cash_impact + total_cost)
+        self.cash -= cash_impact + total_cost
 
         # Update prices
         self.prices = prices.to_dict()
 
         return transactions
 
-    def copy(self) -> 'PortfolioState':
+    def copy(self) -> "PortfolioState":
         """
         Create a copy of this portfolio state.
 
@@ -250,7 +267,7 @@ class PortfolioState:
             timestamp=self.timestamp,
             cash=self.cash,
             positions=self.positions.copy(),
-            prices=self.prices.copy()
+            prices=self.prices.copy(),
         )
 
     def __repr__(self) -> str:

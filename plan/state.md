@@ -1,13 +1,13 @@
 # Plan State
 
-**Current Phase**: 2
-**Current Phase File**: plan/phase-02-critical-bug-fixes.md
-**Current TODO**: `data/cache.py` fuzzy-fallback staleness guard
+**Current Phase**: 3
+**Current Phase File**: plan/phase-03-runner-and-results-schema.md
+**Current TODO**: Extract `backtesting/runner.py` from run_backtest.py
 **Last Updated**: 2026-07-02
 
 ## Progress
 - Phase 1: 5/5 TODOs complete ✅
-- Phase 2: 0/9 TODOs complete
+- Phase 2: 9/9 TODOs complete ✅
 - Phase 3: 0/7 TODOs complete
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete

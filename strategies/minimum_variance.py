@@ -38,11 +38,7 @@ class MinimumVarianceStrategy(AllocationStrategy):
     Falls back to equal weight if optimization fails.
     """
 
-    def __init__(
-        self,
-        underlying: List[Strategy],
-        name: str = None
-    ):
+    def __init__(self, underlying: List[Strategy], name: str = None):
         super().__init__(underlying, name=name or "Minimum Variance")
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
@@ -67,12 +63,35 @@ class MinimumVarianceStrategy(AllocationStrategy):
         cov = returns.cov().values
         n = len(prices.columns)
 
+        # Guard against ill-conditioned covariance matrices (near-singular,
+        # e.g. from highly correlated/near-identical asset series) which can
+        # cause the optimizer to behave erratically. Apply ridge
+        # regularization, escalating once if the first pass isn't enough.
+        cond_number = np.linalg.cond(cov)
+        if cond_number > 1e8:
+            ridge_coefficient = 1e-6
+            logger.warning(
+                f"Covariance matrix ill-conditioned (cond={cond_number:.2e}). "
+                "Applying ridge regularization."
+            )
+            base_cov = cov
+            cov = base_cov + ridge_coefficient * np.trace(base_cov) / n * np.eye(n)
+            cond_number = np.linalg.cond(cov)
+            if cond_number > 1e8:
+                ridge_coefficient *= 100
+                logger.warning(
+                    f"Covariance matrix still ill-conditioned after ridge "
+                    f"(cond={cond_number:.2e}). Escalating ridge coefficient "
+                    f"to {ridge_coefficient:.2e}."
+                )
+                cov = base_cov + ridge_coefficient * np.trace(base_cov) / n * np.eye(n)
+
         # Objective: minimize portfolio variance w'Cov*w
         def portfolio_variance(w):
             return w @ cov @ w
 
         # Constraints: weights sum to 1
-        constraints = {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
+        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
 
         # Bounds: long-only (0 to 1)
         bounds = tuple((0.0, 1.0) for _ in range(n))
@@ -84,10 +103,10 @@ class MinimumVarianceStrategy(AllocationStrategy):
             result = minimize(
                 portfolio_variance,
                 w0,
-                method='SLSQP',
+                method="SLSQP",
                 bounds=bounds,
                 constraints=constraints,
-                options={'maxiter': 1000, 'ftol': 1e-12}
+                options={"maxiter": 1000, "ftol": 1e-12},
             )
 
             if result.success:
@@ -103,7 +122,9 @@ class MinimumVarianceStrategy(AllocationStrategy):
                 weights = np.ones(n) / n
 
         except Exception as e:
-            logger.warning(f"MinVar optimization failed: {e}. Falling back to equal weight.")
+            logger.warning(
+                f"MinVar optimization failed: {e}. Falling back to equal weight."
+            )
             weights = np.ones(n) / n
 
         # Map to strategy names

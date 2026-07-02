@@ -1,6 +1,7 @@
 """Data loading functions for the dashboard server."""
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,27 @@ import pandas as pd
 BASE_DIR = Path(__file__).parent.parent.parent
 RESULTS_DIR = BASE_DIR / "results"
 STRATEGY_DEFS_DIR = BASE_DIR / "strategy_definitions"
+
+_STRATEGY_KEY_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
+
+
+def is_valid_strategy_key(key: str) -> bool:
+    """
+    Validate a strategy key before it is used to build a filesystem path.
+
+    Only alphanumeric characters, underscores, and hyphens are allowed.
+    This prevents path traversal (e.g. "../../etc/passwd") since the key
+    is joined directly onto RESULTS_DIR / "strategies" / <key>.
+
+    Args:
+        key: Candidate strategy key
+
+    Returns:
+        True if the key is safe to use as a single path segment
+    """
+    if not key or not isinstance(key, str):
+        return False
+    return bool(_STRATEGY_KEY_RE.match(key))
 
 
 def load_strategy_tags(strategy_key: str) -> list[str]:
@@ -28,6 +50,7 @@ def load_strategy_tags(strategy_key: str) -> list[str]:
             except Exception:
                 return []
     return []
+
 
 def load_strategies_index() -> dict | None:
     """
@@ -87,7 +110,11 @@ def load_strategy_data(strategy_key: str) -> dict | None:
 
     Returns:
         Dict with portfolio_history, transactions, weights_history, metrics, info
+        None if the strategy is not found or strategy_key is invalid
     """
+    if not is_valid_strategy_key(strategy_key):
+        return None
+
     strategy_dir = RESULTS_DIR / "strategies" / strategy_key
 
     if not strategy_dir.exists():
@@ -202,7 +229,10 @@ def load_overfitting_analysis(strategy_key: str) -> dict | None:
 
     Returns the parsed dict if the file exists, None otherwise.
     A None result means the strategy has not yet been analysed.
+    None is also returned if strategy_key is invalid.
     """
+    if not is_valid_strategy_key(strategy_key):
+        return None
     path = RESULTS_DIR / "strategies" / strategy_key / "overfitting_analysis.json"
     if not path.exists():
         return None
@@ -220,8 +250,11 @@ def load_stress_test(strategy_key: str) -> dict | None:
 
     Returns the parsed dict if the file exists, None otherwise.
     A None result means the strategy has not yet been stress-tested
-    (run with --stress-test flag).
+    (run with --stress-test flag). None is also returned if strategy_key
+    is invalid.
     """
+    if not is_valid_strategy_key(strategy_key):
+        return None
     path = RESULTS_DIR / "strategies" / strategy_key / "stress_test.json"
     if not path.exists():
         return None

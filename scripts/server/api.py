@@ -8,7 +8,17 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
-from .data import RESULTS_DIR, list_strategy_keys, load_strategy_data, load_overfitting_analysis, load_strategy_tags, load_stress_test
+from .data import (
+    RESULTS_DIR,
+    is_valid_strategy_key,
+    list_strategy_keys,
+    load_strategy_data,
+    load_overfitting_analysis,
+    load_strategy_tags,
+    load_stress_test,
+)
+
+MAX_COMPARE_STRATEGIES = 10
 
 
 def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
@@ -16,6 +26,7 @@ def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
     if not portfolio_history or len(portfolio_history) < 2:
         return None
     try:
+
         def parse_date(entry):
             raw = entry.get("date", entry.get("timestamp", ""))
             return datetime.fromisoformat(str(raw).replace("Z", ""))
@@ -30,17 +41,22 @@ def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
         return None
 
 
-def _compute_omega_ratio(portfolio_history: list, threshold: float = 0.0) -> float | None:
+def _compute_omega_ratio(
+    portfolio_history: list, threshold: float = 0.0
+) -> float | None:
     """Compute omega ratio from portfolio history (threshold-adjusted)."""
     if not portfolio_history or len(portfolio_history) < 2:
         return None
     values = [p["total_value"] for p in portfolio_history]
-    returns = [(values[i] - values[i - 1]) / values[i - 1] for i in range(1, len(values))]
+    returns = [
+        (values[i] - values[i - 1]) / values[i - 1] for i in range(1, len(values))
+    ]
     gains = sum(r - threshold for r in returns if r > threshold)
     losses = sum(threshold - r for r in returns if r < threshold)
     if losses == 0:
         return None
     return round(gains / losses, 4)
+
 
 bp = Blueprint("api", __name__)
 
@@ -85,7 +101,8 @@ def api_strategies_summary():
                 "sharpe_ratio": metrics.get("sharpe_ratio"),
                 "cagr": cagr,
                 "max_drawdown": max_drawdown,
-                "volatility": metrics.get("annualized_volatility") or metrics.get("volatility"),
+                "volatility": metrics.get("annualized_volatility")
+                or metrics.get("volatility"),
                 "total_return": total_return,
                 "calmar_ratio": calmar,
                 "omega_ratio": omega,
@@ -137,9 +154,7 @@ def api_monthly_returns(strategy_key: str):
 
     values = pd.Series(
         [p["total_value"] for p in portfolio],
-        index=pd.to_datetime(
-            [p.get("date", p.get("timestamp")) for p in portfolio]
-        ),
+        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio]),
     )
 
     monthly = values.resample("ME").last()
@@ -168,9 +183,7 @@ def api_rolling_metrics(strategy_key: str):
 
     values = pd.Series(
         [p["total_value"] for p in portfolio],
-        index=pd.to_datetime(
-            [p.get("date", p.get("timestamp")) for p in portfolio]
-        ),
+        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio]),
     )
     returns = values.pct_change().dropna()
 
@@ -293,7 +306,27 @@ def api_compare_multi():
     keys = [k.strip() for k in strategies_param.split(",") if k.strip()]
 
     if len(keys) < 2:
-        return jsonify({"error": "Provide at least 2 strategies via ?strategies=k1,k2"}), 400
+        return (
+            jsonify({"error": "Provide at least 2 strategies via ?strategies=k1,k2"}),
+            400,
+        )
+
+    if len(keys) > MAX_COMPARE_STRATEGIES:
+        return (
+            jsonify(
+                {
+                    "error": (
+                        f"Too many strategies requested ({len(keys)}). "
+                        f"Maximum is {MAX_COMPARE_STRATEGIES}."
+                    )
+                }
+            ),
+            400,
+        )
+
+    invalid_keys = [k for k in keys if not is_valid_strategy_key(k)]
+    if invalid_keys:
+        return jsonify({"error": f"Invalid strategy key(s): {invalid_keys}"}), 400
 
     returns_series = {}
     for key in keys:
@@ -374,15 +407,11 @@ def api_compare(key1: str, key2: str):
 
     values1 = pd.Series(
         [p["total_value"] for p in portfolio1],
-        index=pd.to_datetime(
-            [p.get("date", p.get("timestamp")) for p in portfolio1]
-        ),
+        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio1]),
     )
     values2 = pd.Series(
         [p["total_value"] for p in portfolio2],
-        index=pd.to_datetime(
-            [p.get("date", p.get("timestamp")) for p in portfolio2]
-        ),
+        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio2]),
     )
 
     common = values1.index.intersection(values2.index)
@@ -402,7 +431,8 @@ def api_compare(key1: str, key2: str):
 
     relative = (values1[common] / values2[common]).dropna()
     relative_data = [
-        {"date": d.isoformat(), "value": round(float(v), 4)} for d, v in relative.items()
+        {"date": d.isoformat(), "value": round(float(v), 4)}
+        for d, v in relative.items()
     ]
 
     return jsonify(

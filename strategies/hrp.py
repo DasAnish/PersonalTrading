@@ -61,6 +61,9 @@ def get_quasi_diag(link: np.ndarray) -> List[int]:
         >>> get_quasi_diag(link)
         [0, 1, 2, 3]  # or similar ordering based on clustering
     """
+    if link is None or np.size(link) == 0:
+        raise ValueError("Empty linkage matrix")
+
     link = link.astype(int)
 
     # Start with the last tuple (root of tree)
@@ -166,7 +169,7 @@ def get_rec_bipart(cov: pd.DataFrame, sort_ix: List[int]) -> pd.Series:
         # Bisect each cluster into two halves
         # [(0, mid), (mid, end)] for each cluster
         c_items = [
-            i[int(j):int(k)]
+            i[int(j) : int(k)]
             for i in c_items
             for j, k in ((0, len(i) / 2), (len(i) / 2, len(i)))
             if len(i) > 1  # Only split clusters with more than 1 item
@@ -187,7 +190,7 @@ def get_rec_bipart(cov: pd.DataFrame, sort_ix: List[int]) -> pd.Series:
 
             # Update weights: multiply by allocation factor
             w[c_items0] *= alpha  # Left cluster gets alpha
-            w[c_items1] *= (1 - alpha)  # Right cluster gets (1 - alpha)
+            w[c_items1] *= 1 - alpha  # Right cluster gets (1 - alpha)
 
     return w
 
@@ -221,7 +224,7 @@ class HRPStrategy(AllocationStrategy):
         self,
         underlying: List[Strategy],
         linkage_method: str = "single",
-        name: str = None
+        name: str = None,
     ):
         """
         Initialize HRP strategy.
@@ -290,6 +293,13 @@ class HRPStrategy(AllocationStrategy):
         # Calculate correlation matrix
         corr = returns.corr()
 
+        if corr.isnull().any().any():
+            raise ValueError(
+                "Correlation matrix contains NaN values. This typically "
+                "happens with degenerate or constant-price asset series "
+                "(zero variance) over the lookback window."
+            )
+
         # Convert correlation to distance matrix
         # Formula: d = sqrt(0.5 * (1 - corr))
         # Maps correlation [-1, 1] to distance [0, 1]
@@ -324,7 +334,9 @@ class HRPStrategy(AllocationStrategy):
                 symbol_to_strategy_name[symbol] = strategy.name
 
         # Convert weights index from symbols to strategy names
-        new_index = [symbol_to_strategy_name.get(symbols[i], symbols[i]) for i in weights.index]
+        new_index = [
+            symbol_to_strategy_name.get(symbols[i], symbols[i]) for i in weights.index
+        ]
         weights.index = new_index
 
         # Verify weights sum to 1.0 (within floating point precision)

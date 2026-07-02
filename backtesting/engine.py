@@ -16,6 +16,7 @@ Key change from old architecture:
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Dict
+import numpy as np
 import pandas as pd
 import logging
 
@@ -39,6 +40,8 @@ class BacktestResults:
         metrics: Dict of performance metrics
         initial_capital: Starting capital
         final_value: Ending portfolio value
+        failed_rebalances: List of rebalance dates that raised an exception
+            and were skipped during the backtest
     """
 
     strategy_name: str
@@ -48,6 +51,7 @@ class BacktestResults:
     metrics: Dict[str, float] = field(default_factory=dict)
     initial_capital: float = 0.0
     final_value: float = 0.0
+    failed_rebalances: list = field(default_factory=list)
 
 
 class BacktestEngine:
@@ -95,7 +99,7 @@ class BacktestEngine:
         self,
         initial_capital: float,
         transaction_cost_bps: float = 7.5,
-        rebalance_frequency: str = 'monthly'
+        rebalance_frequency: str = "monthly",
     ):
         """
         Initialize backtest engine.
@@ -114,7 +118,7 @@ class BacktestEngine:
         strategy: Strategy,
         start_date: datetime,
         end_date: datetime,
-        refresh: bool = False
+        refresh: bool = False,
     ) -> BacktestResults:
         """
         Run backtest simulation for any strategy (async).
@@ -149,7 +153,7 @@ class BacktestEngine:
             requirements=requirements,
             start_date=start_date,
             end_date=end_date,
-            refresh=refresh
+            refresh=refresh,
         )
 
         if all_data.empty:
@@ -161,8 +165,7 @@ class BacktestEngine:
 
         # Filter to backtest period
         backtest_data = all_data[
-            (all_data.index >= start_date) &
-            (all_data.index <= end_date)
+            (all_data.index >= start_date) & (all_data.index <= end_date)
         ]
 
         if backtest_data.empty:
@@ -175,28 +178,26 @@ class BacktestEngine:
 
         # Generate rebalance dates
         rebalance_dates = self._generate_rebalance_dates(
-            start_date,
-            end_date,
-            backtest_data.index
+            start_date, end_date, backtest_data.index
         )
 
         logger.info(f"Will rebalance {len(rebalance_dates)} times")
 
         # Initialize portfolio state
         portfolio = PortfolioState(
-            timestamp=start_date,
-            cash=self.initial_capital,
-            positions={},
-            prices={}
+            timestamp=start_date, cash=self.initial_capital, positions={}, prices={}
         )
 
         # Track history
         portfolio_history = []
         weights_history = []
         all_transactions = []
+        failed_rebalances = []
 
         # Record initial state
-        portfolio_history.append(self._record_state(portfolio, backtest_data.loc[start_date]))
+        portfolio_history.append(
+            self._record_state(portfolio, backtest_data.loc[start_date])
+        )
 
         # Run backtest
         for rebalance_date in rebalance_dates:
@@ -205,7 +206,7 @@ class BacktestEngine:
                 context = mds.get_context_for_date(
                     all_data=all_data,
                     current_date=rebalance_date,
-                    lookback_days=requirements.lookback_days
+                    lookback_days=requirements.lookback_days,
                 )
 
                 # Strategy calculates weights from context
@@ -213,7 +214,7 @@ class BacktestEngine:
                 weights = strategy.calculate_weights(context)
 
                 # Record weights at this rebalance date
-                weight_record = {'timestamp': rebalance_date}
+                weight_record = {"timestamp": rebalance_date}
                 weight_record.update(weights.to_dict())
                 weights_history.append(weight_record)
 
@@ -227,7 +228,7 @@ class BacktestEngine:
                 transactions = portfolio.execute_rebalance(
                     target_weights=weights,
                     prices=current_prices,
-                    transaction_cost_bps=self.transaction_cost_bps
+                    transaction_cost_bps=self.transaction_cost_bps,
                 )
 
                 all_transactions.extend(transactions)
@@ -241,18 +242,22 @@ class BacktestEngine:
                     f"transactions={len(transactions)}"
                 )
 
-            except Exception as e:
-                logger.error(f"Error at rebalance date {rebalance_date.date()}: {e}")
+            except (ValueError, KeyError, np.linalg.LinAlgError) as e:
+                logger.error(
+                    f"Error at rebalance date {rebalance_date.date()}: {e}",
+                    exc_info=True,
+                )
+                failed_rebalances.append(rebalance_date)
                 continue
 
         # Convert history to DataFrame
         history_df = pd.DataFrame(portfolio_history)
-        history_df.set_index('timestamp', inplace=True)
+        history_df.set_index("timestamp", inplace=True)
 
         # Convert weights history to DataFrame
         if weights_history:
             weights_df = pd.DataFrame(weights_history)
-            weights_df.set_index('timestamp', inplace=True)
+            weights_df.set_index("timestamp", inplace=True)
         else:
             weights_df = pd.DataFrame()
 
@@ -273,7 +278,8 @@ class BacktestEngine:
             weights_history=weights_df,
             transactions=all_transactions,
             initial_capital=self.initial_capital,
-            final_value=final_value
+            final_value=final_value,
+            failed_rebalances=failed_rebalances,
         )
 
         return results
@@ -282,7 +288,7 @@ class BacktestEngine:
         self,
         start_date: datetime,
         end_date: datetime,
-        available_dates: pd.DatetimeIndex
+        available_dates: pd.DatetimeIndex,
     ) -> List[datetime]:
         """
         Generate rebalance dates based on frequency.
@@ -296,21 +302,12 @@ class BacktestEngine:
             List of rebalance dates aligned to trading days
         """
         # Map frequency to pandas offset
-        freq_map = {
-            'monthly': 'ME',
-            'weekly': 'W',
-            'quarterly': 'QE',
-            'daily': 'D'
-        }
+        freq_map = {"monthly": "ME", "weekly": "W", "quarterly": "QE", "daily": "D"}
 
-        freq = freq_map.get(self.rebalance_frequency.lower(), 'ME')
+        freq = freq_map.get(self.rebalance_frequency.lower(), "ME")
 
         # Generate candidate dates
-        candidate_dates = pd.date_range(
-            start=start_date,
-            end=end_date,
-            freq=freq
-        )
+        candidate_dates = pd.date_range(start=start_date, end=end_date, freq=freq)
 
         # Align to actual trading days (find nearest following trading day)
         rebalance_dates = []
@@ -322,11 +319,7 @@ class BacktestEngine:
 
         return rebalance_dates
 
-    def _record_state(
-        self,
-        portfolio: PortfolioState,
-        prices: pd.Series
-    ) -> Dict:
+    def _record_state(self, portfolio: PortfolioState, prices: pd.Series) -> Dict:
         """
         Record portfolio state as a dictionary for history tracking.
 
@@ -338,15 +331,15 @@ class BacktestEngine:
             Dict with timestamp, cash, total_value, and position values
         """
         record = {
-            'timestamp': portfolio.timestamp,
-            'cash': portfolio.cash,
-            'total_value': portfolio.total_value()
+            "timestamp": portfolio.timestamp,
+            "cash": portfolio.cash,
+            "total_value": portfolio.total_value(),
         }
 
         # Add position values
         for symbol, qty in portfolio.positions.items():
             price = prices.get(symbol, portfolio.prices.get(symbol, 0.0))
-            record[f'{symbol}_qty'] = qty
-            record[f'{symbol}_value'] = qty * price
+            record[f"{symbol}_qty"] = qty
+            record[f"{symbol}_value"] = qty * price
 
         return record

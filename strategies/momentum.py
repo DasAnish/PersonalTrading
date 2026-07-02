@@ -21,7 +21,6 @@ Example:
 """
 
 import pandas as pd
-import numpy as np
 from typing import List
 import logging
 
@@ -45,7 +44,7 @@ class MomentumTopNStrategy(AllocationStrategy):
         underlying: List[Strategy],
         top_n: int = 2,
         lookback_days: int = 252,
-        name: str = None
+        name: str = None,
     ):
         """
         Args:
@@ -68,25 +67,19 @@ class MomentumTopNStrategy(AllocationStrategy):
 
         min_required = max(30, self.lookback_days)
         if len(prices) < min_required:
-            logger.warning(
-                f"Insufficient data ({len(prices)} < {min_required}). "
-                "Falling back to equal weight."
+            raise ValueError(
+                f"Insufficient data for momentum: {len(prices)} < {min_required}"
             )
-            n = len(prices.columns)
-            symbols = list(prices.columns)
-            symbol_to_name = self._build_name_map()
-            index = [symbol_to_name.get(s, s) for s in symbols]
-            return pd.Series(np.ones(n) / n, index=index)
 
         prices = prices.ffill(limit=3).dropna()
 
         # Calculate trailing returns over lookback period
-        lookback_prices = prices.iloc[-self.lookback_days:]
+        lookback_prices = prices.iloc[-self.lookback_days :]
         trailing_returns = lookback_prices.iloc[-1] / lookback_prices.iloc[0] - 1
 
         # Rank and select top N
         ranked = trailing_returns.sort_values(ascending=False)
-        selected_symbols = ranked.index[:self.top_n].tolist()
+        selected_symbols = ranked.index[: self.top_n].tolist()
 
         logger.debug(
             f"Momentum rankings: {dict(ranked.round(4))}. "

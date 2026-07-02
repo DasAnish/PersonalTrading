@@ -418,6 +418,7 @@ def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
     Returns:
         BacktestResults
     """
+    import numpy as np
     import pandas as pd
     from datetime import timedelta
     from strategies.core import StrategyContext, OverlayStrategy
@@ -449,6 +450,7 @@ def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
     portfolio_history = []
     weights_history = []
     all_transactions = []
+    failed_rebalances = []
 
     # Record initial state
     if backtest_start in prices.index:
@@ -494,8 +496,13 @@ def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
 
         try:
             weights = strategy.calculate_weights(context)
-        except Exception as e:
-            logger.warning(f"{strategy.name} at {rebalance_date.date()}: {e}")
+        except (ValueError, KeyError, np.linalg.LinAlgError) as e:
+            logger.error(
+                f"{strategy.name} failed at rebalance date "
+                f"{rebalance_date.date()}: {e}",
+                exc_info=True,
+            )
+            failed_rebalances.append(rebalance_date)
             continue
 
         weight_record = {"timestamp": rebalance_date}
@@ -531,6 +538,7 @@ def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
         transactions=all_transactions,
         initial_capital=engine.initial_capital,
         final_value=portfolio.total_value(),
+        failed_rebalances=failed_rebalances,
     )
 
 

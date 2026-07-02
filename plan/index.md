@@ -1,55 +1,42 @@
-# Plan: Analysis Depth — Stress Testing, CPCV, Block Bootstrap, Scenario Removal, Live Risk Dashboard
+# Plan: Cleanup, Modularity, Reporting & Overfitting Extension
 
-**Created**: 2026-03-17
+**Created**: 2026-07-02
 **Status**: In Progress
+
+Supersedes the previous "Analysis Depth" plan (2026-03-17). Its Phase 1 (Stress Testing) shipped;
+its Phases 2–4 (Scenario Removal, CPCV, Block Bootstrap) are absorbed into Phases 7–9 below;
+its Phase 5 (Live Risk Dashboard) is carried over as Phase 10.
+
+Execution: each phase is implemented by a subagent (model per table), validated by the
+orchestrator (pytest baseline + phase acceptance checks + black + 600-line rule), then
+committed as a single commit on `claude/assess-project-state-Bsig4`.
+
+Baseline (2026-07-02): 239 passed, 4 failed (IB-connection tests — no gateway in env, expected),
+`tests/test_strategies.py` fails at collection (fixed in Phase 1).
 
 ## Milestones
 
-| # | Phase | Status |
-|---|-------|--------|
-| 1 | [Stress Testing Framework](phase-01-stress-testing.md) | ✅ Done |
-| 2 | [Scenario Removal (Leave-One-Crisis-Out)](phase-02-scenario-removal.md) | ⬜ Not Started |
-| 3 | [CPCV (Combinatorial Purged Cross-Validation)](phase-03-cpcv.md) | ⬜ Not Started |
-| 4 | [Block Bootstrap](phase-04-block-bootstrap.md) | ⬜ Not Started |
-| 5 | [Forward-Looking Live Risk Dashboard](phase-05-live-risk-dashboard.md) | ⬜ Not Started |
+| # | Phase | Model | Status |
+|---|-------|-------|--------|
+| 1 | [Dead-Code Cleanup](phase-01-dead-code-cleanup.md) | haiku | ⬜ Not Started |
+| 2 | [Critical Bug Fixes](phase-02-critical-bug-fixes.md) | sonnet | ⬜ Not Started |
+| 3 | [Runner Extraction + Results Schema](phase-03-runner-and-results-schema.md) | sonnet | ⬜ Not Started |
+| 4 | [Metrics Dedup, Splitters, Frontend Modules](phase-04-metrics-splitters-frontend.md) | sonnet | ⬜ Not Started |
+| 5 | [Reporting](phase-05-reporting.md) | sonnet | ⬜ Not Started |
+| 6 | [Overfitting Foundations](phase-06-overfitting-foundations.md) | sonnet | ⬜ Not Started |
+| 7 | [Scenario Removal Completion](phase-07-scenario-removal.md) | sonnet | ⬜ Not Started |
+| 8 | [CPCV](phase-08-cpcv.md) | sonnet | ⬜ Not Started |
+| 9 | [Block Bootstrap + SPA / Reality Check](phase-09-bootstrap-spa.md) | sonnet | ⬜ Not Started |
+| 10 | [Live Risk Dashboard](phase-10-live-risk-dashboard.md) | sonnet | ⬜ Not Started |
 
-## All TODOs
+## Dependency order
 
-### Phase 1 — Stress Testing Framework
-- [ ] Define crisis periods as named constants in `analytics/stress_testing.py`
-- [ ] Implement `StressTester` class with crisis slicing and metrics (Sharpe, max DD, recovery days, return)
-- [ ] Add `--stress-test` flag to `run_backtest.py`
-- [ ] Write `tests/test_stress_testing.py`
-- [ ] Add "Stress Periods" tab to Flask dashboard strategy detail page
-- [ ] Add stress data to strategy JSON output
+1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10.
+Phase 3's runner gates 7/8/9; Phase 4's splitters gate 6/8; Phase 5's rebalance module is reused by 10.
 
-### Phase 2 — Scenario Removal (Leave-One-Crisis-Out)
-- [ ] Implement `run_leave_one_out()` in `analytics/stress_testing.py`
-- [ ] Compute Sharpe contribution (delta) per crisis period
-- [ ] Add `--scenario-removal` CLI flag
-- [ ] Write tests for scenario removal
-- [ ] Add "Scenario Removal" sub-section to dashboard Stress Periods tab
+## Cross-phase constraints
 
-### Phase 3 — CPCV (Combinatorial Purged Cross-Validation)
-- [ ] Implement `analytics/cpcv.py` with `CPCVEngine`
-- [ ] Compute OOS Sharpe distribution and summary statistics
-- [ ] Integrate with `BacktestEngine`
-- [ ] Add `--method cpcv` flag to `run_overfitting.py`
-- [ ] Write `tests/test_cpcv.py`
-- [ ] Add CPCV results to JSON output and dashboard Overfitting tab
-
-### Phase 4 — Block Bootstrap
-- [ ] Implement `analytics/bootstrap.py` with `BlockBootstrap`
-- [ ] Implement stationary block bootstrap (geometric block length)
-- [ ] Run N bootstrap iterations, collect metric distributions
-- [ ] Add `--method bootstrap` flag to `run_overfitting.py`
-- [ ] Write `tests/test_bootstrap.py`
-- [ ] Add bootstrap results to JSON output and dashboard Overfitting tab
-
-### Phase 5 — Forward-Looking Live Risk Dashboard
-- [ ] Create `scripts/server/risk.py` blueprint with `/live-risk` route
-- [ ] Compute live risk metrics (VaR, CVaR, correlation, HHI)
-- [ ] Add drift report (current weights vs strategy target)
-- [ ] Write `templates/live_risk.html`
-- [ ] Register blueprint and add nav link in `app.py`
-- [ ] Graceful fallback when IB Gateway offline
+- `mcp_server/server.py:340` shells out to `scripts/run_backtest.py --all` — never rename existing CLI flags.
+- All touched Python files ≤600 lines; Black, line length 88; type hints.
+- NEVER place/submit/modify IB orders — research only.
+- One commit per phase; `git revert` a phase's commit if its validation regresses later.

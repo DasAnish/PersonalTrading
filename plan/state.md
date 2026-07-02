@@ -1,12 +1,12 @@
 # Plan State
 
-**Current Phase**: 1
-**Current Phase File**: plan/phase-01-dead-code-cleanup.md
-**Current TODO**: Delete dead `_run_strategy` from `scripts/run_backtest.py`
+**Current Phase**: 2
+**Current Phase File**: plan/phase-02-critical-bug-fixes.md
+**Current TODO**: `data/cache.py` fuzzy-fallback staleness guard
 **Last Updated**: 2026-07-02
 
 ## Progress
-- Phase 1: 0/5 TODOs complete
+- Phase 1: 5/5 TODOs complete ✅
 - Phase 2: 0/9 TODOs complete
 - Phase 3: 0/7 TODOs complete
 - Phase 4: 0/6 TODOs complete

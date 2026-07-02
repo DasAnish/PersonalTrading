@@ -26,7 +26,12 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 import importlib
 
-from strategies.base import ExecutableStrategy, MarketStrategy, AllocationStrategy, OverlayStrategy
+from strategies.core import (
+    AllocationStrategy,
+    AssetStrategy as MarketStrategy,
+    OverlayStrategy,
+    Strategy as ExecutableStrategy,
+)
 
 
 class StrategyLoader:
@@ -41,7 +46,7 @@ class StrategyLoader:
                        Defaults to strategy_definitions/ in project root.
         """
         if config_dir is None:
-            config_dir = Path(__file__).parent.parent / 'strategy_definitions'
+            config_dir = Path(__file__).parent.parent / "strategy_definitions"
 
         self.config_dir = Path(config_dir)
         self._cache: Dict[str, Any] = {}  # Cache loaded strategies
@@ -53,13 +58,13 @@ class StrategyLoader:
 
     def _load_yaml(self, file_path: Path) -> Dict[str, Any]:
         """Load YAML file and return parsed content."""
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             return yaml.safe_load(f)
 
     def _load_file(self, file_path: Path) -> Dict[str, Any]:
         """Load a JSON or YAML definition file."""
-        with open(file_path, 'r') as f:
-            if file_path.suffix == '.json':
+        with open(file_path, "r") as f:
+            if file_path.suffix == ".json":
                 return json.load(f)
             return yaml.safe_load(f)
 
@@ -80,15 +85,15 @@ class StrategyLoader:
             Path to file if found, None otherwise
         """
         # Path-based ref: look directly under config_dir
-        if '/' in strategy_key:
-            for ext in ('.json', '.yaml'):
+        if "/" in strategy_key:
+            for ext in (".json", ".yaml"):
                 path = self.config_dir / f"{strategy_key}{ext}"
                 if path.exists():
                     return path
             return None
 
         # Simple key: search all subdirectories, JSON first
-        for ext in ('.json', '.yaml'):
+        for ext in (".json", ".yaml"):
             for subdir in self.config_dir.iterdir():
                 if not subdir.is_dir():
                     continue
@@ -116,9 +121,7 @@ class StrategyLoader:
 
         file_path = self._find_strategy_file(strategy_key)
         if file_path is None:
-            raise FileNotFoundError(
-                f"Strategy definition not found: {strategy_key}"
-            )
+            raise FileNotFoundError(f"Strategy definition not found: {strategy_key}")
 
         definition = self._load_file(file_path)
         self._cache[strategy_key] = definition
@@ -140,13 +143,14 @@ class StrategyLoader:
         # Try simple import from strategies module first
         try:
             import strategies
+
             return getattr(strategies, class_name)
         except (ImportError, AttributeError):
             pass
 
         # Try fully qualified import
-        if '.' in class_name:
-            module_name, cls_name = class_name.rsplit('.', 1)
+        if "." in class_name:
+            module_name, cls_name = class_name.rsplit(".", 1)
             try:
                 module = importlib.import_module(module_name)
                 return getattr(module, cls_name)
@@ -155,7 +159,9 @@ class StrategyLoader:
 
         raise ImportError(f"Cannot import class: {class_name}")
 
-    def _build_strategy_from_def(self, definition: Dict[str, Any]) -> ExecutableStrategy:
+    def _build_strategy_from_def(
+        self, definition: Dict[str, Any]
+    ) -> ExecutableStrategy:
         """
         Recursively build a strategy from an inline definition dict.
 
@@ -176,47 +182,47 @@ class StrategyLoader:
         Returns:
             Instantiated strategy
         """
-        strategy_type = definition.get('type')
-        class_name = definition.get('class')
-        params = definition.get('parameters', {}).copy()
+        strategy_type = definition.get("type")
+        class_name = definition.get("class")
+        params = definition.get("parameters", {}).copy()
 
-        if strategy_type == 'asset':
+        if strategy_type == "asset":
             strategy_class = self._get_class(class_name)
             return strategy_class(**params)
 
-        if strategy_type in ('allocation', 'portfolio'):
+        if strategy_type in ("allocation", "portfolio"):
             strategy_class = self._get_class(class_name)
-            underlying_refs = definition.get('underlying', [])
+            underlying_refs = definition.get("underlying", [])
             underlying_list = []
             for ref in underlying_refs:
                 if isinstance(ref, str):
                     underlying_def = self.load_definition(ref)
-                    underlying_list.append(self._build_strategy_from_def(underlying_def))
+                    underlying_list.append(
+                        self._build_strategy_from_def(underlying_def)
+                    )
                 elif isinstance(ref, dict):
                     underlying_list.append(self._build_strategy_from_def(ref))
-            params['underlying'] = underlying_list
+            params["underlying"] = underlying_list
             return strategy_class(**params)
 
-        if strategy_type in ('composed', 'overlay'):
+        if strategy_type in ("composed", "overlay"):
             strategy_class = self._get_class(class_name)
-            underlying_ref = definition.get('underlying')
+            underlying_ref = definition.get("underlying")
             if underlying_ref is not None:
                 if isinstance(underlying_ref, str):
                     underlying_def = self.load_definition(underlying_ref)
-                    params['underlying'] = self._build_strategy_from_def(underlying_def)
+                    params["underlying"] = self._build_strategy_from_def(underlying_def)
                 elif isinstance(underlying_ref, dict):
-                    params['underlying'] = self._build_strategy_from_def(underlying_ref)
+                    params["underlying"] = self._build_strategy_from_def(underlying_ref)
             return strategy_class(**params)
 
-        if strategy_type == 'market':
+        if strategy_type == "market":
             strategy_class = self._get_class(class_name)
             return strategy_class(**params)
 
         raise ValueError(f"Unknown strategy type: {strategy_type!r}")
 
-    def build_market_strategy(
-        self, strategy_key: str
-    ) -> MarketStrategy:
+    def build_market_strategy(self, strategy_key: str) -> MarketStrategy:
         """
         Build market strategy instance from definition.
 
@@ -231,20 +237,16 @@ class StrategyLoader:
         """
         definition = self.load_definition(strategy_key)
 
-        if definition.get('type') != 'market':
-            raise ValueError(
-                f"Expected market strategy, got: {definition.get('type')}"
-            )
+        if definition.get("type") != "market":
+            raise ValueError(f"Expected market strategy, got: {definition.get('type')}")
 
-        class_name = definition['class']
+        class_name = definition["class"]
         strategy_class = self._get_class(class_name)
-        params = definition.get('parameters', {})
+        params = definition.get("parameters", {})
 
         return strategy_class(**params)
 
-    def build_allocation_strategy(
-        self, strategy_key: str
-    ) -> AllocationStrategy:
+    def build_allocation_strategy(self, strategy_key: str) -> AllocationStrategy:
         """
         Build allocation strategy instance from definition.
 
@@ -261,20 +263,20 @@ class StrategyLoader:
         """
         definition = self.load_definition(strategy_key)
 
-        if definition.get('type') != 'allocation':
+        if definition.get("type") != "allocation":
             raise ValueError(
                 f"Expected allocation strategy, got: {definition.get('type')}"
             )
 
-        class_name = definition['class']
+        class_name = definition["class"]
         strategy_class = self._get_class(class_name)
-        params = definition.get('parameters', {}).copy()
+        params = definition.get("parameters", {}).copy()
 
         # Build underlying market strategy
-        market_key = definition.get('market')
+        market_key = definition.get("market")
         if market_key:
             underlying_market = self.build_market_strategy(market_key)
-            params['underlying'] = underlying_market
+            params["underlying"] = underlying_market
 
         return strategy_class(**params)
 
@@ -298,18 +300,18 @@ class StrategyLoader:
         """
         definition = self.load_definition(strategy_key)
 
-        if definition.get('type') != 'overlay':
+        if definition.get("type") != "overlay":
             raise ValueError(
                 f"Expected overlay strategy, got: {definition.get('type')}"
             )
 
-        class_name = definition['class']
+        class_name = definition["class"]
         strategy_class = self._get_class(class_name)
-        params = definition.get('parameters', {}).copy()
+        params = definition.get("parameters", {}).copy()
 
         # Resolve underlying strategy if not provided
         if underlying is None:
-            underlying_key = definition.get('underlying')
+            underlying_key = definition.get("underlying")
             if underlying_key:
                 underlying = self.build_allocation_strategy(underlying_key)
             else:
@@ -317,12 +319,10 @@ class StrategyLoader:
                     f"Overlay strategy '{strategy_key}' requires underlying strategy"
                 )
 
-        params['underlying'] = underlying
+        params["underlying"] = underlying
         return strategy_class(**params)
 
-    def build_composed_strategy(
-        self, strategy_key: str
-    ) -> ExecutableStrategy:
+    def build_composed_strategy(self, strategy_key: str) -> ExecutableStrategy:
         """
         Build composed strategy with multiple overlay layers.
 
@@ -343,12 +343,12 @@ class StrategyLoader:
         """
         definition = self.load_definition(strategy_key)
 
-        if definition.get('type') != 'composed':
+        if definition.get("type") != "composed":
             raise ValueError(
                 f"Expected composed strategy, got: {definition.get('type')}"
             )
 
-        layers = definition.get('layers', [])
+        layers = definition.get("layers", [])
         if not layers:
             raise ValueError(f"Composed strategy '{strategy_key}' has no layers")
 
@@ -393,9 +393,9 @@ class StrategyLoader:
         """
         # Collect best file per stem: JSON takes priority over YAML
         best_files: Dict[str, Path] = {}
-        for file_path in self.config_dir.rglob('*.json'):
+        for file_path in self.config_dir.rglob("*.json"):
             best_files[file_path.stem] = file_path
-        for file_path in self.config_dir.rglob('*.yaml'):
+        for file_path in self.config_dir.rglob("*.yaml"):
             if file_path.stem not in best_files:
                 best_files[file_path.stem] = file_path
 
@@ -403,12 +403,12 @@ class StrategyLoader:
         for stem, file_path in best_files.items():
             try:
                 definition = self._load_file(file_path)
-                file_type = definition.get('type')
+                file_type = definition.get("type")
 
                 if strategy_type and file_type != strategy_type:
                     continue
 
-                description = definition.get('description', '').split('\n')[0]
+                description = definition.get("description", "").split("\n")[0]
                 strategies[stem] = description
 
             except Exception as e:
@@ -432,25 +432,25 @@ class StrategyLoader:
         print(f"\nDescription:")
         print(f"  {definition.get('description', 'N/A')}")
 
-        params = definition.get('parameters', {})
+        params = definition.get("parameters", {})
         if params:
             print(f"\nParameters:")
             for key, value in params.items():
                 print(f"  {key}: {value}")
 
         # Show references if overlay or allocation
-        if definition.get('type') == 'overlay':
-            underlying = definition.get('underlying')
+        if definition.get("type") == "overlay":
+            underlying = definition.get("underlying")
             if underlying:
                 print(f"\nUnderlying Strategy: {underlying}")
 
-        if definition.get('type') == 'allocation':
-            market = definition.get('market')
+        if definition.get("type") == "allocation":
+            market = definition.get("market")
             if market:
                 print(f"\nMarket: {market}")
 
-        if definition.get('type') == 'composed':
-            layers = definition.get('layers', [])
+        if definition.get("type") == "composed":
+            layers = definition.get("layers", [])
             if layers:
                 print(f"\nComposed Layers:")
                 for i, layer in enumerate(layers, 1):
@@ -468,44 +468,44 @@ class StrategyLoader:
         """
         definition = self.load_definition(strategy_key)
         return {
-            'key': strategy_key,
-            'type': definition.get('type'),
-            'class': definition.get('class'),
-            'description': definition.get('description', ''),
-            'parameters': definition.get('parameters', {}),
-            'market': definition.get('market'),
-            'underlying': definition.get('underlying'),
-            'layers': definition.get('layers', [])
+            "key": strategy_key,
+            "type": definition.get("type"),
+            "class": definition.get("class"),
+            "description": definition.get("description", ""),
+            "parameters": definition.get("parameters", {}),
+            "market": definition.get("market"),
+            "underlying": definition.get("underlying"),
+            "layers": definition.get("layers", []),
         }
 
 
 # Example usage and testing
-if __name__ == '__main__':
+if __name__ == "__main__":
     loader = StrategyLoader()
 
     # List all strategies
     print("Available Markets:")
-    for key, desc in loader.list_strategies('market').items():
+    for key, desc in loader.list_strategies("market").items():
         print(f"  {key}: {desc}")
 
     print("\nAvailable Allocations:")
-    for key, desc in loader.list_strategies('allocation').items():
+    for key, desc in loader.list_strategies("allocation").items():
         print(f"  {key}: {desc}")
 
     print("\nAvailable Overlays:")
-    for key, desc in loader.list_strategies('overlay').items():
+    for key, desc in loader.list_strategies("overlay").items():
         print(f"  {key}: {desc}")
 
     print("\nAvailable Composed Strategies:")
-    for key, desc in loader.list_strategies('composed').items():
+    for key, desc in loader.list_strategies("composed").items():
         print(f"  {key}: {desc}")
 
     # Print info for a strategy
     print("\n" + "=" * 70)
-    loader.print_strategy_info('trend_following')
+    loader.print_strategy_info("trend_following")
 
     print("\n" + "=" * 70)
-    loader.print_strategy_info('vol_target_12pct')
+    loader.print_strategy_info("vol_target_12pct")
 
     print("\n" + "=" * 70)
-    loader.print_strategy_info('trend_with_vol_12')
+    loader.print_strategy_info("trend_with_vol_12")

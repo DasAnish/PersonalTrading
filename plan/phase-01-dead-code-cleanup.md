@@ -12,11 +12,11 @@ Remove verified-dead modules, functions, and a broken test file. Zero behavior c
 - `tests/test_strategies.py` (431 lines): tests the pre-refactor API (`BaseStrategy`, `calculate_weights(prices)` signature); fails at pytest collection. Current-architecture coverage lives in `tests/test_core_architecture.py` and `tests/test_backtest_e2e.py`.
 
 ## TODOs
-- [ ] Delete dead `_run_strategy` function from `scripts/run_backtest.py` (lines ~572–620)
-- [ ] Rewire `strategies/strategy_loader.py:29` to `from strategies.core import Strategy as ExecutableStrategy, AssetStrategy as MarketStrategy, AllocationStrategy, OverlayStrategy` (keep alias names — no internal renames in the loader)
-- [ ] Delete `tests/test_strategies.py` (first skim for unique behavioral assertions worth porting to `tests/test_core_architecture.py`; most are already covered)
-- [ ] Delete `strategies/base.py` and `strategies/models.py`
-- [ ] Run Black on touched files
+- [x] Delete dead `_run_strategy` function from `scripts/run_backtest.py` (lines ~572–620)
+- [x] Rewire `strategies/strategy_loader.py:29` to `from strategies.core import Strategy as ExecutableStrategy, AssetStrategy as MarketStrategy, AllocationStrategy, OverlayStrategy` (keep alias names — no internal renames in the loader)
+- [x] Delete `tests/test_strategies.py` (first skim for unique behavioral assertions worth porting to `tests/test_core_architecture.py`; most are already covered)
+- [x] Delete `strategies/base.py` and `strategies/models.py`
+- [x] Run Black on touched files
 
 ## Validation
 - `grep -rn "strategies.base\|strategies.models" --include="*.py" .` → no matches

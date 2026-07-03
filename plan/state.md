@@ -1,8 +1,8 @@
 # Plan State
 
-**Current Phase**: 4
-**Current Phase File**: plan/phase-04-metrics-splitters-frontend.md
-**Current TODO**: Dedupe metrics helpers out of scripts/server/api.py
+**Current Phase**: 5
+**Current Phase File**: plan/phase-05-reporting.md
+**Current TODO**: Build analytics/report.py markdown exporter
 **Last Updated**: 2026-07-02
 
 ## Progress
@@ -11,6 +11,9 @@
 - Phase 3: 7/7 TODOs complete ✅ (run_backtest.py 1187→775 lines; residual 775>600 is
   irreducible CLI orchestration — argparse byte-identical, IB/cache glue, legacy CSV/chart
   save. Reusable logic now in backtesting/runner.py + results_schema.py + results_io.py.)
+- Phase 4: 6/6 TODOs complete ✅ (metrics.py 684→496; new analytics/summary.py,
+  optimization/splitters.py; api.py metric dupes removed; frontend JS extracted to
+  static/js/{api,format,charts,tabs}.js. 299 passed, +33 splitter tests.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

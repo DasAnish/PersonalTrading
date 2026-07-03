@@ -6,6 +6,10 @@
     <title>{{ strategy_key }} — Strategy Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
+    <script src="{{ url_for('routes.static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('routes.static', filename='js/format.js') }}"></script>
+    <script src="{{ url_for('routes.static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('routes.static', filename='js/tabs.js') }}"></script>
     <style>
         .nav-bar {
             background: #f5f5f5;
@@ -367,15 +371,6 @@
         let availableStrategies = [];
         let loadedData = {};
 
-        const CHART_COLORS = [
-            { border: '#667eea', bg: 'rgba(102,126,234,0.1)' },
-            { border: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-            { border: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-            { border: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
-            { border: '#f97316', bg: 'rgba(249,115,22,0.1)' },
-            { border: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
-        ];
-
         function getStrategySelections() {
             return Array.from(document.querySelectorAll('.strategy-select'))
                 .map(s => s.value).filter(v => v);
@@ -406,45 +401,9 @@
             handleStrategyChange();
         }
 
-        function formatCurrency(value) {
-            if (value === null || value === undefined) return '—';
-            const num = parseFloat(value);
-            if (isNaN(num)) return '—';
-            return '£' + num.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function formatMetric(key, value) {
-            if (value === null || value === undefined) return '—';
-
-            if (key.toLowerCase().includes('value') || key.toLowerCase().includes('cost') ||
-                key.toLowerCase().includes('capital') || key.toLowerCase() === 'final_value') {
-                return formatCurrency(value);
-            }
-
-            const k = key.toLowerCase();
-            const num = parseFloat(value);
-            if (isNaN(num)) return String(value);
-
-            // Always treat these as decimal fractions → multiply by 100
-            if (k.includes('return') || k.includes('volatility') || k.includes('drawdown') || k === 'cagr') {
-                return (num * 100).toFixed(2) + '%';
-            }
-
-            if (k.includes('sharpe') || k.includes('sortino') || k.includes('calmar') || k.includes('omega')) {
-                return num.toFixed(3);
-            }
-
-            if (k.includes('transaction') || k.includes('rebalance') || k.includes('count')) {
-                return Math.round(num);
-            }
-
-            return num.toFixed(2);
-        }
-
         async function initializeDashboard() {
             try {
-                const response = await fetch('/api/strategies');
-                availableStrategies = await response.json();
+                availableStrategies = await fetchJSON('/api/strategies');
 
                 if (availableStrategies.length === 0) {
                     document.querySelector('.content').innerHTML =
@@ -476,9 +435,7 @@
 
         async function loadStrategyData(strategyKey) {
             try {
-                const response = await fetch(`/api/strategy/${strategyKey}`);
-                const data = await response.json();
-                loadedData[strategyKey] = data;
+                loadedData[strategyKey] = await fetchJSON(`/api/strategy/${strategyKey}`);
             } catch (error) {
                 console.error(`Error loading strategy ${strategyKey}:`, error);
             }
@@ -698,21 +655,19 @@
             });
         }
 
-        function showTab(tabName, event) {
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            if (event) event.target.classList.add('active');
-            if (tabName === 'rolling') loadRollingMetrics();
-            if (tabName === 'overfitting') loadOverfittingAnalysis();
-            if (tabName === 'stress') loadStressTest();
-            if (tabName === 'attribution') {
+        // Tab switching (showTab) and lazy-load dispatch live in tabs.js;
+        // this page registers its per-tab loaders after they're defined below.
+        registerTabLoaders({
+            rolling: () => loadRollingMetrics(),
+            overfitting: () => loadOverfittingAnalysis(),
+            stress: () => loadStressTest(),
+            attribution: () => {
                 const strategies = getStrategySelections();
                 if (!attributionRendered && strategies.length && loadedData[strategies[0]]) {
                     displayAttributionTab(loadedData[strategies[0]]);
                 }
-            }
-        }
+            },
+        });
 
         let overfittingLoaded = false;
         let overfittingChart = null;
@@ -726,9 +681,9 @@
             const container = document.getElementById('overfittingContent');
 
             try {
-                const resp = await fetch(`/api/strategy/${strategyKey}/overfitting`);
-                if (!resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
+                const { ok, data } = await fetchJSONWithStatus(`/api/strategy/${strategyKey}/overfitting`);
+                if (!ok) {
+                    const err = data || {};
                     container.innerHTML = `
                         <div class="overfitting-not-run">
                             <h3>Overfitting analysis not yet run</h3>
@@ -741,16 +696,11 @@
                         </div>`;
                     return;
                 }
-                const data = await resp.json();
                 renderOverfittingAnalysis(data, container, strategyKey);
                 overfittingLoaded = true;
             } catch (e) {
                 container.innerHTML = `<p style="color:#dc2626;">Error loading overfitting data: ${e.message}</p>`;
             }
-        }
-
-        function verdictBadge(verdict) {
-            return `<span class="verdict-badge verdict-${verdict}">${verdict}</span>`;
         }
 
         function renderOverfittingAnalysis(data, container, strategyKey) {
@@ -899,46 +849,14 @@
         }
 
         function renderLogitHistogram(logits) {
-            const canvas = document.getElementById('logitHistChart');
-            if (!canvas) return;
-            if (overfittingChart) { overfittingChart.destroy(); overfittingChart = null; }
-
-            const min = Math.min(...logits);
-            const max = Math.max(...logits);
-            const nBins = Math.min(30, Math.max(10, Math.round(Math.sqrt(logits.length))));
-            const binWidth = (max - min) / nBins;
-            const bins = Array(nBins).fill(0);
-            logits.forEach(v => {
-                const idx = Math.min(Math.floor((v - min) / binWidth), nBins - 1);
-                bins[idx]++;
-            });
-            const labels = bins.map((_, i) => (min + (i + 0.5) * binWidth).toFixed(2));
-            const colors = labels.map(l => parseFloat(l) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(102,126,234,0.6)');
-
-            overfittingChart = new Chart(canvas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: 'Logit Score Frequency',
-                        data: bins,
-                        backgroundColor: colors,
-                        borderColor: colors.map(c => c.replace('0.6', '1')),
-                        borderWidth: 1,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: { title: items => `Logit ≈ ${items[0].label}` } }
-                    },
-                    scales: {
-                        x: { title: { display: true, text: 'Logit Score (< 0 = overfitting)' } },
-                        y: { title: { display: true, text: 'Frequency' }, beginAtZero: true }
-                    }
-                }
+            if (!document.getElementById('logitHistChart')) return;
+            overfittingChart = renderHistogram('logitHistChart', logits, {
+                label: 'Logit Score Frequency',
+                xTitle: 'Logit Score (< 0 = overfitting)',
+                yTitle: 'Frequency',
+                colorFn: l => parseFloat(l) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(102,126,234,0.6)',
+                existingChart: overfittingChart,
+                tooltipTitle: label => `Logit ≈ ${label}`,
             });
         }
 
@@ -951,9 +869,9 @@
             const strategyKey = strategies[0];
             const container = document.getElementById('stressContent');
             try {
-                const resp = await fetch(`/api/strategy/${strategyKey}/stress_test`);
-                if (!resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
+                const { ok, data } = await fetchJSONWithStatus(`/api/strategy/${strategyKey}/stress_test`);
+                if (!ok) {
+                    const err = data || {};
                     container.innerHTML = `
                         <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:20px;">
                             <strong>Stress test not yet run.</strong><br>
@@ -961,7 +879,6 @@
                         </div>`;
                     return;
                 }
-                const data = await resp.json();
                 stressLoaded = true;
                 renderStressTest(container, data);
             } catch (e) {
@@ -1028,8 +945,7 @@
 
         async function loadMonthlyReturns(strategyKey) {
             try {
-                const response = await fetch(`/api/strategy/${strategyKey}/monthly_returns`);
-                const data = await response.json();
+                const data = await fetchJSON(`/api/strategy/${strategyKey}/monthly_returns`);
 
                 const container = document.getElementById('monthlyHeatmap');
                 if (!data || data.length === 0) {
@@ -1084,7 +1000,7 @@
 
             try {
                 const results = await Promise.all(strategies.map(s =>
-                    fetch(`/api/strategy/${s}/rolling?metric=${metric}&window=${window}`).then(r => r.json())
+                    fetchJSON(`/api/strategy/${s}/rolling?metric=${metric}&window=${window}`)
                 ));
 
                 if (results[0].error) { console.error(results[0].error); return; }

@@ -2,14 +2,16 @@
 
 import csv
 import io
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
+from analytics.metrics import calculate_cagr, calculate_omega_ratio
+
 from .data import (
     RESULTS_DIR,
+    history_to_series,
     is_valid_strategy_key,
     list_strategy_keys,
     load_strategy_data,
@@ -21,41 +23,29 @@ from .data import (
 MAX_COMPARE_STRATEGIES = 10
 
 
-def _compute_cagr(portfolio_history: list, total_return: float) -> float | None:
-    """Compute CAGR from portfolio history dates and total return."""
-    if not portfolio_history or len(portfolio_history) < 2:
+def _cagr_from_history(portfolio_history: list) -> float | None:
+    """Compute CAGR from portfolio history via analytics.metrics.calculate_cagr."""
+    series = history_to_series(portfolio_history)
+    if len(series) < 2:
         return None
-    try:
-
-        def parse_date(entry):
-            raw = entry.get("date", entry.get("timestamp", ""))
-            return datetime.fromisoformat(str(raw).replace("Z", ""))
-
-        start = parse_date(portfolio_history[0])
-        end = parse_date(portfolio_history[-1])
-        years = (end - start).days / 365.25
-        if years <= 0:
-            return None
-        return (1 + total_return) ** (1 / years) - 1
-    except Exception:
+    years = (series.index[-1] - series.index[0]).days / 365.25
+    if years <= 0:
         return None
+    return calculate_cagr(series)
 
 
-def _compute_omega_ratio(
-    portfolio_history: list, threshold: float = 0.0
-) -> float | None:
-    """Compute omega ratio from portfolio history (threshold-adjusted)."""
-    if not portfolio_history or len(portfolio_history) < 2:
+def _omega_from_history(portfolio_history: list) -> float | None:
+    """Compute omega ratio from portfolio history via analytics.metrics.calculate_omega_ratio."""
+    series = history_to_series(portfolio_history)
+    if len(series) < 2:
         return None
-    values = [p["total_value"] for p in portfolio_history]
-    returns = [
-        (values[i] - values[i - 1]) / values[i - 1] for i in range(1, len(values))
-    ]
-    gains = sum(r - threshold for r in returns if r > threshold)
-    losses = sum(threshold - r for r in returns if r < threshold)
-    if losses == 0:
+    returns = series.pct_change().dropna()
+    if len(returns) == 0:
         return None
-    return round(gains / losses, 4)
+    omega = calculate_omega_ratio(returns)
+    if not np.isfinite(omega):
+        return None
+    return round(omega, 4)
 
 
 bp = Blueprint("api", __name__)
@@ -84,13 +74,13 @@ def api_strategies_summary():
 
         cagr = metrics.get("cagr") or metrics.get("annualized_return")
         if cagr is None and total_return is not None:
-            cagr = _compute_cagr(portfolio_history, total_return)
+            cagr = _cagr_from_history(portfolio_history)
 
         calmar = metrics.get("calmar_ratio")
         if calmar is None and cagr is not None and max_drawdown and max_drawdown != 0:
             calmar = round(cagr / abs(max_drawdown), 4)
 
-        omega = metrics.get("omega_ratio") or _compute_omega_ratio(portfolio_history)
+        omega = metrics.get("omega_ratio") or _omega_from_history(portfolio_history)
 
         rows.append(
             {
@@ -124,7 +114,7 @@ def api_strategy(strategy_key: str):
     max_drawdown = metrics.get("max_drawdown")
 
     if "cagr" not in metrics and total_return is not None:
-        cagr = _compute_cagr(portfolio_history, total_return)
+        cagr = _cagr_from_history(portfolio_history)
         if cagr is not None:
             metrics["cagr"] = cagr
 
@@ -134,7 +124,7 @@ def api_strategy(strategy_key: str):
             metrics["calmar_ratio"] = round(cagr / abs(max_drawdown), 4)
 
     if "omega_ratio" not in metrics:
-        omega = _compute_omega_ratio(portfolio_history)
+        omega = _omega_from_history(portfolio_history)
         if omega is not None:
             metrics["omega_ratio"] = omega
 
@@ -152,10 +142,7 @@ def api_monthly_returns(strategy_key: str):
     if not portfolio:
         return jsonify({"error": "No portfolio history"}), 404
 
-    values = pd.Series(
-        [p["total_value"] for p in portfolio],
-        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio]),
-    )
+    values = history_to_series(portfolio)
 
     monthly = values.resample("ME").last()
     monthly_returns = monthly.pct_change().dropna()
@@ -181,10 +168,7 @@ def api_rolling_metrics(strategy_key: str):
     if not portfolio:
         return jsonify({"error": "No portfolio history"}), 404
 
-    values = pd.Series(
-        [p["total_value"] for p in portfolio],
-        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio]),
-    )
+    values = history_to_series(portfolio)
     returns = values.pct_change().dropna()
 
     if len(returns) < window:
@@ -336,12 +320,7 @@ def api_compare_multi():
         portfolio = data.get("portfolio_history", [])
         if not portfolio:
             return jsonify({"error": f"No portfolio history for: {key}"}), 404
-        values = pd.Series(
-            [p["total_value"] for p in portfolio],
-            index=pd.to_datetime(
-                [p.get("date", p.get("timestamp")) for p in portfolio]
-            ),
-        )
+        values = history_to_series(portfolio)
         returns_series[key] = values.pct_change().dropna()
 
     common = None
@@ -405,14 +384,8 @@ def api_compare(key1: str, key2: str):
     if not portfolio1 or not portfolio2:
         return jsonify({"error": "Missing portfolio history"}), 404
 
-    values1 = pd.Series(
-        [p["total_value"] for p in portfolio1],
-        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio1]),
-    )
-    values2 = pd.Series(
-        [p["total_value"] for p in portfolio2],
-        index=pd.to_datetime([p.get("date", p.get("timestamp")) for p in portfolio2]),
-    )
+    values1 = history_to_series(portfolio1)
+    values2 = history_to_series(portfolio2)
 
     common = values1.index.intersection(values2.index)
     if len(common) < 2:

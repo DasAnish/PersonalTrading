@@ -20,6 +20,7 @@ Implements:
 
 Adapted from the pypbo reference implementation (https://github.com/esvhd/pypbo).
 """
+
 from __future__ import annotations
 
 import itertools
@@ -33,6 +34,8 @@ import numpy as np
 import pandas as pd
 import scipy.special as sc
 import scipy.stats as ss
+
+from optimization.splitters import contiguous_folds
 
 logger = logging.getLogger(__name__)
 
@@ -198,9 +201,7 @@ def _psr(
     float
         Probability in [0, 1].
     """
-    denom = math.sqrt(
-        1.0 - skew * sharpe + sharpe**2 * (kurtosis_raw - 1.0) / 4.0
-    )
+    denom = math.sqrt(1.0 - skew * sharpe + sharpe**2 * (kurtosis_raw - 1.0) / 4.0)
     if denom <= 0:
         logger.warning("PSR denominator <= 0; returning 0.")
         return 0.0
@@ -517,17 +518,12 @@ def calculate_kfold_stability(
             f"(T={t}, need >= {min_periods})."
         )
 
-    # Discard leading rows so T is divisible by n_folds (preserves recency)
-    residual = t % n_folds
-    if residual:
-        arr = arr[residual:]
-        t = len(arr)
-
-    fold_size = t // n_folds
+    # Consecutive equal-size folds; leading residual rows are discarded so
+    # T is divisible by n_folds (preserves recency of the most recent data).
     fold_sharpes: List[float] = []
 
-    for i in range(n_folds):
-        fold = arr[i * fold_size : (i + 1) * fold_size]
+    for start, end in contiguous_folds(t, n_folds):
+        fold = arr[start:end]
         sr_period = _sharpe_per_period(fold)
         sr_annual = sr_period * math.sqrt(periods_per_year)
         fold_sharpes.append(round(sr_annual, 4))

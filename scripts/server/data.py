@@ -141,6 +141,36 @@ def load_strategy_data(strategy_key: str) -> dict | None:
     return data
 
 
+def history_to_series(portfolio_history: list) -> pd.Series:
+    """
+    Convert an already-loaded ``portfolio_history`` list of dicts into a
+    date-indexed ``pd.Series`` of ``total_value``.
+
+    Mirrors ``backtesting.results_schema.load_portfolio_values``, but
+    operates on data already loaded into memory (e.g. via
+    ``load_strategy_data``) rather than reading a JSON file from disk.
+    Each entry's date is read from the "date" field, falling back to
+    "timestamp" if absent, matching the field-fallback used elsewhere in
+    this module.
+
+    Args:
+        portfolio_history: List of dicts with "date"/"timestamp" and
+            "total_value" keys.
+
+    Returns:
+        pd.Series of total_value indexed by date, named "total_value".
+        Empty float Series if portfolio_history is empty.
+    """
+    if not portfolio_history:
+        return pd.Series(dtype=float)
+
+    dates = pd.to_datetime(
+        [entry.get("date", entry.get("timestamp")) for entry in portfolio_history]
+    )
+    values = [float(entry["total_value"]) for entry in portfolio_history]
+    return pd.Series(values, index=dates, name="total_value")
+
+
 def get_portfolio_value_data(strategy_data: dict, strategy_name: str = None) -> dict:
     """Extract portfolio value time series from strategy data."""
     if not strategy_data or not strategy_data.get("portfolio_history"):

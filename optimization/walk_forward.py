@@ -27,6 +27,7 @@ import numpy as np
 
 from strategies.core import AllocationStrategy, Strategy
 from .param_sweep import ParameterSweep
+from .splitters import rolling_windows
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WalkForwardWindow:
     """Result from one walk-forward window."""
+
     window_index: int
     in_sample_start: pd.Timestamp
     in_sample_end: pd.Timestamp
@@ -47,6 +49,7 @@ class WalkForwardWindow:
 @dataclass
 class WalkForwardResults:
     """Aggregate results from walk-forward analysis."""
+
     windows: List[WalkForwardWindow]
     target_metric: str
     avg_in_sample: float = 0.0
@@ -62,17 +65,23 @@ class WalkForwardResults:
             self.avg_out_sample = np.mean(out_samples)
             self.overfitting_ratio = (
                 self.avg_in_sample / self.avg_out_sample
-                if self.avg_out_sample != 0 else float('inf')
+                if self.avg_out_sample != 0
+                else float("inf")
             )
 
-            self.summary_df = pd.DataFrame([{
-                'window': w.window_index,
-                'in_sample': f"{w.in_sample_start.date()} to {w.in_sample_end.date()}",
-                'out_sample': f"{w.out_sample_start.date()} to {w.out_sample_end.date()}",
-                **{f'best_{k}': v for k, v in w.best_params.items()},
-                f'in_sample_{self.target_metric}': w.in_sample_metric,
-                f'out_sample_{self.target_metric}': w.out_sample_metric,
-            } for w in self.windows])
+            self.summary_df = pd.DataFrame(
+                [
+                    {
+                        "window": w.window_index,
+                        "in_sample": f"{w.in_sample_start.date()} to {w.in_sample_end.date()}",
+                        "out_sample": f"{w.out_sample_start.date()} to {w.out_sample_end.date()}",
+                        **{f"best_{k}": v for k, v in w.best_params.items()},
+                        f"in_sample_{self.target_metric}": w.in_sample_metric,
+                        f"out_sample_{self.target_metric}": w.out_sample_metric,
+                    }
+                    for w in self.windows
+                ]
+            )
 
 
 class WalkForwardAnalysis:
@@ -95,10 +104,10 @@ class WalkForwardAnalysis:
         param_grid: Dict[str, List[Any]],
         in_sample_days: int = 756,
         out_of_sample_days: int = 252,
-        metric: str = 'sharpe_ratio',
+        metric: str = "sharpe_ratio",
         initial_capital: float = 10000.0,
         transaction_cost_bps: float = 7.5,
-        step_days: int = None
+        step_days: int = None,
     ):
         """
         Args:
@@ -145,17 +154,22 @@ class WalkForwardAnalysis:
             )
 
         windows = []
-        window_idx = 0
-        start_idx = 0
+        index_windows = rolling_windows(
+            n_days=len(trading_days),
+            in_sample=self.in_sample_days,
+            out_sample=self.out_of_sample_days,
+            step=self.step_days,
+        )
 
-        while start_idx + total_needed <= len(trading_days):
-            is_start = trading_days[start_idx]
-            is_end = trading_days[start_idx + self.in_sample_days - 1]
-            oos_start = trading_days[start_idx + self.in_sample_days]
-            oos_end_idx = min(
-                start_idx + total_needed - 1,
-                len(trading_days) - 1
-            )
+        for window_idx, (
+            is_start_idx,
+            is_end_idx,
+            oos_start_idx,
+            oos_end_idx,
+        ) in enumerate(index_windows):
+            is_start = trading_days[is_start_idx]
+            is_end = trading_days[is_end_idx]
+            oos_start = trading_days[oos_start_idx]
             oos_end = trading_days[oos_end_idx]
 
             logger.info(
@@ -170,7 +184,7 @@ class WalkForwardAnalysis:
                 param_grid=self.param_grid,
                 metric=self.metric,
                 initial_capital=self.initial_capital,
-                transaction_cost_bps=self.transaction_cost_bps
+                transaction_cost_bps=self.transaction_cost_bps,
             )
 
             sweep_results = sweep.run(
@@ -178,13 +192,11 @@ class WalkForwardAnalysis:
                 prices=prices,
                 start_date=is_start,
                 end_date=is_end,
-                lookback_days=252
+                lookback_days=252,
             )
 
             if sweep_results.empty:
                 logger.warning(f"Window {window_idx + 1}: no valid results, skipping")
-                start_idx += self.step_days
-                window_idx += 1
                 continue
 
             # Best params from in-sample
@@ -193,7 +205,9 @@ class WalkForwardAnalysis:
             best_params = {k: best_row[k] for k in param_keys}
             is_metric_value = float(best_row[self.metric])
 
-            logger.info(f"  Best IS params: {best_params} ({self.metric}={is_metric_value:.4f})")
+            logger.info(
+                f"  Best IS params: {best_params} ({self.metric}={is_metric_value:.4f})"
+            )
 
             # Test best params on out-of-sample
             oos_sweep = ParameterSweep(
@@ -201,7 +215,7 @@ class WalkForwardAnalysis:
                 param_grid={k: [v] for k, v in best_params.items()},
                 metric=self.metric,
                 initial_capital=self.initial_capital,
-                transaction_cost_bps=self.transaction_cost_bps
+                transaction_cost_bps=self.transaction_cost_bps,
             )
 
             oos_results = oos_sweep.run(
@@ -209,36 +223,30 @@ class WalkForwardAnalysis:
                 prices=prices,
                 start_date=oos_start,
                 end_date=oos_end,
-                lookback_days=252
+                lookback_days=252,
             )
 
             if oos_results.empty:
                 logger.warning(f"Window {window_idx + 1}: OOS test failed, skipping")
-                start_idx += self.step_days
-                window_idx += 1
                 continue
 
             oos_metric_value = float(oos_results.iloc[0][self.metric])
             logger.info(f"  OOS {self.metric}={oos_metric_value:.4f}")
 
-            windows.append(WalkForwardWindow(
-                window_index=window_idx + 1,
-                in_sample_start=is_start,
-                in_sample_end=is_end,
-                out_sample_start=oos_start,
-                out_sample_end=oos_end,
-                best_params=best_params,
-                in_sample_metric=is_metric_value,
-                out_sample_metric=oos_metric_value,
-            ))
+            windows.append(
+                WalkForwardWindow(
+                    window_index=window_idx + 1,
+                    in_sample_start=is_start,
+                    in_sample_end=is_end,
+                    out_sample_start=oos_start,
+                    out_sample_end=oos_end,
+                    best_params=best_params,
+                    in_sample_metric=is_metric_value,
+                    out_sample_metric=oos_metric_value,
+                )
+            )
 
-            start_idx += self.step_days
-            window_idx += 1
-
-        results = WalkForwardResults(
-            windows=windows,
-            target_metric=self.metric
-        )
+        results = WalkForwardResults(windows=windows, target_metric=self.metric)
 
         logger.info(f"\nWalk-Forward Complete:")
         logger.info(f"  Windows: {len(windows)}")

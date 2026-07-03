@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strategy Backtest Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
+    <script src="{{ url_for('routes.static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('routes.static', filename='js/format.js') }}"></script>
     <style>
         .overview-table {
             width: 100%;
@@ -250,13 +252,7 @@
         let sortDir = 'desc';
         let activeTags = new Set();
 
-        function fmt(val, isPercent) {
-            if (val === null || val === undefined) return '—';
-            const n = parseFloat(val);
-            if (isNaN(n)) return '—';
-            if (isPercent) return (n * 100).toFixed(2) + '%';
-            return n.toFixed(3);
-        }
+        // fmt() is defined in format.js
 
         // Columns: key → higherIsBetter
         const COL_DIR = {
@@ -468,8 +464,7 @@
 
         async function init() {
             try {
-                const response = await fetch('/api/strategies/summary');
-                allRows = await response.json();
+                allRows = await fetchJSON('/api/strategies/summary');
 
                 allRows.sort((a, b) => {
                     const av = a.sharpe_ratio, bv = b.sharpe_ratio;

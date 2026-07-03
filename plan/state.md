@@ -1,8 +1,7 @@
 # Plan State
 
-**Current Phase**: 10
-**Current Phase File**: plan/phase-10-live-risk-dashboard.md
-**Current TODO**: scripts/server/risk.py + /live-risk route
+**Current Phase**: COMPLETE — all 10 phases landed
+**Last Updated**: 2026-07-03
 **Last Updated**: 2026-07-02
 
 ## Known residual (out of scope, note for later)
@@ -39,6 +38,10 @@
   --spa flags; dashboard bootstrap+SPA cards; docs/overfitting.md refreshed; 10 tests. 389 passed.
   Residual: run_overfitting.py 674 / run_all_overfitting.py 652 lines >600 — CLI-orchestration
   helpers, same category as run_backtest.py 775.)
+- Phase 10: complete ✅ (scripts/server/risk.py read-only /live-risk + /api/live-risk;
+  VaR/CVaR/HHI/correlation from parquet cache, drift vs target weights via rebalance;
+  IB-offline fallback banner; templates/live_risk.html; nav link; 5 tests. 394 passed.
+  Verified zero order-placement paths.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

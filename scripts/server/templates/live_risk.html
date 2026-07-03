@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Risk</title>
+    <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
+    <style>
+        .risk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 16px 0; }
+        .risk-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+        .risk-card h3 { margin: 0 0 8px; font-size: 0.8rem; color: #666; text-transform: uppercase; }
+        .risk-card .big { font-size: 1.6rem; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #eee; }
+        th:first-child, td:first-child { text-align: left; }
+        .banner { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 10px 14px; border-radius: 6px; margin: 12px 0; }
+        .flagged { color: #dc2626; font-weight: 600; }
+        .muted { color: #888; }
+    </style>
+</head>
+<body>
+    <header><h1>Live Risk <span class="muted" style="font-size:0.9rem;">(read-only — no orders)</span></h1>
+        <nav><a href="/">← Overview</a></nav>
+    </header>
+    <main style="max-width: 1100px; margin: 0 auto; padding: 0 16px;">
+        <div id="banner"></div>
+        <p class="muted" id="asOf"></p>
+
+        <div class="risk-grid" id="cards"></div>
+
+        <h2>Positions</h2>
+        <div id="positions"></div>
+
+        <h2>Correlation</h2>
+        <div id="correlation" style="overflow-x:auto;"></div>
+
+        <h2>Drift vs Target
+            <input id="strategyInput" placeholder="strategy key" style="font-size:0.9rem;padding:4px;">
+            <button onclick="loadRisk()">Load</button>
+        </h2>
+        <div id="drift"></div>
+    </main>
+
+    <script src="{{ url_for('routes.static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('routes.static', filename='js/format.js') }}"></script>
+    <script>
+        function pct(x) { return x == null ? 'n/a' : (x * 100).toFixed(2) + '%'; }
+
+        async function loadRisk() {
+            const key = document.getElementById('strategyInput').value.trim();
+            const url = '/api/live-risk' + (key ? ('?strategy=' + encodeURIComponent(key)) : '');
+            const data = await fetchJSON(url);
+            if (!data) return;
+
+            document.getElementById('banner').innerHTML = data.banner
+                ? `<div class="banner">${data.banner}</div>` : '';
+            document.getElementById('asOf').textContent = data.as_of ? ('Data as of: ' + data.as_of) : 'No position data available.';
+
+            document.getElementById('cards').innerHTML = `
+                <div class="risk-card"><h3>VaR 95%</h3><div class="big">${pct(data.var_95)}</div></div>
+                <div class="risk-card"><h3>VaR 99%</h3><div class="big">${pct(data.var_99)}</div></div>
+                <div class="risk-card"><h3>CVaR 95%</h3><div class="big">${pct(data.cvar_95)}</div></div>
+                <div class="risk-card"><h3>Concentration (HHI)</h3><div class="big">${data.hhi != null ? data.hhi.toFixed(3) : 'n/a'}</div></div>
+                <div class="risk-card"><h3>Portfolio Value</h3><div class="big">${data.total_value ? '£' + data.total_value.toLocaleString() : 'n/a'}</div></div>`;
+
+            const pos = data.positions || [];
+            document.getElementById('positions').innerHTML = pos.length ? `
+                <table><thead><tr><th>Symbol</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th></tr></thead>
+                <tbody>${pos.map(p => `<tr><td>${p.symbol}</td><td>${p.shares}</td><td>${p.price}</td><td>${p.value.toLocaleString()}</td><td>${pct((data.weights||{})[p.symbol])}</td></tr>`).join('')}</tbody></table>`
+                : '<p class="muted">No positions.</p>';
+
+            const corr = data.correlation || {};
+            const syms = Object.keys(corr);
+            document.getElementById('correlation').innerHTML = syms.length ? `
+                <table><thead><tr><th></th>${syms.map(s => `<th>${s}</th>`).join('')}</tr></thead>
+                <tbody>${syms.map(r => `<tr><td>${r}</td>${syms.map(c => `<td>${corr[r][c] != null ? corr[r][c].toFixed(2) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+                : '<p class="muted">No correlation data.</p>';
+
+            const drift = data.drift || [];
+            document.getElementById('drift').innerHTML = drift.length ? `
+                <table><thead><tr><th>Symbol</th><th>Current</th><th>Target</th><th>Drift</th></tr></thead>
+                <tbody>${drift.map(d => `<tr class="${d.flagged ? 'flagged' : ''}"><td>${d.symbol}</td><td>${pct(d.current_weight)}</td><td>${pct(d.target_weight)}</td><td>${pct(d.drift)}</td></tr>`).join('')}</tbody></table>`
+                : '<p class="muted">Enter a strategy key to see drift vs its target weights.</p>';
+        }
+
+        loadRisk();
+    </script>
+</body>
+</html>

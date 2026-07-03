@@ -710,6 +710,8 @@
             const minbtl = data.minbtl;
             const walkforward = data.walkforward;
             const cpcv = data.cpcv;
+            const bootstrap = data.bootstrap;
+            const spa = data.spa;
 
             // Overall verdict
             let verdicts = [];
@@ -964,6 +966,59 @@
                     </div>`;
             }
 
+            // Block bootstrap card
+            if (bootstrap) {
+                const sh = bootstrap.sharpe || {};
+                const realized = (bootstrap.realized && bootstrap.realized.sharpe != null) ? bootstrap.realized.sharpe.toFixed(3) : 'n/a';
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Block Bootstrap (${bootstrap.n_iter}x)</h3>
+                        <div class="overfitting-row">
+                            <span class="label">Realized Sharpe</span>
+                            <span class="val">${realized}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Bootstrap mean</span>
+                            <span class="val">${sh.mean != null ? sh.mean.toFixed(3) : 'n/a'}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">5th–95th pct</span>
+                            <span class="val">${sh.pct5 != null ? sh.pct5.toFixed(2) : 'n/a'} — ${sh.pct95 != null ? sh.pct95.toFixed(2) : 'n/a'}</span>
+                        </div>
+                        <canvas id="bootstrapHistChart"></canvas>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Block Bootstrap</h3>
+                        <p style="color:#888;">Not computed — run with <code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;">--method bootstrap --bootstrap-fast</code>.</p>
+                    </div>`;
+            }
+
+            // SPA / Reality Check card
+            if (spa) {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>SPA / Reality Check</h3>
+                        <div class="overfitting-row">
+                            <span class="label">Reality Check p</span>
+                            <span class="val">${spa.reality_check_pvalue != null ? spa.reality_check_pvalue.toFixed(3) : 'n/a'}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">SPA (consistent) p</span>
+                            <span class="val">${spa.spa_pvalue_consistent != null ? spa.spa_pvalue_consistent.toFixed(3) : 'n/a'}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Rank of ${spa.n_strategies} strategies</span>
+                            <span class="val">${spa.rank != null ? spa.rank : 'n/a'}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Best strategy</span>
+                            <span class="val">${spa.best_strategy || 'n/a'}</span>
+                        </div>
+                    </div>`;
+            }
+
             html += `</div>`;
 
             // Logit score histogram (if PBO available)
@@ -1013,6 +1068,11 @@
             if (cpcv && cpcv.oos_sharpes && cpcv.oos_sharpes.length > 0) {
                 renderCPCVHistogram(cpcv.oos_sharpes);
             }
+
+            // Render bootstrap Sharpe histogram
+            if (bootstrap && bootstrap.sharpe && bootstrap.sharpe.dist && bootstrap.sharpe.dist.length > 0) {
+                renderBootstrapHistogram(bootstrap.sharpe.dist);
+            }
         }
 
         function renderLogitHistogram(logits) {
@@ -1050,6 +1110,20 @@
                 yTitle: 'Frequency',
                 colorFn: v => parseFloat(v) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(16,185,129,0.6)',
                 existingChart: cpcvChart,
+                tooltipTitle: label => `Sharpe ≈ ${label}`,
+            });
+        }
+
+        let bootstrapChart = null;
+
+        function renderBootstrapHistogram(sharpes) {
+            if (!document.getElementById('bootstrapHistChart')) return;
+            bootstrapChart = renderHistogram('bootstrapHistChart', sharpes, {
+                label: 'Bootstrap Sharpe Frequency',
+                xTitle: 'Bootstrapped Sharpe',
+                yTitle: 'Frequency',
+                colorFn: v => parseFloat(v) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(59,130,246,0.6)',
+                existingChart: bootstrapChart,
                 tooltipTitle: label => `Sharpe ≈ ${label}`,
             });
         }

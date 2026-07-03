@@ -322,6 +322,43 @@ def run_cpcv_analysis(strategy_key: str, n_groups: int, embargo_days: int) -> No
     print(f"  Saved to     : {path}\n")
 
 
+def run_bootstrap_analysis(
+    strategy_key: str, n_iter: int, block_months: int, fast: bool
+) -> None:
+    """Run block bootstrap from saved portfolio history; merge into JSON."""
+    import json as _json
+
+    from analytics.bootstrap import BlockBootstrap
+
+    if not fast:
+        print(
+            "  (full re-run bootstrap needs live prices/engine; from saved "
+            "results only --bootstrap-fast is available — using fast mode.)"
+        )
+    total_values = load_portfolio_history(strategy_key)
+    returns = total_values.pct_change().dropna()
+    result = BlockBootstrap(
+        n_iter=n_iter, block_months=block_months, periods_per_year=12, seed=0
+    ).run_fast(returns)
+
+    out_dir = schema_strategy_dir(RESULTS_DIR.parent, strategy_key)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / OVERFITTING_FILE
+    payload = (
+        _json.load(open(path)) if path.exists() else {"strategy_key": strategy_key}
+    )
+    payload["bootstrap"] = result.to_dict()
+    with open(path, "w") as f:
+        _json.dump(payload, f, indent=2)
+
+    sh = result.to_dict()["sharpe"]
+    print(f"\nBLOCK BOOTSTRAP — {strategy_key}")
+    print(f"  Iterations       : {result.n_iter}")
+    print(f"  Realized Sharpe  : {result.realized.get('sharpe')}")
+    print(f"  Bootstrap mean   : {sh['mean']}  (5th pct {sh['pct5']})")
+    print(f"  Saved to         : {path}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Overfitting analysis: Deflated Sharpe Ratio + Probability of Backtest Overfitting",
@@ -440,6 +477,23 @@ Examples:
         default=6,
         help="Number of CPCV groups (default: 6). Test combinations = C(folds, 2).",
     )
+    parser.add_argument(
+        "--bootstrap-n",
+        type=int,
+        default=500,
+        help="Block-bootstrap replications (default: 500).",
+    )
+    parser.add_argument(
+        "--block-months",
+        type=int,
+        default=3,
+        help="Expected bootstrap block length in months (default: 3).",
+    )
+    parser.add_argument(
+        "--bootstrap-fast",
+        action="store_true",
+        help="Resample realised strategy returns instead of re-running backtests.",
+    )
 
     args = parser.parse_args()
     embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
@@ -448,7 +502,10 @@ Examples:
         run_cpcv_analysis(args.strategy, args.cpcv_folds, args.embargo_days)
         return
     if args.method == "bootstrap":
-        parser.error("--method bootstrap is implemented in Phase 9.")
+        run_bootstrap_analysis(
+            args.strategy, args.bootstrap_n, args.block_months, args.bootstrap_fast
+        )
+        return
 
     # Validate mode
     if args.param and args.n_trials:

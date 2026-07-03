@@ -173,3 +173,46 @@ and end-to-end `run_overfitting_analysis()` flows.
 | Strategy with parameter grid (linkage, lookback, top-N) | DSR + PBO + k-fold |
 | All strategies at once | `run_all_overfitting.py --skip-pbo` |
 | Deep investigation of a strategy family | `run_overfitting.py --strategy hrp --param linkage_method=...` |
+
+---
+
+## Extended methods (2026)
+
+Beyond DSR, PBO (CSCV) and k-fold, the analysis now includes:
+
+| Method | Module | Verdict basis |
+|--------|--------|---------------|
+| **MinBTL** (Minimum Backtest Length) | `analytics/overfitting.py::calculate_minbtl` | PASS if `actual_years ≥ min_years` (Bailey/López de Prado 2014). Simplified MinTRL form (no skew/kurtosis correction). |
+| **Purged k-fold** (embargo) | `calculate_kfold_stability(..., embargo_periods)` | `embargo_periods=0` reproduces classic k-fold; `--embargo-days` converts at monthly cadence. |
+| **Walk-forward ratio** | `analytics/overfitting_results.py::walk_forward_to_dict` | PASS `<1.5x`, WARN `<2.5x`, else FAIL (avg IS / avg OOS). `--walk-forward`. |
+| **CPCV** | `analytics/cpcv.py::CPCVEngine` | OOS Sharpe distribution over all `C(k,2)` test-group combinations; PASS if `P(Sharpe>0) ≥ 0.9` and 5th pct `> −0.5`. `--method cpcv --cpcv-folds`. |
+| **Block bootstrap** | `analytics/bootstrap.py::BlockBootstrap` | Stationary (Politis–Romano) resampling → Sharpe/Calmar/maxDD/annual distributions. `--method bootstrap --bootstrap-n --block-months [--bootstrap-fast]`. |
+| **White's RC / Hansen's SPA** | `analytics/spa.py::compute_spa` | Data-snooping p-values across the whole library vs `equal_weight`. Small p rejects "no strategy beats the benchmark". `--spa` (batch). |
+
+### New CLI flags
+
+```bash
+# Per-strategy (run_overfitting.py)
+python scripts/run_overfitting.py --strategy hrp_single --method cpcv --cpcv-folds 6 --embargo-days 10
+python scripts/run_overfitting.py --strategy hrp_single --method bootstrap --bootstrap-fast
+python scripts/run_overfitting.py --strategy hrp_single --n-trials 20 --scenario-removal
+
+# Batch (run_all_overfitting.py)
+python scripts/run_all_overfitting.py --walk-forward --composed-pbo --spa
+```
+
+### Output schema additions
+
+`overfitting_analysis.json` gains optional top-level keys (all `null` when not
+computed, so readers/dashboard tolerate absence): `minbtl`, `walkforward`,
+`cpcv`, `bootstrap`, `spa`. The batch `--spa` run also writes
+`results/spa_analysis.json`. Non-finite metric values (inf/NaN) serialize to
+`null` so the JSON stays strictly valid.
+
+### Scenario removal (stress testing)
+
+`stress_test.json` carries `scenario_removal` (leave-one-crisis-out) with both
+Sharpe and Calmar deltas and a `scenario_removal_mode` of `excise` (re-slice the
+value series) or `rerun` (drop each crisis window from prices and re-run the
+backtest). Flags: `--scenario-removal` on `run_backtest.py` (rerun) and
+`run_overfitting.py` (excise).

@@ -458,6 +458,64 @@ def print_verdict_counts(rows: List[dict], col: str) -> None:
     print(f"  {col}: " + "  |  ".join(parts))
 
 
+def run_spa_analysis(strategy_keys, results_dir) -> None:
+    """White's RC / Hansen's SPA across all strategies vs the equal_weight benchmark.
+
+    Writes results/spa_analysis.json and a per-strategy ``spa`` stub (the p-values
+    plus this strategy's mean-differential rank) into each overfitting_analysis.json.
+    """
+    import json as _json
+
+    from analytics.family_matrix import build_family_return_matrix
+    from analytics.spa import compute_spa
+
+    matrix = build_family_return_matrix(results_dir, strategy_keys)
+    if matrix.empty or matrix.shape[1] < 2:
+        print("  SPA skipped: need >= 2 strategies with aligned history.")
+        return
+
+    bench_col = "equal_weight" if "equal_weight" in matrix.columns else None
+    if bench_col is None:
+        benchmark = matrix.mean(axis=1)
+        strat_matrix = matrix
+        print("  SPA: no equal_weight column; using cross-sectional mean benchmark.")
+    else:
+        benchmark = matrix[bench_col]
+        strat_matrix = matrix.drop(columns=[bench_col])
+
+    result = compute_spa(strat_matrix, benchmark, expected_block=3, n_iter=1000, seed=0)
+
+    spa_dict = result.to_dict()
+    out_path = Path(results_dir) / "spa_analysis.json"
+    with open(out_path, "w") as f:
+        _json.dump(spa_dict, f, indent=2)
+
+    # Per-strategy stub: rank by mean differential vs benchmark.
+    diffs = (
+        strat_matrix.sub(benchmark, axis=0).mean(axis=0).sort_values(ascending=False)
+    )
+    ranks = {k: i + 1 for i, k in enumerate(diffs.index)}
+    for key in strat_matrix.columns:
+        opath = schema_strategy_dir(RESULTS_DIR.parent, key) / OVERFITTING_FILE
+        payload = _json.load(open(opath)) if opath.exists() else {"strategy_key": key}
+        payload["spa"] = {
+            "reality_check_pvalue": spa_dict["reality_check_pvalue"],
+            "spa_pvalue_consistent": spa_dict["spa_pvalue_consistent"],
+            "best_strategy": spa_dict["best_strategy"],
+            "rank": ranks.get(key),
+            "n_strategies": spa_dict["n_strategies"],
+        }
+        opath.parent.mkdir(parents=True, exist_ok=True)
+        with open(opath, "w") as f:
+            _json.dump(payload, f, indent=2)
+
+    print(f"\nSPA / Reality Check (N={result.n_strategies}, T={result.n_obs})")
+    print(f"  Best strategy        : {result.best_strategy}")
+    print(f"  Reality Check p-value: {result.reality_check_pvalue:.4f}")
+    print(f"  SPA consistent p     : {result.spa_pvalue_consistent:.4f}")
+    print(f"  Saved to             : {out_path}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Batch overfitting analysis (DSR + k-fold) for all strategies.",
@@ -506,6 +564,14 @@ def main() -> None:
             "Also run group PBO for composed/overlay strategy families "
             "(e.g. vol-target variants of the same base strategy) that "
             "don't otherwise get a PBO from a ParameterSweep."
+        ),
+    )
+    parser.add_argument(
+        "--spa",
+        action="store_true",
+        help=(
+            "Run White's Reality Check / Hansen's SPA across all strategies vs "
+            "the equal_weight benchmark; write results/spa_analysis.json."
         ),
     )
     args = parser.parse_args()
@@ -574,6 +640,10 @@ def main() -> None:
                 print_summary_table(composed_rows)
             else:
                 print("  No composed groups with >= 4 usable members found.")
+
+    if args.spa:
+        print("\nRunning SPA / Reality Check across all strategies ...")
+        run_spa_analysis(strategy_keys, RESULTS_DIR.parent)
 
     print(f"Results saved to: {RESULTS_DIR}/<strategy>/overfitting_analysis.json\n")
 

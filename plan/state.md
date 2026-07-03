@@ -1,8 +1,8 @@
 # Plan State
 
-**Current Phase**: 9
-**Current Phase File**: plan/phase-09-bootstrap-spa.md
-**Current TODO**: analytics/bootstrap.py stationary block bootstrap
+**Current Phase**: 10
+**Current Phase File**: plan/phase-10-live-risk-dashboard.md
+**Current TODO**: scripts/server/risk.py + /live-risk route
 **Last Updated**: 2026-07-02
 
 ## Known residual (out of scope, note for later)
@@ -34,6 +34,11 @@
 - Phase 8: complete ✅ (analytics/cpcv.py CPCVEngine + CPCVResult; --method {dsr,cpcv,bootstrap}
   dispatch + --cpcv-folds on run_overfitting; cpcv JSON section merged into overfitting_analysis;
   dashboard CPCV card + OOS-Sharpe histogram; 8 tests incl. no-lookahead property. 379 passed.)
+- Phase 9: complete ✅ (analytics/bootstrap.py stationary block bootstrap + BlockBootstrap;
+  analytics/spa.py White's RC + Hansen's SPA, power-test validated; --method bootstrap +
+  --spa flags; dashboard bootstrap+SPA cards; docs/overfitting.md refreshed; 10 tests. 389 passed.
+  Residual: run_overfitting.py 674 / run_all_overfitting.py 652 lines >600 — CLI-orchestration
+  helpers, same category as run_backtest.py 775.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

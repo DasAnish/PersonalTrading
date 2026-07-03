@@ -34,6 +34,12 @@ from analytics.overfitting import (
     run_overfitting_analysis,
     overfitting_analysis_to_dict,
 )
+from backtesting.results_schema import (
+    OVERFITTING_FILE,
+    STRATEGY_FILES,
+    load_portfolio_values,
+)
+from backtesting.results_schema import strategy_dir as schema_strategy_dir
 from data import HistoricalDataCache, align_dataframes
 from optimization import ParameterSweep
 from strategies import (
@@ -56,7 +62,9 @@ RESULTS_DIR = Path("results/strategies")
 CURRENCY = "GBP"
 SYMBOLS = sorted(
     p.stem.upper()
-    for p in (Path(__file__).parent.parent / "strategy_definitions" / "assets").glob("*.json")
+    for p in (Path(__file__).parent.parent / "strategy_definitions" / "assets").glob(
+        "*.json"
+    )
 )
 
 # Parameter grids for PBO sweeps per base strategy family
@@ -93,19 +101,18 @@ PBO_PARAM_GRIDS: Dict[str, dict] = {
 
 def load_portfolio_history(strategy_key: str) -> Optional[pd.Series]:
     """Load portfolio total_value series; returns None if file missing."""
-    path = RESULTS_DIR / strategy_key / "portfolio_history.json"
+    path = (
+        schema_strategy_dir(RESULTS_DIR.parent, strategy_key)
+        / STRATEGY_FILES["portfolio_history"]
+    )
     if not path.exists():
         return None
-    with open(path) as f:
-        data = json.load(f)
-    dates = [pd.Timestamp(row["date"]) for row in data]
-    values = [float(row["total_value"]) for row in data]
-    return pd.Series(values, index=dates, name="total_value")
+    return load_portfolio_values(RESULTS_DIR.parent, strategy_key)
 
 
 def save_analysis(analysis: OverfittingAnalysis, strategy_key: str) -> Path:
     """Save overfitting_analysis.json to the strategy's results directory."""
-    out_path = RESULTS_DIR / strategy_key / "overfitting_analysis.json"
+    out_path = schema_strategy_dir(RESULTS_DIR.parent, strategy_key) / OVERFITTING_FILE
     out_path.parent.mkdir(parents=True, exist_ok=True)
     d = overfitting_analysis_to_dict(analysis)
     with open(out_path, "w") as f:
@@ -175,9 +182,7 @@ def run_dsr_kfold_batch(
 
         dsr_val = f"{analysis.dsr.dsr:.4f}" if analysis.dsr else "N/A"
         dsr_v = analysis.dsr.verdict if analysis.dsr else "N/A"
-        kf_frac = (
-            f"{analysis.kfold.fraction_positive:.0%}" if analysis.kfold else "N/A"
-        )
+        kf_frac = f"{analysis.kfold.fraction_positive:.0%}" if analysis.kfold else "N/A"
         kf_v = analysis.kfold.verdict if analysis.kfold else "N/A"
 
         # Overall verdict
@@ -277,9 +282,7 @@ def run_pbo_sweeps(n_folds: int) -> List[dict]:
         pbo_v = analysis.pbo.verdict if analysis.pbo else "N/A"
         dsr_val = f"{analysis.dsr.dsr:.4f}" if analysis.dsr else "N/A"
         dsr_v = analysis.dsr.verdict if analysis.dsr else "N/A"
-        kf_frac = (
-            f"{analysis.kfold.fraction_positive:.0%}" if analysis.kfold else "N/A"
-        )
+        kf_frac = f"{analysis.kfold.fraction_positive:.0%}" if analysis.kfold else "N/A"
         kf_v = analysis.kfold.verdict if analysis.kfold else "N/A"
 
         pbo_rows.append(
@@ -360,7 +363,8 @@ def main() -> None:
         strategy_keys = sorted(
             d.name
             for d in RESULTS_DIR.iterdir()
-            if d.is_dir() and (d / "portfolio_history.json").exists()
+            if d.is_dir()
+            and (d / STRATEGY_FILES["portfolio_history"]).exists()
             and not d.name.endswith("__pbo_sweep")
         )
 

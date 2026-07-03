@@ -8,6 +8,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from backtesting.results_schema import (
+    INDEX_FILE,
+    STRESS_TEST_FILE,
+    OVERFITTING_FILE,
+    load_strategy_payload,
+)
+from backtesting.results_schema import strategy_dir as schema_strategy_dir
+
 BASE_DIR = Path(__file__).parent.parent.parent
 RESULTS_DIR = BASE_DIR / "results"
 STRATEGY_DEFS_DIR = BASE_DIR / "strategy_definitions"
@@ -60,7 +68,7 @@ def load_strategies_index() -> dict | None:
     Falls back to legacy metadata.json if index doesn't exist.
     Reads fresh from disk each call so new backtest runs are picked up immediately.
     """
-    index_path = RESULTS_DIR / "strategies_index.json"
+    index_path = RESULTS_DIR / INDEX_FILE
 
     if index_path.exists():
         try:
@@ -115,9 +123,9 @@ def load_strategy_data(strategy_key: str) -> dict | None:
     if not is_valid_strategy_key(strategy_key):
         return None
 
-    strategy_dir = RESULTS_DIR / "strategies" / strategy_key
+    target_dir = schema_strategy_dir(RESULTS_DIR, strategy_key)
 
-    if not strategy_dir.exists():
+    if not target_dir.exists():
         return None
 
     data = {
@@ -128,18 +136,7 @@ def load_strategy_data(strategy_key: str) -> dict | None:
         "metrics": {},
         "info": {},
     }
-
-    for field, filename in [
-        ("portfolio_history", "portfolio_history.json"),
-        ("transactions", "transactions.json"),
-        ("weights_history", "weights_history.json"),
-        ("metrics", "metrics.json"),
-        ("info", "info.json"),
-    ]:
-        path = strategy_dir / filename
-        if path.exists():
-            with open(path, "r") as f:
-                data[field] = json.load(f)
+    data.update(load_strategy_payload(RESULTS_DIR, strategy_key))
 
     return data
 
@@ -233,7 +230,7 @@ def load_overfitting_analysis(strategy_key: str) -> dict | None:
     """
     if not is_valid_strategy_key(strategy_key):
         return None
-    path = RESULTS_DIR / "strategies" / strategy_key / "overfitting_analysis.json"
+    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / OVERFITTING_FILE
     if not path.exists():
         return None
     try:
@@ -255,7 +252,7 @@ def load_stress_test(strategy_key: str) -> dict | None:
     """
     if not is_valid_strategy_key(strategy_key):
         return None
-    path = RESULTS_DIR / "strategies" / strategy_key / "stress_test.json"
+    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / STRESS_TEST_FILE
     if not path.exists():
         return None
     try:

@@ -24,16 +24,22 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
+
 # IB Wrapper imports
 from ib_wrapper.client import IBClient
 from ib_wrapper.config import Config
 
 # Strategy imports
-from strategies import create_strategy, get_available_strategies, STRATEGY_REGISTRY
+from strategies import create_strategy, STRATEGY_REGISTRY
 from strategies.strategy_loader import StrategyLoader
+from strategies.catalog import extract_strategy_params, get_all_available_strategies
 
 # Backtesting imports
-from backtesting import BacktestEngine, BacktestResults, PortfolioState
+from backtesting import BacktestEngine
+from backtesting.runner import run_single_backtest
+from backtesting.results_io import save_strategy_results, serialize_backtest_results
+from backtesting.results_schema import INDEX_FILE
 
 # Analytics imports
 from analytics import (
@@ -147,401 +153,6 @@ async def fetch_historical_data(
     return data_dict
 
 
-def extract_strategy_params(args, strategy_name: str) -> dict:
-    """
-    Extract parameters for a specific strategy from CLI args.
-
-    Args:
-        args: Parsed command-line arguments
-        strategy_name: Strategy key (e.g., 'hrp')
-
-    Returns:
-        Dictionary of strategy-specific parameters
-    """
-    config = STRATEGY_REGISTRY[strategy_name]
-    params = {}
-
-    for param_name in config.get("params", {}).keys():
-        arg_name = f"{strategy_name}_{param_name}"
-        if hasattr(args, arg_name):
-            value = getattr(args, arg_name)
-            if value is not None:
-                params[param_name] = value
-
-    return params
-
-
-def get_all_available_strategies(use_definitions: bool = True) -> dict:
-    """
-    Get all available strategies from strategy definitions.
-
-    Args:
-        use_definitions: If True, load from YAML definitions; else from registry
-
-    Returns:
-        Dict mapping strategy_key to (strategy_object, strategy_info)
-    """
-    import pandas as pd
-
-    if use_definitions:
-        loader = StrategyLoader()
-        available = {}
-
-        # Get all allocations, composed strategies, and meta-portfolios
-        allocations = loader.list_strategies("allocation")
-        composed = loader.list_strategies("composed")
-        portfolios = loader.list_strategies("portfolio")
-
-        for strategy_key in (
-            list(allocations.keys()) + list(composed.keys()) + list(portfolios.keys())
-        ):
-            try:
-                strategy = loader.build_strategy(strategy_key)
-                definition = loader.load_definition(strategy_key)
-                info = {
-                    "key": strategy_key,
-                    "type": definition.get("type"),
-                    "class": definition.get("class"),
-                    "description": definition.get("description", ""),
-                    "parameters": definition.get("parameters", {}),
-                }
-                available[strategy_key] = (strategy, info)
-            except Exception as e:
-                logger.warning(f"Could not load strategy {strategy_key}: {e}")
-
-        return available
-    else:
-        # Use registry
-        available = {}
-        for strategy_key, config in STRATEGY_REGISTRY.items():
-            if strategy_key not in ["hrp", "equal_weight", "trend_following"]:
-                continue  # Only include main allocation strategies
-            try:
-                strategy = create_strategy(strategy_key)
-                info = {
-                    "key": strategy_key,
-                    "type": "allocation",
-                    "class": config["display_name"],
-                    "description": "",
-                    "parameters": {},
-                }
-                available[strategy_key] = (strategy, info)
-            except Exception as e:
-                logger.warning(f"Could not create strategy {strategy_key}: {e}")
-
-        return available
-
-
-def save_strategy_results(result_data: dict, strategy_key: str) -> None:
-    """
-    Save a single strategy's backtest results to results/strategies/<key>/
-    and merge it into strategies_index.json.
-
-    This mirrors the --all mode's per-strategy save so the dashboard index
-    is always up to date when individual strategies are backtested.
-    """
-    strategies_dir = RESULTS_DIR / "strategies"
-    strategies_dir.mkdir(exist_ok=True)
-    strategy_dir = strategies_dir / strategy_key
-    strategy_dir.mkdir(exist_ok=True)
-
-    for filename, key in [
-        ("portfolio_history.json", "portfolio_history"),
-        ("transactions.json", "transactions"),
-        ("weights_history.json", "weights_history"),
-        ("metrics.json", "metrics"),
-        ("info.json", "info"),
-    ]:
-        with open(strategy_dir / filename, "w") as f:
-            json.dump(result_data[key], f, indent=2)
-
-    logger.info(f"✓ Saved results for {strategy_key} to {strategy_dir}")
-
-    # Merge into strategies_index.json
-    index_path = RESULTS_DIR / "strategies_index.json"
-    if index_path.exists():
-        try:
-            with open(index_path, "r") as f:
-                index_data = json.load(f)
-        except Exception:
-            index_data = {"strategies": {}, "config": {}}
-    else:
-        index_data = {"strategies": {}, "config": {}}
-
-    index_data["strategies"][strategy_key] = {
-        "path": str((strategy_dir).relative_to(RESULTS_DIR)),
-        "metrics": result_data["metrics"],
-        "info": result_data["info"],
-    }
-    index_data["run_date"] = datetime.now().isoformat()
-    index_data["total_strategies"] = len(index_data["strategies"])
-    index_data.setdefault(
-        "config",
-        {
-            "symbols": SYMBOLS,
-            "currency": CURRENCY,
-            "initial_capital": INITIAL_CAPITAL,
-            "transaction_cost_bps": TRANSACTION_COST_BPS,
-            "rebalance_frequency": REBALANCE_FREQUENCY,
-            "lookback_days": LOOKBACK_DAYS,
-        },
-    )
-
-    with open(index_path, "w") as f:
-        json.dump(index_data, f, indent=2)
-    logger.info(
-        f"✓ strategies_index.json updated ({index_data['total_strategies']} strategies)"
-    )
-
-
-def serialize_backtest_results(results, strategy_key: str, strategy_info: dict) -> dict:
-    """
-    Serialize backtest results to JSON-compatible format.
-
-    Args:
-        results: BacktestResults object
-        strategy_key: Strategy identifier
-        strategy_info: Strategy metadata
-
-    Returns:
-        Dictionary with all results data
-    """
-    import pandas as pd
-    import numpy as np
-
-    def clean_value(val):
-        """Convert NaN/inf to None for JSON serialization."""
-        if isinstance(val, float):
-            if np.isnan(val) or np.isinf(val):
-                return None
-            return float(val)
-        return val
-
-    # Convert portfolio history to list of dicts
-    portfolio_history = []
-    if hasattr(results.portfolio_history, "to_dict"):
-        for idx, row in results.portfolio_history.iterrows():
-            entry = row.to_dict() if hasattr(row, "to_dict") else dict(row)
-            entry["date"] = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
-            # Clean NaN values
-            entry = {k: clean_value(v) for k, v in entry.items()}
-            portfolio_history.append(entry)
-
-    # Convert transactions to list of dicts
-    transactions = []
-    for t in results.transactions:
-        transactions.append(
-            {
-                "date": (
-                    t.timestamp.isoformat()
-                    if hasattr(t.timestamp, "isoformat")
-                    else str(t.timestamp)
-                ),
-                "symbol": t.symbol,
-                "quantity": float(t.quantity),
-                "price": float(t.price),
-                "cost": float(t.total_cost),
-            }
-        )
-
-    # Extract weights history if available
-    weights_history = []
-    if hasattr(results, "weights_history") and results.weights_history is not None:
-        for idx, row in results.weights_history.iterrows():
-            entry = row.to_dict() if hasattr(row, "to_dict") else dict(row)
-            entry["date"] = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
-            # Clean NaN values
-            entry = {k: clean_value(v) for k, v in entry.items()}
-            weights_history.append(entry)
-
-    # Calculate metrics
-    portfolio_values = results.portfolio_history["total_value"].values
-    returns = np.diff(portfolio_values) / portfolio_values[:-1]
-
-    total_return = (portfolio_values[-1] - portfolio_values[0]) / portfolio_values[0]
-    volatility = np.std(returns) * np.sqrt(252) if len(returns) > 0 else 0
-    sharpe_ratio = (np.mean(returns) * 252) / volatility if volatility > 0 else 0
-
-    cumulative = (1 + returns).cumprod()
-    running_max = np.maximum.accumulate(cumulative)
-    drawdown = (cumulative - running_max) / running_max
-    max_drawdown = np.min(drawdown) if len(drawdown) > 0 else 0
-
-    return {
-        "key": strategy_key,
-        "info": strategy_info,
-        "metrics": {
-            "total_return": clean_value(float(total_return)),
-            "volatility": clean_value(float(volatility)),
-            "sharpe_ratio": clean_value(float(sharpe_ratio)),
-            "max_drawdown": clean_value(float(max_drawdown)),
-            "final_value": clean_value(float(results.final_value)),
-            "total_transactions": len(results.transactions),
-            "rebalances": len(results.portfolio_history),
-        },
-        "portfolio_history": portfolio_history,
-        "transactions": transactions,
-        "weights_history": weights_history,
-    }
-
-
-def _compute_portfolio_values(strategy, prices, backtest_start, backtest_end, engine):
-    """Run a strategy and return its portfolio-value time-series.
-
-    Used by overlay strategies that need the underlying portfolio's history
-    (e.g. VolatilityTargetStrategy computes realised vol from these values).
-    """
-    import pandas as pd
-
-    results = _run_single_backtest(
-        strategy, prices, backtest_start, backtest_end, engine
-    )
-    if results.portfolio_history.empty:
-        return pd.Series(dtype=float)
-    return results.portfolio_history["total_value"]
-
-
-def _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine):
-    """Run a strategy backtest directly from a pre-fetched prices DataFrame.
-
-    Bypasses MarketDataService so no live IB connection is required after the
-    data fetch.  Works for allocation, overlay, and composed (stacked overlay)
-    strategies.
-
-    Args:
-        strategy      : Any Strategy instance
-        prices        : Aligned price DataFrame (columns=symbols, index=dates)
-        backtest_start: First rebalance date
-        backtest_end  : Last rebalance date
-        engine        : BacktestEngine (for rebalance dates and transaction cost)
-
-    Returns:
-        BacktestResults
-    """
-    import numpy as np
-    import pandas as pd
-    from datetime import timedelta
-    from strategies.core import StrategyContext, OverlayStrategy
-
-    # Determine how much lookback history the strategy needs
-    try:
-        requirements = strategy.get_data_requirements()
-        lookback_days = requirements.lookback_days or LOOKBACK_DAYS
-    except Exception:
-        lookback_days = LOOKBACK_DAYS
-
-    # For overlay strategies, pre-compute the underlying portfolio value series
-    portfolio_values = None
-    if isinstance(strategy, OverlayStrategy):
-        portfolio_values = _compute_portfolio_values(
-            strategy.underlying, prices, backtest_start, backtest_end, engine
-        )
-
-    # Generate rebalance dates aligned to actual trading days
-    rebalance_dates = engine._generate_rebalance_dates(
-        backtest_start, backtest_end, prices.index
-    )
-
-    # Initialise portfolio
-    portfolio = PortfolioState(
-        timestamp=backtest_start, cash=engine.initial_capital, positions={}, prices={}
-    )
-
-    portfolio_history = []
-    weights_history = []
-    all_transactions = []
-    failed_rebalances = []
-
-    # Record initial state
-    if backtest_start in prices.index:
-        portfolio_history.append(
-            engine._record_state(portfolio, prices.loc[backtest_start])
-        )
-
-    for rebalance_date in rebalance_dates:
-        # Convert trading-day lookback to calendar days (+14-day buffer),
-        # with a minimum of 60 calendar days so strategies with minimal
-        # lookback (e.g. equal_weight with lookback_days=1) always get
-        # enough rows to pass the len(sliced) < 5 guard.
-        calendar_lookback = max(60, int(lookback_days * 365 / 252) + 14)
-        lookback_start = rebalance_date - timedelta(days=calendar_lookback)
-        sliced = prices[
-            (prices.index >= lookback_start) & (prices.index <= rebalance_date)
-        ]
-
-        # Filter to only the symbols this strategy cares about
-        try:
-            strategy_symbols = strategy.get_symbols()
-            available = [s for s in strategy_symbols if s in sliced.columns]
-            if available:
-                sliced = sliced[available]
-        except Exception:
-            pass  # fall back to full price frame if get_symbols() fails
-
-        if sliced.empty or len(sliced) < 5:
-            continue
-
-        # Pass accumulated portfolio values to overlays (up to current date)
-        pv_slice = None
-        if portfolio_values is not None and not portfolio_values.empty:
-            pv_slice = portfolio_values[portfolio_values.index <= rebalance_date]
-
-        context = StrategyContext(
-            current_date=rebalance_date,
-            lookback_start=lookback_start,
-            prices=sliced,
-            portfolio_values=pv_slice,
-            metadata={},
-        )
-
-        try:
-            weights = strategy.calculate_weights(context)
-        except (ValueError, KeyError, np.linalg.LinAlgError) as e:
-            logger.error(
-                f"{strategy.name} failed at rebalance date "
-                f"{rebalance_date.date()}: {e}",
-                exc_info=True,
-            )
-            failed_rebalances.append(rebalance_date)
-            continue
-
-        weight_record = {"timestamp": rebalance_date}
-        weight_record.update(weights.to_dict())
-        weights_history.append(weight_record)
-
-        current_prices = prices.loc[rebalance_date]
-        portfolio.timestamp = rebalance_date
-
-        transactions = portfolio.execute_rebalance(
-            target_weights=weights,
-            prices=current_prices,
-            transaction_cost_bps=engine.transaction_cost_bps,
-        )
-        all_transactions.extend(transactions)
-        portfolio_history.append(engine._record_state(portfolio, current_prices))
-
-    # Assemble result DataFrames
-    history_df = pd.DataFrame(portfolio_history)
-    if not history_df.empty:
-        history_df.set_index("timestamp", inplace=True)
-
-    if weights_history:
-        weights_df = pd.DataFrame(weights_history)
-        weights_df.set_index("timestamp", inplace=True)
-    else:
-        weights_df = pd.DataFrame()
-
-    return BacktestResults(
-        strategy_name=strategy.name,
-        portfolio_history=history_df,
-        weights_history=weights_df,
-        transactions=all_transactions,
-        initial_capital=engine.initial_capital,
-        final_value=portfolio.total_value(),
-        failed_rebalances=failed_rebalances,
-    )
-
-
 async def run_all_strategies(args, prices, backtest_start, backtest_end):
     """
     Run all available strategies and generate comprehensive results.
@@ -563,7 +174,7 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
     available_strategies = get_all_available_strategies(use_definitions=True)
     logger.info(f"Found {len(available_strategies)} available strategies")
 
-    # Initialize backtest engine (lookback_days handled per-strategy in _run_single_backtest)
+    # Initialize backtest engine (lookback_days handled per-strategy in run_single_backtest)
     engine = BacktestEngine(
         initial_capital=INITIAL_CAPITAL,
         transaction_cost_bps=TRANSACTION_COST_BPS,
@@ -576,8 +187,13 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
         try:
             logger.info(f"\nRunning {strategy_key}...")
 
-            results = _run_single_backtest(
-                strategy, prices, backtest_start, backtest_end, engine
+            results = run_single_backtest(
+                strategy,
+                prices,
+                backtest_start,
+                backtest_end,
+                engine,
+                default_lookback_days=LOOKBACK_DAYS,
             )
 
             serialized = serialize_backtest_results(
@@ -770,46 +386,26 @@ async def main(args):
         logger.info("SAVING INDIVIDUAL STRATEGY RESULTS")
         logger.info("=" * 60)
 
-        # Create subdirectories for organization
-        strategies_dir = RESULTS_DIR / "strategies"
-        strategies_dir.mkdir(exist_ok=True)
+        run_config = {
+            "symbols": SYMBOLS,
+            "currency": CURRENCY,
+            "initial_capital": INITIAL_CAPITAL,
+            "transaction_cost_bps": TRANSACTION_COST_BPS,
+            "rebalance_frequency": REBALANCE_FREQUENCY,
+            "lookback_days": LOOKBACK_DAYS,
+        }
 
-        strategy_index = {}
+        # save_strategy_results() always merges into strategies_index.json
+        # (see backtesting/results_io.py). Reset it once before this run's
+        # per-strategy loop so the index ends up scoped to exactly the
+        # strategies produced by this --all run, matching the old inline
+        # block's full-rebuild behaviour.
+        index_path = RESULTS_DIR / INDEX_FILE
+        if index_path.exists():
+            index_path.unlink()
 
         for strategy_key, result_data in all_strategy_results.items():
-            # Create directory for this strategy
-            strategy_dir = strategies_dir / strategy_key
-            strategy_dir.mkdir(exist_ok=True)
-
-            # Save portfolio history as JSON
-            import pandas as pd
-
-            portfolio_history = result_data["portfolio_history"]
-            portfolio_json_path = strategy_dir / "portfolio_history.json"
-            with open(portfolio_json_path, "w") as f:
-                json.dump(portfolio_history, f, indent=2)
-
-            # Save transactions
-            transactions_json_path = strategy_dir / "transactions.json"
-            with open(transactions_json_path, "w") as f:
-                json.dump(result_data["transactions"], f, indent=2)
-
-            # Save weights history
-            weights_json_path = strategy_dir / "weights_history.json"
-            with open(weights_json_path, "w") as f:
-                json.dump(result_data["weights_history"], f, indent=2)
-
-            # Save metrics
-            metrics_json_path = strategy_dir / "metrics.json"
-            with open(metrics_json_path, "w") as f:
-                json.dump(result_data["metrics"], f, indent=2)
-
-            # Save strategy info
-            info_json_path = strategy_dir / "info.json"
-            with open(info_json_path, "w") as f:
-                json.dump(result_data["info"], f, indent=2)
-
-            # Stress test (optional)
+            stress_report = None
             if args.stress_test:
                 try:
                     ph = result_data["portfolio_history"]
@@ -822,39 +418,18 @@ async def main(args):
                         values_series,
                         strategy_name=result_data["info"].get("name", strategy_key),
                     )
-                    stress_path = strategy_dir / "stress_test.json"
-                    with open(stress_path, "w") as f:
-                        json.dump(report.to_dict(), f, indent=2)
-                    logger.info(f"  ✓ Stress test saved for {strategy_key}")
+                    stress_report = report.to_dict()
                 except Exception as exc:
                     logger.warning(f"  ⚠ Stress test failed for {strategy_key}: {exc}")
 
-            logger.info(f"✓ Saved results for {strategy_key} to {strategy_dir}")
+            save_strategy_results(
+                result_data,
+                strategy_key,
+                RESULTS_DIR,
+                stress_report=stress_report,
+                config=run_config,
+            )
 
-            # Add to index
-            strategy_index[strategy_key] = {
-                "path": str(strategy_dir.relative_to(RESULTS_DIR)),
-                "metrics": result_data["metrics"],
-                "info": result_data["info"],
-            }
-
-        # Save master index
-        index_path = RESULTS_DIR / "strategies_index.json"
-        index_data = {
-            "run_date": datetime.now().isoformat(),
-            "total_strategies": len(strategy_index),
-            "strategies": strategy_index,
-            "config": {
-                "symbols": SYMBOLS,
-                "currency": CURRENCY,
-                "initial_capital": INITIAL_CAPITAL,
-                "transaction_cost_bps": TRANSACTION_COST_BPS,
-                "rebalance_frequency": REBALANCE_FREQUENCY,
-                "lookback_days": LOOKBACK_DAYS,
-            },
-        }
-        with open(index_path, "w") as f:
-            json.dump(index_data, f, indent=2)
         logger.info(f"✓ Strategies index saved to: {index_path}")
 
         # Print summary
@@ -885,8 +460,13 @@ async def main(args):
 
         # Run primary strategy backtest
         logger.info(f"\nRunning {strategy_display} backtest...")
-        primary_results = _run_single_backtest(
-            primary_strategy, prices, backtest_start, backtest_end, engine
+        primary_results = run_single_backtest(
+            primary_strategy,
+            prices,
+            backtest_start,
+            backtest_end,
+            engine,
+            default_lookback_days=LOOKBACK_DAYS,
         )
 
         # Generate metrics
@@ -898,8 +478,13 @@ async def main(args):
 
         # Run benchmark strategy backtest
         logger.info(f"\nRunning {benchmark_display} backtest...")
-        benchmark_results = _run_single_backtest(
-            benchmark_strategy, prices, backtest_start, backtest_end, engine
+        benchmark_results = run_single_backtest(
+            benchmark_strategy,
+            prices,
+            backtest_start,
+            backtest_end,
+            engine,
+            default_lookback_days=LOOKBACK_DAYS,
         )
 
         # Generate metrics
@@ -942,8 +527,6 @@ async def main(args):
         )
 
         # Save transactions
-        import pandas as pd
-
         primary_tx_df = pd.DataFrame(
             [
                 {
@@ -1059,7 +642,12 @@ async def main(args):
             serialized = serialize_backtest_results(
                 primary_results, strategy_key_for_index, strategy_info_for_index
             )
-            save_strategy_results(serialized, strategy_key_for_index)
+            save_strategy_results(
+                serialized,
+                strategy_key_for_index,
+                RESULTS_DIR,
+                config=metadata["config"],
+            )
 
         # Create and save visualization
         logger.info("\nGenerating performance charts...")

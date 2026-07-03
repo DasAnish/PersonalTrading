@@ -14,12 +14,12 @@ from pathlib import Path
 
 from strategies.strategy_loader import StrategyLoader
 from backtesting import BacktestEngine
-from scripts.run_backtest import _run_single_backtest
-
+from backtesting.runner import run_single_backtest
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_simulated_prices(n_days: int = 1000, seed: int = 42) -> pd.DataFrame:
     """
@@ -63,7 +63,9 @@ _BUILDABLE_STEMS = [
     }.items()
     if _LOADER._load_file(
         next(
-            (Path(__file__).parent.parent / "strategy_definitions").rglob(f"{stem}.json")
+            (Path(__file__).parent.parent / "strategy_definitions").rglob(
+                f"{stem}.json"
+            )
         )
     ).get("type")
     in ("allocation", "composed", "asset")
@@ -82,6 +84,7 @@ def test_loader_builds_all_json_definitions(strategy_key):
 # Slow backtest tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.slow
 def test_equal_weight_nonzero_returns():
     """
@@ -96,10 +99,14 @@ def test_equal_weight_nonzero_returns():
     backtest_start = prices.index[252]
     backtest_end = prices.index[-1]
 
-    results = _run_single_backtest(strategy, prices, backtest_start, backtest_end, engine)
+    results = run_single_backtest(
+        strategy, prices, backtest_start, backtest_end, engine
+    )
 
     assert len(results.transactions) > 0, "EqualWeight made zero transactions"
-    assert len(results.portfolio_history) > 1, "EqualWeight produced no portfolio history"
+    assert (
+        len(results.portfolio_history) > 1
+    ), "EqualWeight produced no portfolio history"
     total_return = (results.final_value - 10_000) / 10_000
     assert total_return != 0.0, "EqualWeight total return is exactly zero"
 
@@ -119,9 +126,13 @@ def test_trend_following_differs_from_equal_weight():
     backtest_start = prices.index[252]
     backtest_end = prices.index[-1]
 
-    results = _run_single_backtest(tf_strategy, prices, backtest_start, backtest_end, engine)
+    results = run_single_backtest(
+        tf_strategy, prices, backtest_start, backtest_end, engine
+    )
 
-    assert not results.weights_history.empty, "TrendFollowing produced no weights history"
+    assert (
+        not results.weights_history.empty
+    ), "TrendFollowing produced no weights history"
 
     # Check that at least one rebalance has a weight deviating > 1% from 0.25
     max_deviation = (results.weights_history - 0.25).abs().max().max()

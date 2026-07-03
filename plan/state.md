@@ -1,14 +1,16 @@
 # Plan State
 
-**Current Phase**: 3
-**Current Phase File**: plan/phase-03-runner-and-results-schema.md
-**Current TODO**: Extract `backtesting/runner.py` from run_backtest.py
+**Current Phase**: 4
+**Current Phase File**: plan/phase-04-metrics-splitters-frontend.md
+**Current TODO**: Dedupe metrics helpers out of scripts/server/api.py
 **Last Updated**: 2026-07-02
 
 ## Progress
 - Phase 1: 5/5 TODOs complete ✅
 - Phase 2: 9/9 TODOs complete ✅
-- Phase 3: 0/7 TODOs complete
+- Phase 3: 7/7 TODOs complete ✅ (run_backtest.py 1187→775 lines; residual 775>600 is
+  irreducible CLI orchestration — argparse byte-identical, IB/cache glue, legacy CSV/chart
+  save. Reusable logic now in backtesting/runner.py + results_schema.py + results_io.py.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

@@ -42,6 +42,12 @@ from analytics.overfitting import (
     overfitting_analysis_to_dict,
     OverfittingAnalysis,
 )
+from backtesting.results_schema import (
+    OVERFITTING_FILE,
+    STRATEGY_FILES,
+    load_portfolio_values,
+)
+from backtesting.results_schema import strategy_dir as schema_strategy_dir
 from data import HistoricalDataCache, align_dataframes
 from optimization import ParameterSweep
 from strategies import (
@@ -72,7 +78,9 @@ STRATEGY_CLASSES = {
 CURRENCY = "GBP"
 SYMBOLS = sorted(
     p.stem.upper()
-    for p in (Path(__file__).parent.parent / "strategy_definitions" / "assets").glob("*.json")
+    for p in (Path(__file__).parent.parent / "strategy_definitions" / "assets").glob(
+        "*.json"
+    )
 )
 RESULTS_DIR = Path("results/strategies")
 
@@ -122,7 +130,10 @@ def load_portfolio_history(strategy_key: str) -> pd.Series:
 
     Returns a pd.Series of total_value indexed by date.
     """
-    path = RESULTS_DIR / strategy_key / "portfolio_history.json"
+    path = (
+        schema_strategy_dir(RESULTS_DIR.parent, strategy_key)
+        / STRATEGY_FILES["portfolio_history"]
+    )
     if not path.exists():
         logger.error(
             f"No portfolio_history.json found at {path}.\n"
@@ -130,20 +141,19 @@ def load_portfolio_history(strategy_key: str) -> pd.Series:
         )
         sys.exit(1)
 
-    with open(path) as f:
-        data = json.load(f)
-
-    dates = [pd.Timestamp(row["date"]) for row in data]
-    values = [float(row["total_value"]) for row in data]
-    return pd.Series(values, index=dates, name="total_value")
+    return load_portfolio_values(RESULTS_DIR.parent, strategy_key)
 
 
-def save_analysis(analysis: OverfittingAnalysis, strategy_key: str, output_dir: str | None) -> Path:
+def save_analysis(
+    analysis: OverfittingAnalysis, strategy_key: str, output_dir: str | None
+) -> Path:
     """Save overfitting_analysis.json to the strategy's results directory."""
     if output_dir:
-        out_path = Path(output_dir) / "overfitting_analysis.json"
+        out_path = Path(output_dir) / OVERFITTING_FILE
     else:
-        out_path = RESULTS_DIR / strategy_key / "overfitting_analysis.json"
+        out_path = (
+            schema_strategy_dir(RESULTS_DIR.parent, strategy_key) / OVERFITTING_FILE
+        )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     d = overfitting_analysis_to_dict(analysis)
@@ -172,9 +182,17 @@ def print_analysis_report(analysis: OverfittingAnalysis) -> None:
         kurt_str = f"{d.excess_kurtosis:.3f}"
         print(f"Skewness / Excess Kurt:    {skew_str} / {kurt_str}")
 
-        verdict_icon = "✓" if d.verdict == "PASS" else ("⚠" if d.verdict == "WARN" else "✗")
-        threshold_str = f">= {d.threshold_pass}" if d.verdict == "PASS" else (
-            f">= {d.threshold_warn}" if d.verdict == "WARN" else f"< {d.threshold_warn}"
+        verdict_icon = (
+            "✓" if d.verdict == "PASS" else ("⚠" if d.verdict == "WARN" else "✗")
+        )
+        threshold_str = (
+            f">= {d.threshold_pass}"
+            if d.verdict == "PASS"
+            else (
+                f">= {d.threshold_warn}"
+                if d.verdict == "WARN"
+                else f"< {d.threshold_warn}"
+            )
         )
         print(f"DSR: {d.dsr:.4f}  {verdict_icon} {d.verdict} ({threshold_str})")
     else:
@@ -188,9 +206,17 @@ def print_analysis_report(analysis: OverfittingAnalysis) -> None:
         print(f"S subsets:                 {p.s_subsets}")
         print(f"Prob OOS Loss:             {p.prob_oos_loss:.1%}")
 
-        verdict_icon = "✓" if p.verdict == "PASS" else ("⚠" if p.verdict == "WARN" else "✗")
-        threshold_str = f"<= {p.threshold_pass}" if p.verdict == "PASS" else (
-            f"<= {p.threshold_warn}" if p.verdict == "WARN" else f"> {p.threshold_warn}"
+        verdict_icon = (
+            "✓" if p.verdict == "PASS" else ("⚠" if p.verdict == "WARN" else "✗")
+        )
+        threshold_str = (
+            f"<= {p.threshold_pass}"
+            if p.verdict == "PASS"
+            else (
+                f"<= {p.threshold_warn}"
+                if p.verdict == "WARN"
+                else f"> {p.threshold_warn}"
+            )
         )
         print(f"PBO: {p.pbo:.4f}  {verdict_icon} {p.verdict} ({threshold_str})")
     elif analysis.n_param_combinations < 2:
@@ -203,13 +229,23 @@ def print_analysis_report(analysis: OverfittingAnalysis) -> None:
         print()
         print("--- K-Fold Temporal Stability ---")
         print(f"Folds (k):                 {k.n_folds}")
-        print(f"Fold Sharpes:              [{', '.join(f'{s:.2f}' for s in k.fold_sharpes)}]")
+        print(
+            f"Fold Sharpes:              [{', '.join(f'{s:.2f}' for s in k.fold_sharpes)}]"
+        )
         print(f"Mean / Std:                {k.mean_sharpe:.4f} / {k.std_sharpe:.4f}")
         print(f"Worst Fold Sharpe:         {k.worst_fold_sharpe:.4f}")
 
-        verdict_icon = "✓" if k.verdict == "PASS" else ("⚠" if k.verdict == "WARN" else "✗")
-        threshold_str = f">= {k.threshold_pass}" if k.verdict == "PASS" else (
-            f">= {k.threshold_warn}" if k.verdict == "WARN" else f"< {k.threshold_warn}"
+        verdict_icon = (
+            "✓" if k.verdict == "PASS" else ("⚠" if k.verdict == "WARN" else "✗")
+        )
+        threshold_str = (
+            f">= {k.threshold_pass}"
+            if k.verdict == "PASS"
+            else (
+                f">= {k.threshold_warn}"
+                if k.verdict == "WARN"
+                else f"< {k.threshold_warn}"
+            )
         )
         print(
             f"Frac Positive: {k.fraction_positive:.1%}  "
@@ -266,46 +302,71 @@ Examples:
     )
 
     parser.add_argument(
-        "--strategy", type=str, required=True,
+        "--strategy",
+        type=str,
+        required=True,
         help=(
             "Mode 1: base strategy class key (hrp, trend_following, …). "
             "Mode 2: full strategy results key (hrp_ward, trend_following, …)."
         ),
     )
     parser.add_argument(
-        "--param", type=str, action="append", default=None,
+        "--param",
+        type=str,
+        action="append",
+        default=None,
         help="Parameter sweep grid entry: key=val1,val2,val3. Repeatable. Activates Mode 1.",
     )
     parser.add_argument(
-        "--n-trials", type=int, default=None,
+        "--n-trials",
+        type=int,
+        default=None,
         help="(Mode 2) Number of trials N for DSR. Loads existing portfolio_history.json.",
     )
     parser.add_argument(
-        "--s-subsets", type=int, default=16,
+        "--s-subsets",
+        type=int,
+        default=16,
         help="CSCV partition count for PBO (default: 16, must be even).",
     )
     parser.add_argument(
-        "--dsr-pass", type=float, default=0.95, dest="dsr_threshold_pass",
+        "--dsr-pass",
+        type=float,
+        default=0.95,
+        dest="dsr_threshold_pass",
         help="DSR >= this is a PASS (default: 0.95).",
     )
     parser.add_argument(
-        "--dsr-warn", type=float, default=0.80, dest="dsr_threshold_warn",
+        "--dsr-warn",
+        type=float,
+        default=0.80,
+        dest="dsr_threshold_warn",
         help="DSR >= this is a WARN, else FAIL (default: 0.80).",
     )
     parser.add_argument(
-        "--pbo-pass", type=float, default=0.30, dest="pbo_threshold_pass",
+        "--pbo-pass",
+        type=float,
+        default=0.30,
+        dest="pbo_threshold_pass",
         help="PBO <= this is a PASS (default: 0.30).",
     )
     parser.add_argument(
-        "--pbo-warn", type=float, default=0.50, dest="pbo_threshold_warn",
+        "--pbo-warn",
+        type=float,
+        default=0.50,
+        dest="pbo_threshold_warn",
         help="PBO <= this is a WARN, else FAIL (default: 0.50).",
     )
     parser.add_argument(
-        "--output-dir", type=str, default=None,
+        "--output-dir",
+        type=str,
+        default=None,
         help="Override output directory (default: results/strategies/<strategy>/).",
     )
     parser.add_argument(
-        "--metric", type=str, default="sharpe_ratio",
+        "--metric",
+        type=str,
+        default="sharpe_ratio",
         help="Sweep optimisation metric (default: sharpe_ratio).",
     )
 
@@ -313,12 +374,16 @@ Examples:
 
     # Validate mode
     if args.param and args.n_trials:
-        parser.error("Specify either --param (Mode 1) or --n-trials (Mode 2), not both.")
+        parser.error(
+            "Specify either --param (Mode 1) or --n-trials (Mode 2), not both."
+        )
     if not args.param and not args.n_trials:
         parser.error("Specify either --param (Mode 1) or --n-trials (Mode 2).")
 
     print(f"\nOVERFITTING ANALYSIS — {args.strategy}")
-    print(f"Mode: {'Sweep + Overfitting' if args.param else 'DSR-only (existing results)'}")
+    print(
+        f"Mode: {'Sweep + Overfitting' if args.param else 'DSR-only (existing results)'}"
+    )
 
     if args.param:
         # ------------------------------------------------------------------ #
@@ -379,7 +444,10 @@ Examples:
         best_key = next(iter(sweep.return_series_))
         # Find which frozenset corresponds to the best row in sweep_df
         best_params = {
-            k: v for k, v in zip(sweep_df.columns[:len(param_grid)], sweep_df.iloc[0][:len(param_grid)])
+            k: v
+            for k, v in zip(
+                sweep_df.columns[: len(param_grid)], sweep_df.iloc[0][: len(param_grid)]
+            )
         }
         best_frozen = frozenset(best_params.items())
         if best_frozen in sweep.return_series_:
@@ -430,6 +498,7 @@ Examples:
         # Override n_trials to user-supplied value for DSR
         if analysis.dsr is not None:
             from analytics.overfitting import calculate_deflated_sharpe_ratio
+
             analysis.dsr = calculate_deflated_sharpe_ratio(
                 returns=best_returns,
                 n_trials=args.n_trials,

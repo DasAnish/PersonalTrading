@@ -1,0 +1,163 @@
+"""
+Standalone CLI: compute and print a rebalance plan from JSON inputs.
+
+Backs the ``rebalance`` skill (``.claude/skills/rebalance/SKILL.md``) with
+tested Python arithmetic instead of free-form LLM computation. Reads
+current positions, last prices, and target weights from JSON files (or
+inline JSON strings), computes the plan via
+``analytics.rebalance.compute_rebalance_plan``, and prints it as a table.
+
+This script NEVER places, submits, modifies, or cancels any order — it
+only prints a report. All orders are entered manually by the user in IB
+Gateway (see CLAUDE.md).
+
+Input JSON shapes:
+    positions.json: {"VUSA": 100.0, "VWRL": 50.0}         # symbol -> shares
+    prices.json:    {"VUSA": 95.23, "VWRL": 110.50}        # symbol -> last price
+    weights.json:   {"VUSA": 0.6, "VWRL": 0.4}              # symbol -> target weight
+
+Usage:
+    python scripts/rebalance_report.py \\
+        --positions positions.json --prices prices.json \\
+        --weights weights.json --cash 500.0
+
+    # Or pass inline JSON directly:
+    python scripts/rebalance_report.py \\
+        --positions-json '{"VUSA": 100}' --prices-json '{"VUSA": 95.23}' \\
+        --weights-json '{"VUSA": 1.0}' --cash 0
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from analytics.rebalance import DEFAULT_HOLD_THRESHOLD, compute_rebalance_plan
+
+
+def _load_dict_arg(file_path: str | None, inline_json: str | None, label: str) -> dict:
+    if inline_json is not None:
+        return json.loads(inline_json)
+    if file_path is not None:
+        with open(file_path, "r") as f:
+            return json.load(f)
+    raise SystemExit(f"Must supply either --{label} <file> or --{label}-json <json>")
+
+
+def print_plan_table(plan) -> None:
+    print()
+    header = (
+        f"{'Symbol':<10} {'Cur Wt':>8} {'Tgt Wt':>8} {'Δ Wt':>8} "
+        f"{'Cur Val':>12} {'Tgt Val':>12} {'Δ Val':>12} {'Est Shares':>11} {'Action':<6}"
+    )
+    print(header)
+    print("-" * len(header))
+    for e in plan.entries:
+        if e.skipped:
+            print(
+                f"{e.symbol:<10} {'--':>8} {'--':>8} {'--':>8} {'--':>12} {'--':>12} {'--':>12} {'--':>11} {'SKIP':<6}  ({e.note})"
+            )
+            continue
+        print(
+            f"{e.symbol:<10} {e.current_weight*100:>7.2f}% {e.target_weight*100:>7.2f}% "
+            f"{e.delta_weight*100:>+7.2f}% {e.current_value:>12,.2f} {e.target_value:>12,.2f} "
+            f"{e.delta_value:>+12,.2f} {e.est_shares:>+11,.2f} {e.direction:<6}"
+        )
+    print("-" * len(header))
+    print(f"Cash: {plan.cash:,.2f}")
+    print(f"Total portfolio value: {plan.total_portfolio_value:,.2f}")
+    print(f"Total turnover (sum |Δ value|): {plan.total_turnover:,.2f}")
+    if plan.weights_normalized:
+        print("Note: target weights did not sum to 1.0 and were normalized.")
+    for note in plan.notes:
+        print(f"Note: {note}")
+    print()
+    print(
+        "IMPORTANT: this is a report only. Enter all orders manually in IB "
+        "Gateway — nothing here places, submits, modifies, or cancels trades."
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Compute a rebalance plan (current holdings vs target weights) "
+        "and print it as a table. Report only — never places orders.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python scripts/rebalance_report.py --positions positions.json --prices prices.json \\
+      --weights weights.json --cash 500.0
+
+  python scripts/rebalance_report.py --positions-json '{"VUSA": 100}' \\
+      --prices-json '{"VUSA": 95.23}' --weights-json '{"VUSA": 1.0}' --cash 0
+        """,
+    )
+    parser.add_argument(
+        "--positions",
+        type=str,
+        default=None,
+        help="Path to positions JSON (symbol -> shares).",
+    )
+    parser.add_argument(
+        "--positions-json", type=str, default=None, help="Inline positions JSON."
+    )
+    parser.add_argument(
+        "--prices",
+        type=str,
+        default=None,
+        help="Path to prices JSON (symbol -> last price).",
+    )
+    parser.add_argument(
+        "--prices-json", type=str, default=None, help="Inline prices JSON."
+    )
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default=None,
+        help="Path to target weights JSON (symbol -> weight).",
+    )
+    parser.add_argument(
+        "--weights-json", type=str, default=None, help="Inline target weights JSON."
+    )
+    parser.add_argument(
+        "--cash",
+        type=float,
+        default=0.0,
+        help="Uninvested cash balance (default: 0.0).",
+    )
+    parser.add_argument(
+        "--hold-threshold",
+        type=float,
+        default=DEFAULT_HOLD_THRESHOLD,
+        help=f"Weight-delta threshold below which a symbol is HOLD (default: {DEFAULT_HOLD_THRESHOLD}).",
+    )
+    parser.add_argument(
+        "--json-out",
+        action="store_true",
+        help="Also print the plan as JSON (machine-readable) after the table.",
+    )
+
+    args = parser.parse_args()
+
+    positions = _load_dict_arg(args.positions, args.positions_json, "positions")
+    prices = _load_dict_arg(args.prices, args.prices_json, "prices")
+    weights = _load_dict_arg(args.weights, args.weights_json, "weights")
+
+    plan = compute_rebalance_plan(
+        positions=positions,
+        prices=prices,
+        target_weights=weights,
+        cash=args.cash,
+        hold_threshold=args.hold_threshold,
+    )
+
+    print_plan_table(plan)
+
+    if args.json_out:
+        print(json.dumps(plan.to_dict(), indent=2))
+
+
+if __name__ == "__main__":
+    main()

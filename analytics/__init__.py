@@ -47,6 +47,18 @@ from .overfitting import (
     OverfittingAnalysis,
 )
 
+from .report import (
+    build_report,
+    to_html,
+    write_report,
+)
+
+from .rebalance import (
+    compute_rebalance_plan,
+    RebalanceEntry,
+    RebalancePlan,
+)
+
 __all__ = [
     "calculate_returns",
     "calculate_cumulative_returns",
@@ -78,4 +90,10 @@ __all__ = [
     "DSRResult",
     "PBOResult",
     "OverfittingAnalysis",
+    "build_report",
+    "to_html",
+    "write_report",
+    "compute_rebalance_plan",
+    "RebalanceEntry",
+    "RebalancePlan",
 ]

@@ -706,11 +706,13 @@
         function renderOverfittingAnalysis(data, container, strategyKey) {
             const dsr = data.dsr;
             const pbo = data.pbo;
+            const kfold = data.kfold;
 
             // Overall verdict
             let verdicts = [];
             if (dsr) verdicts.push(dsr.verdict);
             if (pbo) verdicts.push(pbo.verdict);
+            if (kfold) verdicts.push(kfold.verdict);
             let overall = 'N/A';
             if (verdicts.length > 0) {
                 if (verdicts.every(v => v === 'PASS')) overall = 'PASS';
@@ -807,6 +809,47 @@
                     </div>`;
             }
 
+            // K-fold card
+            if (kfold) {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>K-Fold Temporal Stability</h3>
+                        <div class="overfitting-row">
+                            <span class="label">Fraction Positive Folds</span>
+                            <span class="val">${(kfold.fraction_positive * 100).toFixed(1)}% &nbsp; ${verdictBadge(kfold.verdict)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Folds (k)</span>
+                            <span class="val">${kfold.n_folds}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Mean Sharpe</span>
+                            <span class="val">${kfold.mean_sharpe.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Std Sharpe</span>
+                            <span class="val">${kfold.std_sharpe.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Worst Fold Sharpe</span>
+                            <span class="val">${kfold.worst_fold_sharpe.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Pass threshold</span>
+                            <span class="val">&ge; ${(kfold.threshold_pass * 100).toFixed(0)}% positive folds</span>
+                        </div>
+                        <div class="chart-container" style="height:180px;margin-top:12px;">
+                            <canvas id="kfoldSharpeChart"></canvas>
+                        </div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>K-Fold Temporal Stability</h3>
+                        <p style="color:#888;">K-fold stability not computed.</p>
+                    </div>`;
+            }
+
             html += `</div>`;
 
             // Logit score histogram (if PBO available)
@@ -846,6 +889,11 @@
             if (pbo && pbo.logit_scores && pbo.logit_scores.length > 0) {
                 renderLogitHistogram(pbo.logit_scores);
             }
+
+            // Render k-fold Sharpe-per-fold bar chart
+            if (kfold && kfold.fold_sharpes && kfold.fold_sharpes.length > 0) {
+                renderKFoldSharpeChart(kfold.fold_sharpes);
+            }
         }
 
         function renderLogitHistogram(logits) {
@@ -857,6 +905,19 @@
                 colorFn: l => parseFloat(l) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(102,126,234,0.6)',
                 existingChart: overfittingChart,
                 tooltipTitle: label => `Logit ≈ ${label}`,
+            });
+        }
+
+        let kfoldChart = null;
+
+        function renderKFoldSharpeChart(foldSharpes) {
+            if (!document.getElementById('kfoldSharpeChart')) return;
+            const labels = foldSharpes.map((_, i) => `Fold ${i + 1}`);
+            kfoldChart = renderBarChart('kfoldSharpeChart', labels, foldSharpes, {
+                label: 'Sharpe Ratio',
+                yTitle: 'Sharpe Ratio',
+                colorFn: v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)',
+                existingChart: kfoldChart,
             });
         }
 

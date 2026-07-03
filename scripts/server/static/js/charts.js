@@ -92,3 +92,67 @@ function renderHistogram(canvasId, values, options = {}) {
         }
     });
 }
+
+/**
+ * Render a simple labeled bar chart (one bar per value) into a Chart.js
+ * bar chart. Unlike renderHistogram, values are not binned — each entry
+ * gets its own bar and label.
+ *
+ * Backs the overfitting-tab k-fold Sharpe-per-fold chart today; generic
+ * enough for any "one bar per named item" use case.
+ *
+ * @param {string} canvasId - id of the <canvas> element to render into.
+ * @param {(string|number)[]} labels - one label per bar (e.g. fold indices).
+ * @param {number[]} values - one value per bar, same length as labels.
+ * @param {object} [options]
+ * @param {string} [options.label='Value'] - dataset label.
+ * @param {string} [options.xTitle=''] - x-axis title (hidden if empty).
+ * @param {string} [options.yTitle=''] - y-axis title (hidden if empty).
+ * @param {(value: number) => string} [options.colorFn] - maps a bar's raw
+ *   value to a CSS color for that bar.
+ * @param {Chart|null} [options.existingChart] - a previous Chart instance
+ *   to destroy before rendering (avoids leaking canvases on re-render).
+ * @returns {Chart|null} the new Chart.js instance, or null if the canvas
+ *   is missing.
+ */
+function renderBarChart(canvasId, labels, values, options = {}) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+
+    const {
+        label = 'Value',
+        xTitle = '',
+        yTitle = '',
+        colorFn = v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)',
+        existingChart = null,
+    } = options;
+
+    if (existingChart) existingChart.destroy();
+
+    const colors = values.map(colorFn);
+
+    return new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label,
+                data: values,
+                backgroundColor: colors,
+                borderColor: colors.map(c => c.replace(/[\d.]+\)$/, '1)')),
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: { title: { display: !!xTitle, text: xTitle } },
+                y: { title: { display: !!yTitle, text: yTitle } }
+            }
+        }
+    });
+}

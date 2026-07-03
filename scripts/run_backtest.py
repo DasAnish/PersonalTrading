@@ -48,6 +48,7 @@ from analytics import (
     create_performance_table,
 )
 from analytics.stress_testing import run_stress_test
+from analytics.report import write_report
 
 # Data management imports
 from data import HistoricalDataCache, align_dataframes, validate_data_quality
@@ -430,6 +431,15 @@ async def main(args):
                 config=run_config,
             )
 
+            if args.report:
+                try:
+                    written = write_report(strategy_key, RESULTS_DIR, fmt="md")
+                    logger.info(f"  ✓ Report written: {written['md']}")
+                except Exception as exc:
+                    logger.warning(
+                        f"  ⚠ Report generation failed for {strategy_key}: {exc}"
+                    )
+
         logger.info(f"✓ Strategies index saved to: {index_path}")
 
         # Print summary
@@ -649,6 +659,15 @@ async def main(args):
                 config=metadata["config"],
             )
 
+            if args.report:
+                try:
+                    written = write_report(
+                        strategy_key_for_index, RESULTS_DIR, fmt="md"
+                    )
+                    logger.info(f"✓ Report written: {written['md']}")
+                except Exception as exc:
+                    logger.warning(f"⚠ Report generation failed: {exc}")
+
         # Create and save visualization
         logger.info("\nGenerating performance charts...")
         fig = plot_portfolio_comparison(
@@ -743,6 +762,15 @@ List Available Strategies:
         help="After running backtest(s), compute stress-period metrics and "
         "leave-one-crisis-out scenario removal. Saves stress_test.json "
         "alongside other result files (--all mode) or prints to stdout.",
+    )
+
+    # Report generation flag
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="After saving a strategy's results, generate report.md "
+        "(analytics/report.py) alongside the other result files. "
+        "Equivalent to running scripts/generate_report.py afterwards.",
     )
 
     # Strategy-specific parameters (dynamically generated for registry mode)

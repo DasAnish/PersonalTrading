@@ -8,11 +8,11 @@ Finish the old plan's Phase 2. The core already exists: `StressTester._run_leave
 renders them. Missing: public API, Calmar deltas, a true backtest re-run mode, CLI flag, tests.
 
 ## TODOs
-- [ ] Public `StressTester.run_leave_one_out()` wrapping the existing private method; add Calmar to `ScenarioRemovalResult` (`full_calmar`, `loo_calmar`, `calmar_delta`) using `calculate_calmar_ratio` (analytics/metrics.py:354); extend `StressTestReport.to_dict()` keeping ALL existing field names (dashboard reads them) and adding the new ones
-- [ ] `mode` parameter: `mode="excise"` (current behavior — re-slice the existing portfolio value series; stays the default, backward compatible) vs `mode="rerun"` (drop crisis rows from the *price* data and re-run the backtest via `backtesting.runner.run_single_backtest`; requires strategy + prices + engine arguments)
-- [ ] `--scenario-removal` CLI flag: on `scripts/run_backtest.py` (has strategy + prices in hand → rerun mode) and on `scripts/run_overfitting.py` (saved histories only → excise mode); results written into `stress_test.json`
-- [ ] Tests in `tests/test_stress_testing.py`: window-exclusion boundaries (first/last row of crisis), delta math, insufficient-remaining-data skip, rerun-vs-excise divergence on synthetic data where the two must differ
-- [ ] Update docs (`docs/overfitting.md` or session log) with the two modes and flag
+- [x] Public `StressTester.run_leave_one_out()` wrapping the existing private method; add Calmar to `ScenarioRemovalResult` (`full_calmar`, `loo_calmar`, `calmar_delta`) using `calculate_calmar_ratio` (analytics/metrics.py:354); extend `StressTestReport.to_dict()` keeping ALL existing field names (dashboard reads them) and adding the new ones
+- [x] `mode` parameter: `mode="excise"` (current behavior — re-slice the existing portfolio value series; stays the default, backward compatible) vs `mode="rerun"` (drop crisis rows from the *price* data and re-run the backtest via `backtesting.runner.run_single_backtest`; requires strategy + prices + engine arguments)
+- [x] `--scenario-removal` CLI flag: on `scripts/run_backtest.py` (has strategy + prices in hand → rerun mode) and on `scripts/run_overfitting.py` (saved histories only → excise mode); results written into `stress_test.json`
+- [x] Tests in `tests/test_stress_testing.py`: window-exclusion boundaries (first/last row of crisis), delta math, insufficient-remaining-data skip, rerun-vs-excise divergence on synthetic data where the two must differ
+- [x] Update docs (`docs/overfitting.md` or session log) with the two modes and flag
 
 ## Validation
 - `python -m pytest -m "not slow" -q` → green

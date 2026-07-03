@@ -47,7 +47,11 @@ from analytics import (
     plot_portfolio_comparison,
     create_performance_table,
 )
-from analytics.stress_testing import run_stress_test
+from analytics.stress_testing import (
+    StressTestReport,
+    StressTester,
+    run_stress_test,
+)
 from analytics.report import write_report
 
 # Data management imports
@@ -201,6 +205,37 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
                 results, strategy_key, strategy_info
             )
             all_results[strategy_key] = serialized
+
+            # Rerun-mode leave-one-crisis-out: needs the live strategy/engine/
+            # prices, which only exist here (the save loop sees serialized
+            # dicts only). Stash the full stress report for the save loop.
+            if getattr(args, "scenario_removal", False):
+                try:
+                    values = results.portfolio_history["total_value"]
+                    name = strategy_info.get("name", strategy_key)
+                    tester = StressTester(values, name)
+                    crisis_metrics = [tester._analyse_crisis(c) for c in tester.crises]
+                    scenario = tester.run_leave_one_out(
+                        mode="rerun",
+                        strategy=strategy,
+                        prices=prices,
+                        engine=engine,
+                        backtest_start=backtest_start,
+                        backtest_end=backtest_end,
+                        default_lookback_days=LOOKBACK_DAYS,
+                    )
+                    report = StressTestReport(
+                        strategy_name=name,
+                        crisis_metrics=crisis_metrics,
+                        scenario_removal=scenario,
+                        scenario_removal_mode="rerun",
+                    )
+                    serialized["_stress_report"] = report.to_dict()
+                except Exception as exc:
+                    logger.warning(
+                        f"  ⚠ Scenario-removal rerun failed for "
+                        f"{strategy_key}: {exc}"
+                    )
 
             logger.info(f"  Final value: £{results.final_value:,.2f}")
             logger.info(f"  Rebalances: {len(results.portfolio_history)}")
@@ -407,7 +442,11 @@ async def main(args):
 
         for strategy_key, result_data in all_strategy_results.items():
             stress_report = None
-            if args.stress_test:
+            # Rerun scenario-removal was computed upstream where the live
+            # strategy/engine existed; prefer it over the cheap excise path.
+            if result_data.get("_stress_report") is not None:
+                stress_report = result_data.pop("_stress_report")
+            elif args.stress_test:
                 try:
                     ph = result_data["portfolio_history"]
                     values_series = pd.Series(
@@ -763,6 +802,13 @@ List Available Strategies:
         "leave-one-crisis-out scenario removal. Saves stress_test.json "
         "alongside other result files (--all mode) or prints to stdout.",
     )
+    parser.add_argument(
+        "--scenario-removal",
+        action="store_true",
+        help="Run TRUE leave-one-crisis-out (rerun mode): drop each crisis "
+        "window from the price data and re-run the backtest. Implies "
+        "--stress-test. Writes rerun scenario_removal into stress_test.json.",
+    )
 
     # Report generation flag
     parser.add_argument(
@@ -787,6 +833,9 @@ List Available Strategies:
             )
 
     args = parser.parse_args()
+    # --scenario-removal implies --stress-test (it produces the report).
+    if getattr(args, "scenario_removal", False):
+        args.stress_test = True
 
     # Validation
     if not args.all:

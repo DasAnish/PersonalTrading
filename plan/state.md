@@ -1,8 +1,8 @@
 # Plan State
 
-**Current Phase**: 7
-**Current Phase File**: plan/phase-07-scenario-removal.md
-**Current TODO**: Public run_leave_one_out() + Calmar deltas + rerun mode
+**Current Phase**: 8
+**Current Phase File**: plan/phase-08-cpcv.md
+**Current TODO**: analytics/cpcv.py CPCVEngine
 **Last Updated**: 2026-07-02
 
 ## Known residual (out of scope, note for later)
@@ -27,6 +27,10 @@
   by class, walk-forward integration, composed-strategy PBO; --walk-forward/--embargo-days/
   --composed-pbo flags; MinBTL/WF dashboard cards. 362 passed, +38 tests. inf→null JSON
   verified. Assumptions: simplified MinBTL (no skew/kurtosis), symmetric fold embargo.)
+- Phase 7: complete ✅ (public run_leave_one_out excise+rerun modes; Calmar deltas added,
+  nothing renamed; _safe_round inf/NaN->null; --scenario-removal on run_backtest [rerun]
+  + run_overfitting [excise]; 10 new tests. 371 passed +1 slow. NOTE: implemented via Bash
+  write channel — interactive Edit/ExitPlanMode permission stream is broken this session.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

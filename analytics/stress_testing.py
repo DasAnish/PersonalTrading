@@ -11,21 +11,30 @@ Crisis periods defined:
 - 2015-16 EM/China Rout: Aug 2015 – Feb 2016
 - 2020 COVID Crash: Feb – Mar 2020
 - 2022 Rate Spike: Jan – Oct 2022
+
+Scenario removal supports two modes:
+- ``excise`` (default): re-slice the already-computed portfolio value series
+  with each crisis window removed and recompute Sharpe/Calmar. Cheap; needs no
+  extra inputs. This is what the ``--stress-test`` path uses.
+- ``rerun``: a true leave-one-crisis-out — drop each crisis window from the
+  price data and RE-RUN the backtest, then compare full vs LOO Sharpe/Calmar.
+  Requires the strategy, prices, and engine.
 """
+
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from datetime import date
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-import numpy as np
 import pandas as pd
 
 from analytics.metrics import (
     calculate_cagr,
+    calculate_calmar_ratio,
     calculate_max_drawdown,
-    calculate_max_drawdown_duration,
     calculate_sharpe_ratio,
 )
 
@@ -35,6 +44,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Crisis period definitions
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class CrisisPeriod:
@@ -82,27 +92,48 @@ CRISIS_PERIODS: List[CrisisPeriod] = [
 # Result dataclasses
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CrisisMetrics:
     """Performance metrics for a single crisis window."""
 
     crisis: CrisisPeriod
-    total_return: float       # decimal, e.g. -0.15 = -15%
+    total_return: float  # decimal, e.g. -0.15 = -15%
     annualised_return: float  # CAGR over the window
-    max_drawdown: float       # negative decimal
-    recovery_days: int        # calendar days from trough to recovery (0 if not recovered)
+    max_drawdown: float  # negative decimal
+    recovery_days: int  # calendar days from trough to recovery (0 if not recovered)
     sharpe: float
-    has_data: bool            # False if strategy had no data in this window
+    has_data: bool  # False if strategy had no data in this window
 
 
 @dataclass
 class ScenarioRemovalResult:
-    """Result of a leave-one-crisis-out run."""
+    """Result of a leave-one-crisis-out run.
+
+    ``sharpe_delta``/``calmar_delta`` are full minus leave-one-out; a positive
+    delta means the crisis window *raised* the metric (i.e. the strategy's
+    headline number depends on that event).
+    """
 
     crisis: CrisisPeriod
-    full_sharpe: float    # Sharpe using all history
-    loo_sharpe: float     # Sharpe with this crisis window excluded
-    sharpe_delta: float   # full_sharpe - loo_sharpe (positive = crisis helped strategy)
+    full_sharpe: float  # Sharpe using all history
+    loo_sharpe: float  # Sharpe with this crisis window excluded
+    sharpe_delta: float  # full_sharpe - loo_sharpe
+    full_calmar: float = 0.0  # Calmar using all history
+    loo_calmar: float = 0.0  # Calmar with this crisis window excluded
+    calmar_delta: float = 0.0  # full_calmar - loo_calmar
+
+
+def _safe_round(x: float, ndigits: int) -> Optional[float]:
+    """Round, mapping non-finite values (inf/-inf/NaN) to None.
+
+    Keeps serialized JSON valid — ``json.dumps`` would otherwise emit the
+    non-standard ``Infinity``/``NaN`` tokens that break strict parsers (and the
+    dashboard's ``JSON.parse``).
+    """
+    if x is None or not math.isfinite(x):
+        return None
+    return round(x, ndigits)
 
 
 @dataclass
@@ -112,10 +143,12 @@ class StressTestReport:
     strategy_name: str
     crisis_metrics: List[CrisisMetrics]
     scenario_removal: List[ScenarioRemovalResult]
+    scenario_removal_mode: str = "excise"
 
     def to_dict(self) -> dict:
         return {
             "strategy_name": self.strategy_name,
+            "scenario_removal_mode": self.scenario_removal_mode,
             "crisis_metrics": [
                 {
                     "crisis_name": m.crisis.name,
@@ -134,9 +167,12 @@ class StressTestReport:
             "scenario_removal": [
                 {
                     "crisis_name": r.crisis.name,
-                    "full_sharpe": round(r.full_sharpe, 3),
-                    "loo_sharpe": round(r.loo_sharpe, 3),
-                    "sharpe_delta": round(r.sharpe_delta, 3),
+                    "full_sharpe": _safe_round(r.full_sharpe, 3),
+                    "loo_sharpe": _safe_round(r.loo_sharpe, 3),
+                    "sharpe_delta": _safe_round(r.sharpe_delta, 3),
+                    "full_calmar": _safe_round(r.full_calmar, 3),
+                    "loo_calmar": _safe_round(r.loo_calmar, 3),
+                    "calmar_delta": _safe_round(r.calmar_delta, 3),
                 }
                 for r in self.scenario_removal
             ],
@@ -146,6 +182,7 @@ class StressTestReport:
 # ---------------------------------------------------------------------------
 # Core analyser
 # ---------------------------------------------------------------------------
+
 
 class StressTester:
     """
@@ -159,6 +196,9 @@ class StressTester:
         report = tester.run()
         print(report.to_dict())
     """
+
+    # Minimum surviving observations required to compute stable LOO metrics.
+    MIN_LOO_OBSERVATIONS = 60
 
     def __init__(
         self,
@@ -183,13 +223,14 @@ class StressTester:
     # ------------------------------------------------------------------
 
     def run(self) -> StressTestReport:
-        """Run all crisis-period analyses and return a StressTestReport."""
+        """Run all crisis-period analyses (excise-mode scenario removal)."""
         crisis_metrics = [self._analyse_crisis(c) for c in self.crises]
-        scenario_removal = self._run_leave_one_out()
+        scenario_removal = self.run_leave_one_out(mode="excise")
         return StressTestReport(
             strategy_name=self.strategy_name,
             crisis_metrics=crisis_metrics,
             scenario_removal=scenario_removal,
+            scenario_removal_mode="excise",
         )
 
     # ------------------------------------------------------------------
@@ -236,7 +277,7 @@ class StressTester:
         series. Returns 0 if already at or above peak at end of window,
         and -1 if not yet recovered as of the last data point.
         """
-        pre_crisis_peak = self.values.loc[:window.index[0]].iloc[-1]
+        pre_crisis_peak = self.values.loc[: window.index[0]].iloc[-1]
         trough_idx = window.idxmin()
 
         # Look for recovery in the tail of the full series after the trough
@@ -252,31 +293,151 @@ class StressTester:
     # Leave-one-crisis-out
     # ------------------------------------------------------------------
 
-    def _run_leave_one_out(self) -> List[ScenarioRemovalResult]:
+    def run_leave_one_out(
+        self,
+        mode: str = "excise",
+        *,
+        strategy=None,
+        prices: Optional[pd.DataFrame] = None,
+        engine=None,
+        backtest_start=None,
+        backtest_end=None,
+        default_lookback_days: int = 252,
+    ) -> List[ScenarioRemovalResult]:
         """
-        For each crisis, exclude it from the full history and re-compute
-        Sharpe. Returns the delta vs the full-history Sharpe.
+        Leave-one-crisis-out scenario removal.
+
+        Args:
+            mode: ``"excise"`` (default) re-slices the existing value series
+                with each crisis removed; ``"rerun"`` drops the crisis window
+                from ``prices`` and re-runs the backtest for a true LOO.
+            strategy, prices, engine, backtest_start, backtest_end:
+                required for ``mode="rerun"`` (ValueError otherwise).
+            default_lookback_days: fallback lookback passed to the runner.
+
+        Returns:
+            List[ScenarioRemovalResult], one per crisis with enough surviving
+            data (crises leaving too little data are skipped).
         """
+        if mode == "excise":
+            return self._run_leave_one_out_excise()
+        if mode == "rerun":
+            return self._run_leave_one_out_rerun(
+                strategy=strategy,
+                prices=prices,
+                engine=engine,
+                backtest_start=backtest_start,
+                backtest_end=backtest_end,
+                default_lookback_days=default_lookback_days,
+            )
+        raise ValueError(f"Unknown scenario-removal mode: {mode!r}")
+
+    def _run_leave_one_out_excise(self) -> List[ScenarioRemovalResult]:
+        """Excise mode: re-slice the value series with each crisis removed."""
         full_returns = self.values.pct_change().dropna()
         full_sharpe = calculate_sharpe_ratio(full_returns)
+        full_calmar = calculate_calmar_ratio(self.values)
 
         results: List[ScenarioRemovalResult] = []
         for crisis in self.crises:
             loo_values = self._exclude(crisis)
-            if loo_values is None or len(loo_values) < 60:
+            if loo_values is None or len(loo_values) < self.MIN_LOO_OBSERVATIONS:
                 logger.debug("Insufficient data after excluding %s", crisis.name)
                 continue
             loo_returns = loo_values.pct_change().dropna()
             loo_sharpe = calculate_sharpe_ratio(loo_returns)
+            loo_calmar = calculate_calmar_ratio(loo_values)
             results.append(
                 ScenarioRemovalResult(
                     crisis=crisis,
                     full_sharpe=full_sharpe,
                     loo_sharpe=loo_sharpe,
                     sharpe_delta=full_sharpe - loo_sharpe,
+                    full_calmar=full_calmar,
+                    loo_calmar=loo_calmar,
+                    calmar_delta=full_calmar - loo_calmar,
                 )
             )
         return results
+
+    def _run_leave_one_out_rerun(
+        self,
+        *,
+        strategy,
+        prices: Optional[pd.DataFrame],
+        engine,
+        backtest_start,
+        backtest_end,
+        default_lookback_days: int,
+    ) -> List[ScenarioRemovalResult]:
+        """Rerun mode: drop each crisis window from prices and re-run the backtest."""
+        missing = [
+            name
+            for name, val in (
+                ("strategy", strategy),
+                ("prices", prices),
+                ("engine", engine),
+                ("backtest_start", backtest_start),
+                ("backtest_end", backtest_end),
+            )
+            if val is None
+        ]
+        if missing:
+            raise ValueError(
+                "run_leave_one_out(mode='rerun') requires: " + ", ".join(missing)
+            )
+
+        # Lazy import keeps analytics import-safe even if backtesting grows an
+        # analytics dependency later.
+        from backtesting.runner import run_single_backtest
+
+        full_returns = self.values.pct_change().dropna()
+        full_sharpe = calculate_sharpe_ratio(full_returns)
+        full_calmar = calculate_calmar_ratio(self.values)
+
+        results: List[ScenarioRemovalResult] = []
+        for crisis in self.crises:
+            start = pd.Timestamp(crisis.start)
+            end = pd.Timestamp(crisis.end)
+            reduced = prices.loc[(prices.index < start) | (prices.index > end)]
+            if len(reduced) < self.MIN_LOO_OBSERVATIONS:
+                logger.debug(
+                    "Insufficient price data after excluding %s (rerun)", crisis.name
+                )
+                continue
+
+            loo_results = run_single_backtest(
+                strategy,
+                reduced,
+                backtest_start,
+                backtest_end,
+                engine,
+                default_lookback_days=default_lookback_days,
+            )
+            loo_values = loo_results.portfolio_history.get("total_value")
+            if loo_values is None or len(loo_values) < self.MIN_LOO_OBSERVATIONS:
+                logger.debug("Rerun for %s produced too little data", crisis.name)
+                continue
+
+            loo_returns = loo_values.pct_change().dropna()
+            loo_sharpe = calculate_sharpe_ratio(loo_returns)
+            loo_calmar = calculate_calmar_ratio(loo_values)
+            results.append(
+                ScenarioRemovalResult(
+                    crisis=crisis,
+                    full_sharpe=full_sharpe,
+                    loo_sharpe=loo_sharpe,
+                    sharpe_delta=full_sharpe - loo_sharpe,
+                    full_calmar=full_calmar,
+                    loo_calmar=loo_calmar,
+                    calmar_delta=full_calmar - loo_calmar,
+                )
+            )
+        return results
+
+    def _run_leave_one_out(self) -> List[ScenarioRemovalResult]:
+        """Backward-compatible alias for excise-mode scenario removal."""
+        return self.run_leave_one_out(mode="excise")
 
     # ------------------------------------------------------------------
     # Helpers
@@ -293,13 +454,16 @@ class StressTester:
         """Return the values Series with the crisis window removed."""
         start = pd.Timestamp(crisis.start)
         end = pd.Timestamp(crisis.end)
-        excluded = self.values.loc[(self.values.index < start) | (self.values.index > end)]
+        excluded = self.values.loc[
+            (self.values.index < start) | (self.values.index > end)
+        ]
         return excluded if not excluded.empty else None
 
 
 # ---------------------------------------------------------------------------
 # Convenience function
 # ---------------------------------------------------------------------------
+
 
 def run_stress_test(
     values: pd.Series,

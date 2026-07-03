@@ -45,6 +45,7 @@ from analytics.overfitting import (
 from backtesting.results_schema import (
     OVERFITTING_FILE,
     STRATEGY_FILES,
+    STRESS_TEST_FILE,
     load_portfolio_values,
 )
 from backtesting.results_schema import strategy_dir as schema_strategy_dir
@@ -381,6 +382,15 @@ Examples:
             "classic k-fold)."
         ),
     )
+    parser.add_argument(
+        "--scenario-removal",
+        action="store_true",
+        help=(
+            "Also run excise-mode leave-one-crisis-out scenario removal from "
+            "the saved portfolio history and write stress_test.json "
+            "(Mode 2 only)."
+        ),
+    )
 
     args = parser.parse_args()
     embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
@@ -392,6 +402,10 @@ Examples:
         )
     if not args.param and not args.n_trials:
         parser.error("Specify either --param (Mode 1) or --n-trials (Mode 2).")
+    if args.scenario_removal and args.param:
+        parser.error(
+            "--scenario-removal is Mode 2 only; use it with --n-trials, not --param."
+        )
 
     print(f"\nOVERFITTING ANALYSIS — {args.strategy}")
     print(
@@ -527,6 +541,21 @@ Examples:
 
     out_path = save_analysis(analysis, strategy_key, args.output_dir)
     print(f"Results saved to: {out_path}\n")
+
+    if args.scenario_removal:
+        import json as _json
+
+        from analytics.stress_testing import run_stress_test
+
+        total_values = load_portfolio_history(strategy_key)
+        report = run_stress_test(total_values, strategy_key)
+        stress_path = (
+            schema_strategy_dir(RESULTS_DIR.parent, strategy_key) / STRESS_TEST_FILE
+        )
+        stress_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(stress_path, "w") as f:
+            _json.dump(report.to_dict(), f, indent=2)
+        print(f"Scenario removal (excise) saved to: {stress_path}\n")
 
 
 if __name__ == "__main__":

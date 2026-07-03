@@ -286,6 +286,42 @@ def print_analysis_report(analysis: OverfittingAnalysis) -> None:
     print(sep + "\n")
 
 
+def run_cpcv_analysis(strategy_key: str, n_groups: int, embargo_days: int) -> None:
+    """Run CPCV from saved portfolio history and merge into overfitting_analysis.json."""
+    import json as _json
+
+    from analytics.cpcv import CPCVEngine
+
+    total_values = load_portfolio_history(strategy_key)
+    returns = total_values.pct_change().dropna()
+    result = CPCVEngine(
+        n_groups=n_groups,
+        n_test_groups=2,
+        embargo_days=embargo_days,
+        periods_per_year=12,
+    ).run(returns)
+
+    out_dir = schema_strategy_dir(RESULTS_DIR.parent, strategy_key)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / OVERFITTING_FILE
+    if path.exists():
+        with open(path) as f:
+            payload = _json.load(f)
+    else:
+        payload = {"strategy_key": strategy_key}
+    payload["cpcv"] = result.to_dict()
+    with open(path, "w") as f:
+        _json.dump(payload, f, indent=2)
+
+    print(f"\nCPCV — {strategy_key}")
+    print(f"  Combinations : {result.n_combinations}")
+    print(f"  Mean OOS Sharpe   : {result.mean_sharpe:.3f}")
+    print(f"  5th pct OOS Sharpe: {result.pct5_sharpe:.3f}")
+    print(f"  P(Sharpe>0)  : {result.prob_oos_sharpe_positive:.2%}")
+    print(f"  Verdict      : {result.verdict}")
+    print(f"  Saved to     : {path}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Overfitting analysis: Deflated Sharpe Ratio + Probability of Backtest Overfitting",
@@ -391,9 +427,28 @@ Examples:
             "(Mode 2 only)."
         ),
     )
+    parser.add_argument(
+        "--method",
+        choices=["dsr", "cpcv", "bootstrap"],
+        default="dsr",
+        help="Analysis method: dsr (default, DSR/PBO/k-fold via --param/--n-trials), "
+        "cpcv (combinatorial purged CV), or bootstrap (Phase 9).",
+    )
+    parser.add_argument(
+        "--cpcv-folds",
+        type=int,
+        default=6,
+        help="Number of CPCV groups (default: 6). Test combinations = C(folds, 2).",
+    )
 
     args = parser.parse_args()
     embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
+
+    if args.method == "cpcv":
+        run_cpcv_analysis(args.strategy, args.cpcv_folds, args.embargo_days)
+        return
+    if args.method == "bootstrap":
+        parser.error("--method bootstrap is implemented in Phase 9.")
 
     # Validate mode
     if args.param and args.n_trials:

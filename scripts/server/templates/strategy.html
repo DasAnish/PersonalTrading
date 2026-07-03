@@ -709,6 +709,7 @@
             const kfold = data.kfold;
             const minbtl = data.minbtl;
             const walkforward = data.walkforward;
+            const cpcv = data.cpcv;
 
             // Overall verdict
             let verdicts = [];
@@ -929,6 +930,40 @@
                     </div>`;
             }
 
+            // CPCV card
+            if (cpcv) {
+                const meanStr = cpcv.mean_sharpe === null ? 'n/a' : cpcv.mean_sharpe.toFixed(3);
+                const p5Str = cpcv.pct5_sharpe === null ? 'n/a' : cpcv.pct5_sharpe.toFixed(3);
+                const ppos = cpcv.prob_oos_sharpe_positive === null ? 'n/a' : (cpcv.prob_oos_sharpe_positive * 100).toFixed(1) + '%';
+                html += `
+                    <div class="overfitting-card">
+                        <h3>CPCV (Combinatorial Purged CV)</h3>
+                        <div class="overfitting-row">
+                            <span class="label">P(OOS Sharpe > 0)</span>
+                            <span class="val">${ppos} &nbsp; ${verdictBadge(cpcv.verdict)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Mean OOS Sharpe</span>
+                            <span class="val">${meanStr}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">5th pct OOS Sharpe</span>
+                            <span class="val">${p5Str}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Combinations</span>
+                            <span class="val">${cpcv.n_combinations}</span>
+                        </div>
+                        <canvas id="cpcvHistChart"></canvas>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>CPCV (Combinatorial Purged CV)</h3>
+                        <p style="color:#888;">CPCV not computed — run with <code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;">--method cpcv</code>.</p>
+                    </div>`;
+            }
+
             html += `</div>`;
 
             // Logit score histogram (if PBO available)
@@ -973,6 +1008,11 @@
             if (kfold && kfold.fold_sharpes && kfold.fold_sharpes.length > 0) {
                 renderKFoldSharpeChart(kfold.fold_sharpes);
             }
+
+            // Render CPCV OOS Sharpe histogram
+            if (cpcv && cpcv.oos_sharpes && cpcv.oos_sharpes.length > 0) {
+                renderCPCVHistogram(cpcv.oos_sharpes);
+            }
         }
 
         function renderLogitHistogram(logits) {
@@ -997,6 +1037,20 @@
                 yTitle: 'Sharpe Ratio',
                 colorFn: v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)',
                 existingChart: kfoldChart,
+            });
+        }
+
+        let cpcvChart = null;
+
+        function renderCPCVHistogram(sharpes) {
+            if (!document.getElementById('cpcvHistChart')) return;
+            cpcvChart = renderHistogram('cpcvHistChart', sharpes, {
+                label: 'OOS Sharpe Frequency',
+                xTitle: 'Out-of-Sample Sharpe (per combination)',
+                yTitle: 'Frequency',
+                colorFn: v => parseFloat(v) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(16,185,129,0.6)',
+                existingChart: cpcvChart,
+                tooltipTitle: label => `Sharpe ≈ ${label}`,
             });
         }
 

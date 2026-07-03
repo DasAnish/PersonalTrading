@@ -1,8 +1,8 @@
 # Plan State
 
-**Current Phase**: 8
-**Current Phase File**: plan/phase-08-cpcv.md
-**Current TODO**: analytics/cpcv.py CPCVEngine
+**Current Phase**: 9
+**Current Phase File**: plan/phase-09-bootstrap-spa.md
+**Current TODO**: analytics/bootstrap.py stationary block bootstrap
 **Last Updated**: 2026-07-02
 
 ## Known residual (out of scope, note for later)
@@ -31,6 +31,9 @@
   nothing renamed; _safe_round inf/NaN->null; --scenario-removal on run_backtest [rerun]
   + run_overfitting [excise]; 10 new tests. 371 passed +1 slow. NOTE: implemented via Bash
   write channel — interactive Edit/ExitPlanMode permission stream is broken this session.)
+- Phase 8: complete ✅ (analytics/cpcv.py CPCVEngine + CPCVResult; --method {dsr,cpcv,bootstrap}
+  dispatch + --cpcv-folds on run_overfitting; cpcv JSON section merged into overfitting_analysis;
+  dashboard CPCV card + OOS-Sharpe histogram; 8 tests incl. no-lookahead property. 379 passed.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

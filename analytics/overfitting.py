@@ -1,24 +1,21 @@
 """
 Overfitting detection metrics for backtested trading strategies.
 
-Implements:
-- Deflated Sharpe Ratio (DSR): probability that observed Sharpe ratio is not
-  due to selection bias across N parameter trials.
-  Reference: Bailey & López de Prado (2014), "The Deflated Sharpe Ratio"
-  https://ssrn.com/abstract=2460551
-
-- Probability of Backtest Overfitting (PBO): fraction of Combinatorially
-  Symmetric Cross-Validation (CSCV) partitions where the in-sample best
-  parameter combination ranks below median out-of-sample.
-  Reference: Bailey et al. (2014), "The Probability of Backtest Overfitting"
-  http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
-
-- K-Fold Temporal Stability: splits a single strategy's return series into
-  k equal time folds and measures how consistently positive the Sharpe ratio
-  is across all folds. Answers: "Is performance concentrated in one lucky
-  period, or does it hold across all time slices?"
+Implements: Deflated Sharpe Ratio (DSR) — Bailey & López de Prado (2014),
+"The Deflated Sharpe Ratio", https://ssrn.com/abstract=2460551 (probability
+the observed Sharpe isn't selection bias across N trials); Probability of
+Backtest Overfitting (PBO) via CSCV — Bailey et al. (2014), "The
+Probability of Backtest Overfitting", http://papers.ssrn.com/sol3/papers.
+cfm?abstract_id=2326253; K-Fold Temporal Stability (fraction of k equal
+time folds with positive Sharpe, optionally purged/embargoed — Phase 6);
+Minimum Backtest Length (MinBTL/MinTRL) — Bailey, Borwein, López de Prado
+& Zhu (2014), "Pseudo-Mathematics and Financial Charlatanism", Notices of
+the AMS 61(5) (minimum years of track record needed for an observed Sharpe
+to beat the expected-max-under-null of N trials).
 
 Adapted from the pypbo reference implementation (https://github.com/esvhd/pypbo).
+Result dataclasses and ``overfitting_analysis_to_dict`` live in
+``analytics.overfitting_results`` and are re-exported here for compatibility.
 """
 
 from __future__ import annotations
@@ -26,7 +23,6 @@ from __future__ import annotations
 import itertools
 import logging
 import math
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
@@ -35,123 +31,21 @@ import pandas as pd
 import scipy.special as sc
 import scipy.stats as ss
 
-from optimization.splitters import contiguous_folds
+from optimization.splitters import contiguous_folds, embargoed_fold_indices
+
+from .overfitting_results import (  # noqa: F401 (re-exported for compatibility)
+    DSRResult,
+    KFoldResult,
+    MinBTLResult,
+    OverfittingAnalysis,
+    PBOResult,
+    WalkForwardResult,
+    build_walk_forward_result,
+    overfitting_analysis_to_dict,
+    walk_forward_to_dict,
+)
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Dataclasses
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class DSRResult:
-    """Result of the Deflated Sharpe Ratio calculation."""
-
-    dsr: float
-    """DSR probability in [0, 1]. Higher = less likely to be due to luck."""
-
-    observed_sharpe: float
-    """Annualised Sharpe ratio of the evaluated strategy."""
-
-    sharpe_reference: float
-    """SR₀: expected max Sharpe under null (annualised), used as PSR target."""
-
-    n_trials: int
-    """Number of parameter combinations tested (N)."""
-
-    t_periods: int
-    """Number of return observations used."""
-
-    skewness: float
-    """Skewness of the return series."""
-
-    excess_kurtosis: float
-    """Excess kurtosis (Fisher) of the return series."""
-
-    verdict: str
-    """PASS / WARN / FAIL based on thresholds."""
-
-    threshold_pass: float = 0.95
-    threshold_warn: float = 0.80
-
-
-@dataclass
-class PBOResult:
-    """Result of the Probability of Backtest Overfitting (CSCV) calculation."""
-
-    pbo: float
-    """Fraction of IS-best configs that underperform OOS. Lower = better."""
-
-    prob_oos_loss: float
-    """Fraction of partitions where IS-best config has negative OOS metric."""
-
-    n_combinations: int
-    """Number of C(S, S/2) partitions evaluated."""
-
-    s_subsets: int
-    """Number of equal time-subsets S."""
-
-    n_configs: int
-    """Number of parameter combinations (columns in return matrix)."""
-
-    logit_scores: List[float]
-    """logit(OOS rank / (N+1)) for each partition — useful for distribution plot."""
-
-    verdict: str
-    """PASS / WARN / FAIL based on thresholds."""
-
-    threshold_pass: float = 0.30
-    threshold_warn: float = 0.50
-
-
-@dataclass
-class KFoldResult:
-    """Result of k-fold temporal stability analysis."""
-
-    n_folds: int
-    """Number of equal time folds the return series was split into."""
-
-    fold_sharpes: List[float]
-    """Annualised Sharpe ratio computed for each fold."""
-
-    mean_sharpe: float
-    """Mean of per-fold Sharpe ratios."""
-
-    std_sharpe: float
-    """Standard deviation of per-fold Sharpe ratios."""
-
-    fraction_positive: float
-    """Fraction of folds with Sharpe > 0. 1.0 = all folds positive."""
-
-    worst_fold_sharpe: float
-    """Lowest per-fold Sharpe (worst time period)."""
-
-    verdict: str
-    """PASS / WARN / FAIL based on fraction_positive thresholds."""
-
-    threshold_pass: float = 0.70
-    threshold_warn: float = 0.50
-
-
-@dataclass
-class OverfittingAnalysis:
-    """Combined overfitting analysis output for a strategy."""
-
-    strategy_key: str
-    dsr: Optional[DSRResult]
-    pbo: Optional[PBOResult]
-    n_param_combinations: int
-    analysis_date: str
-    config: Dict[str, Any]
-    kfold: Optional[KFoldResult] = None
-    errors: List[str] = field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
-# Core math helpers
-# ---------------------------------------------------------------------------
 
 
 def _expected_max_sharpe(n: int) -> float:
@@ -183,23 +77,10 @@ def _psr(
     """
     Probabilistic Sharpe Ratio (PSR).
 
-    Parameters
-    ----------
-    sharpe : float
-        Observed Sharpe ratio (in per-period units, not annualised).
-    t : int
-        Number of return observations.
-    skew : float
-        Skewness of the return series.
-    kurtosis_raw : float
-        Raw (non-excess) kurtosis of the return series.
-    target_sharpe : float
-        Benchmark Sharpe ratio (SR₀ for DSR, 0 for PSR).
-
-    Returns
-    -------
-    float
-        Probability in [0, 1].
+    ``sharpe``: observed Sharpe (per-period, not annualised). ``t``: number
+    of return observations. ``skew``/``kurtosis_raw``: return series
+    skewness / raw (non-excess) kurtosis. ``target_sharpe``: benchmark
+    Sharpe (SR₀ for DSR, 0 for PSR). Returns a probability in [0, 1].
     """
     denom = math.sqrt(1.0 - skew * sharpe + sharpe**2 * (kurtosis_raw - 1.0) / 4.0)
     if denom <= 0:
@@ -229,11 +110,6 @@ def _sharpe_matrix(matrix: np.ndarray) -> np.ndarray:
     return means / stds
 
 
-# ---------------------------------------------------------------------------
-# Public API: DSR
-# ---------------------------------------------------------------------------
-
-
 def calculate_deflated_sharpe_ratio(
     returns: pd.Series,
     n_trials: int,
@@ -250,22 +126,11 @@ def calculate_deflated_sharpe_ratio(
     combinations. It answers: "Given that we picked the best strategy from
     N trials, what is the probability the observed Sharpe is real?"
 
-    Parameters
-    ----------
-    returns : pd.Series
-        Portfolio return series (percentage returns, one entry per rebalance).
-    n_trials : int
-        Number of parameter combinations tested (N). Must be >= 2.
-    periods_per_year : int
-        Annualisation factor. 12 for monthly, 252 for daily.
-    sharpe_std : float, optional
-        Standard deviation of Sharpe ratios across all N configurations.
-        If provided, SR₀ = sharpe_std * E[max_N].
-        If None, computes SR₀ = E[max_N] / sqrt(T-1) (single-series fallback).
-    threshold_pass : float
-        DSR >= this → PASS.
-    threshold_warn : float
-        DSR >= this → WARN, else FAIL.
+    ``n_trials`` (N) must be >= 2. ``periods_per_year``: 12 monthly / 252
+    daily. ``sharpe_std`` (optional): std of Sharpes across all N configs —
+    if given, SR₀ = sharpe_std * E[max_N]; else SR₀ = E[max_N] / sqrt(T-1)
+    (single-series fallback). ``threshold_pass``/``threshold_warn``: DSR
+    verdict cutoffs.
 
     Returns
     -------
@@ -328,11 +193,6 @@ def calculate_deflated_sharpe_ratio(
     )
 
 
-# ---------------------------------------------------------------------------
-# Public API: PBO
-# ---------------------------------------------------------------------------
-
-
 def calculate_pbo(
     return_matrix: pd.DataFrame,
     s_subsets: int = 16,
@@ -344,22 +204,13 @@ def calculate_pbo(
     """
     Calculate the Probability of Backtest Overfitting (PBO) via CSCV.
 
-    Parameters
-    ----------
-    return_matrix : pd.DataFrame
-        Shape (T, N) — rows=time periods, columns=parameter combinations.
-        All series must share the same DatetimeIndex.
-    s_subsets : int
-        Number of equal time partitions (must be even). Paper suggests 16.
-    metric_fn : callable, optional
-        f(2D numpy array of shape (T_sub, N)) -> array of shape (N,).
-        Defaults to per-period Sharpe ratio.
-    oos_loss_threshold : float
-        Cutoff for prob_oos_loss calculation. For Sharpe, use 0.
-    threshold_pass : float
-        PBO <= this → PASS.
-    threshold_warn : float
-        PBO <= this → WARN, else FAIL.
+    ``return_matrix`` shape (T, N): rows=time periods, columns=parameter
+    combinations, all sharing the same DatetimeIndex. ``s_subsets``: number
+    of equal time partitions (must be even; paper suggests 16).
+    ``metric_fn`` (optional): f(2D array (T_sub, N)) -> array (N,), default
+    per-period Sharpe. ``oos_loss_threshold``: cutoff for prob_oos_loss (0
+    for Sharpe). ``threshold_pass``/``threshold_warn``: PBO verdict cutoffs
+    (PBO <= threshold_pass -> PASS, <= threshold_warn -> WARN, else FAIL).
 
     Returns
     -------
@@ -466,48 +317,30 @@ def calculate_pbo(
     )
 
 
-# ---------------------------------------------------------------------------
-# Public API: K-Fold Temporal Stability
-# ---------------------------------------------------------------------------
-
-
 def calculate_kfold_stability(
     returns: pd.Series,
     n_folds: int = 10,
     periods_per_year: int = 12,
     threshold_pass: float = 0.70,
     threshold_warn: float = 0.50,
+    embargo_periods: int = 0,
 ) -> KFoldResult:
     """
-    K-fold temporal stability analysis for a single strategy.
+    K-fold temporal stability, optionally purged/embargoed (Phase 6).
 
-    Splits the return series into ``n_folds`` equal consecutive time windows
-    and computes the annualised Sharpe ratio for each. Reports what fraction
-    of folds have positive Sharpe, making it easy to spot strategies that
-    only work in one lucky era.
+    Splits returns into ``n_folds`` equal consecutive windows, computes the
+    annualised Sharpe of each, and reports what fraction are positive
+    (spots strategies that only work in one lucky era). ``embargo_periods``
+    applies ``splitters.apply_embargo`` at each internal fold boundary,
+    dropping that many observations from each side of a shared boundary
+    before computing that fold's Sharpe — guards against lookback-window
+    leakage across the split (López de Prado, *AFML*, ch. 7).
+    ``embargo_periods=0`` (default) reproduces the original fold Sharpes
+    exactly. ``periods_per_year``: 12 monthly / 252 daily.
+    ``threshold_pass``/``threshold_warn``: fraction_positive cutoffs.
 
-    Parameters
-    ----------
-    returns : pd.Series
-        Portfolio return series (percentage returns per period, no NaNs).
-    n_folds : int
-        Number of equal time folds (default 10).
-    periods_per_year : int
-        Annualisation factor: 12 for monthly, 252 for daily.
-    threshold_pass : float
-        fraction_positive >= this → PASS (default 0.70).
-    threshold_warn : float
-        fraction_positive >= this → WARN, else FAIL (default 0.50).
-
-    Returns
-    -------
-    KFoldResult
-
-    Raises
-    ------
-    ValueError
-        If the series has fewer than ``n_folds * 3`` periods (less than 3
-        data points per fold makes per-fold Sharpe unreliable).
+    Raises ValueError if T < n_folds*3, embargo_periods < 0, or an embargo
+    leaves < 2 observations in a fold.
     """
     arr = returns.dropna().values
     t = len(arr)
@@ -517,13 +350,25 @@ def calculate_kfold_stability(
             f"Return series too short for {n_folds}-fold analysis "
             f"(T={t}, need >= {min_periods})."
         )
+    if embargo_periods < 0:
+        raise ValueError(
+            f"embargo_periods must be non-negative, got {embargo_periods}."
+        )
 
     # Consecutive equal-size folds; leading residual rows are discarded so
     # T is divisible by n_folds (preserves recency of the most recent data).
+    folds = contiguous_folds(t, n_folds)
     fold_sharpes: List[float] = []
 
-    for start, end in contiguous_folds(t, n_folds):
-        fold = arr[start:end]
+    for i, (start, end) in enumerate(folds):
+        fold_idx = embargoed_fold_indices(folds, i, embargo_periods)
+        if len(fold_idx) < 2:
+            raise ValueError(
+                f"embargo_periods={embargo_periods} leaves < 2 observations "
+                f"in fold {i} (original size {end - start}); reduce "
+                "embargo_periods or n_folds."
+            )
+        fold = arr[fold_idx]
         sr_period = _sharpe_per_period(fold)
         sr_annual = sr_period * math.sqrt(periods_per_year)
         fold_sharpes.append(round(sr_annual, 4))
@@ -550,12 +395,65 @@ def calculate_kfold_stability(
         verdict=verdict,
         threshold_pass=threshold_pass,
         threshold_warn=threshold_warn,
+        embargo_periods=embargo_periods,
     )
 
 
-# ---------------------------------------------------------------------------
-# Orchestrator
-# ---------------------------------------------------------------------------
+def calculate_minbtl(
+    observed_sharpe_annualized: float,
+    n_trials: int,
+    actual_years: float,
+    warn_ratio: float = 0.8,
+) -> MinBTLResult:
+    """
+    Minimum Backtest Length (MinBTL, a.k.a. Minimum Track Record Length).
+
+    Minimum years of track record needed for an observed annualised Sharpe
+    to be distinguishable from the expected *maximum* Sharpe obtainable by
+    chance across ``n_trials`` configs. Formula (Bailey, Borwein, López de
+    Prado & Zhu (2014), "Pseudo-Mathematics and Financial Charlatanism",
+    Notices of the AMS 61(5); same E[max_N] term as the DSR reference SR₀
+    in Bailey & López de Prado (2014), "The Deflated Sharpe Ratio")::
+
+        MinBTL ≈ ( E[max_N] / SR )²   [years]
+
+    ``E[max_N]`` = ``_expected_max_sharpe(n_trials)``; ``SR`` = ANNUALISED
+    Sharpe of the selected strategy. Simplified MinTRL: omits the
+    skew/kurtosis correction ``_psr`` applies for DSR (order-of-magnitude
+    check, not an exact bound), and relies on the same "reference Sharpe
+    scales as 1/sqrt(T)" assumption as ``calculate_deflated_sharpe_ratio``'s
+    single-series fallback. ``n_trials`` >= 2.
+
+    Non-positive Sharpe -> ratio undefined -> min_years=inf, verdict FAIL.
+    ``warn_ratio`` (default 0.8): WARN if actual_years is between
+    ``warn_ratio * min_years`` and ``min_years``.
+
+    Returns
+    -------
+    MinBTLResult
+    """
+    e_max = _expected_max_sharpe(n_trials)
+
+    if observed_sharpe_annualized <= 0:
+        min_years = float("inf")
+    else:
+        min_years = (e_max / observed_sharpe_annualized) ** 2
+
+    if actual_years >= min_years:
+        verdict = "PASS"
+    elif math.isfinite(min_years) and actual_years >= warn_ratio * min_years:
+        verdict = "WARN"
+    else:
+        verdict = "FAIL"
+
+    return MinBTLResult(
+        min_years=round(min_years, 4) if math.isfinite(min_years) else min_years,
+        actual_years=round(actual_years, 4),
+        n_trials=n_trials,
+        observed_sharpe=round(observed_sharpe_annualized, 4),
+        verdict=verdict,
+        warn_ratio=warn_ratio,
+    )
 
 
 def run_overfitting_analysis(
@@ -574,38 +472,25 @@ def run_overfitting_analysis(
     n_folds: int = 10,
     kfold_threshold_pass: float = 0.70,
     kfold_threshold_warn: float = 0.50,
+    embargo_periods: int = 0,
+    minbtl_warn_ratio: float = 0.8,
 ) -> OverfittingAnalysis:
     """
-    Run DSR and (optionally) PBO for a strategy and return combined analysis.
+    Run DSR, (optionally) PBO, k-fold stability, and MinBTL for a strategy
+    and return combined analysis.
 
-    Parameters
-    ----------
-    strategy_key : str
-        Strategy identifier, e.g. 'hrp_ward'.
-    strategy_returns : pd.Series
-        Return series of the selected/best parameter combination.
-    return_matrix : pd.DataFrame or None
-        Shape (T, N) with all parameter combinations' returns. If None,
-        PBO is skipped.
-    param_grid : dict
-        Parameter grid used (stored in config for reproducibility).
-    periods_per_year : int
-        12 for monthly rebalancing, 252 for daily.
-    sharpe_std : float, optional
-        Std of Sharpe ratios across N configs. If return_matrix is provided
-        this is computed automatically; pass explicitly only for Mode 2.
-    s_subsets : int
-        CSCV partition count for PBO.
-    dsr_threshold_pass / dsr_threshold_warn : float
-        DSR verdict thresholds.
-    pbo_threshold_pass / pbo_threshold_warn : float
-        PBO verdict thresholds.
-    oos_loss_threshold : float
-        Metric threshold for prob_oos_loss (0 for Sharpe).
-    n_folds : int
-        Number of equal time folds for k-fold temporal stability (default 10).
-    kfold_threshold_pass / kfold_threshold_warn : float
-        K-fold verdict thresholds based on fraction_positive.
+    ``strategy_returns`` is the selected/best combination's return series;
+    ``return_matrix`` (T, N) holds all combinations' returns (PBO skipped
+    if None). ``param_grid`` is stored in ``config`` for reproducibility.
+    ``periods_per_year``: 12 monthly / 252 daily. ``sharpe_std`` (optional):
+    std of Sharpes across N configs, auto-computed from ``return_matrix``
+    when available. ``s_subsets``: CSCV partition count for PBO.
+    ``{dsr,pbo,kfold}_threshold_{pass,warn}``: verdict cutoffs for each
+    section. ``oos_loss_threshold``: cutoff for PBO's prob_oos_loss.
+    ``n_folds``: k-fold window count. ``embargo_periods``: purge/embargo
+    window (periods) for k-fold stability, see ``calculate_kfold_stability``
+    (0 = classic k-fold). ``minbtl_warn_ratio``: WARN ratio for MinBTL, see
+    ``calculate_minbtl``.
 
     Returns
     -------
@@ -660,9 +545,29 @@ def run_overfitting_analysis(
             periods_per_year=periods_per_year,
             threshold_pass=kfold_threshold_pass,
             threshold_warn=kfold_threshold_warn,
+            embargo_periods=embargo_periods,
         )
     except Exception as exc:
         msg = f"K-fold stability calculation failed: {exc}"
+        logger.warning(msg)
+        errors.append(msg)
+
+    minbtl_result: Optional[MinBTLResult] = None
+    try:
+        arr = strategy_returns.dropna()
+        t_obs = len(arr)
+        if dsr_result is not None:
+            sr_annual = dsr_result.observed_sharpe
+        else:
+            sr_annual = _sharpe_per_period(arr.values) * math.sqrt(periods_per_year)
+        minbtl_result = calculate_minbtl(
+            observed_sharpe_annualized=sr_annual,
+            n_trials=max(n_configs, 2),
+            actual_years=t_obs / periods_per_year,
+            warn_ratio=minbtl_warn_ratio,
+        )
+    except Exception as exc:
+        msg = f"MinBTL calculation failed: {exc}"
         logger.warning(msg)
         errors.append(msg)
 
@@ -671,6 +576,7 @@ def run_overfitting_analysis(
         dsr=dsr_result,
         pbo=pbo_result,
         kfold=kfold_result,
+        minbtl=minbtl_result,
         n_param_combinations=n_configs,
         analysis_date=datetime.now(timezone.utc).isoformat(),
         config={
@@ -678,70 +584,7 @@ def run_overfitting_analysis(
             "periods_per_year": periods_per_year,
             "s_subsets": s_subsets,
             "n_folds": n_folds,
+            "embargo_periods": embargo_periods,
         },
         errors=errors,
     )
-
-
-# ---------------------------------------------------------------------------
-# Serialisation
-# ---------------------------------------------------------------------------
-
-
-def overfitting_analysis_to_dict(analysis: OverfittingAnalysis) -> Dict[str, Any]:
-    """Serialise OverfittingAnalysis to a JSON-compatible dict."""
-    result: Dict[str, Any] = {
-        "strategy_key": analysis.strategy_key,
-        "analysis_date": analysis.analysis_date,
-        "n_param_combinations": analysis.n_param_combinations,
-        "config": analysis.config,
-        "errors": analysis.errors,
-        "dsr": None,
-        "pbo": None,
-        "kfold": None,
-    }
-
-    if analysis.dsr is not None:
-        d = analysis.dsr
-        result["dsr"] = {
-            "dsr": d.dsr,
-            "observed_sharpe": d.observed_sharpe,
-            "sharpe_reference": d.sharpe_reference,
-            "n_trials": d.n_trials,
-            "t_periods": d.t_periods,
-            "skewness": d.skewness,
-            "excess_kurtosis": d.excess_kurtosis,
-            "verdict": d.verdict,
-            "threshold_pass": d.threshold_pass,
-            "threshold_warn": d.threshold_warn,
-        }
-
-    if analysis.pbo is not None:
-        p = analysis.pbo
-        result["pbo"] = {
-            "pbo": p.pbo,
-            "prob_oos_loss": p.prob_oos_loss,
-            "n_combinations": p.n_combinations,
-            "s_subsets": p.s_subsets,
-            "n_configs": p.n_configs,
-            "logit_scores": p.logit_scores,
-            "verdict": p.verdict,
-            "threshold_pass": p.threshold_pass,
-            "threshold_warn": p.threshold_warn,
-        }
-
-    if analysis.kfold is not None:
-        k = analysis.kfold
-        result["kfold"] = {
-            "n_folds": k.n_folds,
-            "fold_sharpes": k.fold_sharpes,
-            "mean_sharpe": k.mean_sharpe,
-            "std_sharpe": k.std_sharpe,
-            "fraction_positive": k.fraction_positive,
-            "worst_fold_sharpe": k.worst_fold_sharpe,
-            "verdict": k.verdict,
-            "threshold_pass": k.threshold_pass,
-            "threshold_warn": k.threshold_warn,
-        }
-
-    return result

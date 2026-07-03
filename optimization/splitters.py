@@ -156,6 +156,47 @@ def apply_embargo(
     return sorted(set(train_idx) - embargo_zone)
 
 
+def embargoed_fold_indices(
+    folds: Sequence[Tuple[int, int]], i: int, embargo_periods: int
+) -> List[int]:
+    """
+    Index list for fold ``i`` of a ``contiguous_folds`` split, with
+    ``embargo_periods`` observations dropped from each side that borders a
+    neighbouring fold.
+
+    Used by ``analytics.overfitting.calculate_kfold_stability`` for its
+    purged/embargoed k-fold mode: each fold's own Sharpe is computed on the
+    fold alone (there is no separate train set), so the embargo is applied
+    directly to the fold's near-boundary observations via two ``apply_embargo``
+    calls (one per neighbour) rather than to a train set.
+
+    Parameters
+    ----------
+    folds : list of (start, end)
+        Full ``contiguous_folds(t, n_folds)`` output.
+    i : int
+        Index of the fold to compute embargoed indices for.
+    embargo_periods : int
+        Observations dropped from each bordering side. 0 = no-op (returns
+        the fold's original ``range(start, end)`` as a list).
+
+    Returns
+    -------
+    Sorted list of surviving indices for fold ``i``.
+    """
+    start, end = folds[i]
+    fold_idx = list(range(start, end))
+    if embargo_periods <= 0:
+        return fold_idx
+    if i > 0:
+        prev_start, prev_end = folds[i - 1]
+        fold_idx = apply_embargo(fold_idx, range(prev_start, prev_end), embargo_periods)
+    if i < len(folds) - 1:
+        next_start, next_end = folds[i + 1]
+        fold_idx = apply_embargo(fold_idx, range(next_start, next_end), embargo_periods)
+    return fold_idx
+
+
 def purge(train_idx: Sequence[int], test_idx: Sequence[int], horizon: int) -> List[int]:
     """
     Drop training indices whose label horizon overlaps the test window.

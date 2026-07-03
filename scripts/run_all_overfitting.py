@@ -2,7 +2,9 @@
 Batch overfitting analysis for all strategy results.
 
 Runs DSR + k-fold temporal stability for every strategy in results/strategies/.
-Optionally runs PBO parameter sweeps for base strategy families.
+Optionally runs PBO parameter sweeps for base strategy families, walk-forward
+analysis for those same families, and group PBO for composed/overlay
+strategy families (Phase 6).
 
 Usage:
   # Fast: DSR + k-fold only (no parameter sweeps)
@@ -16,12 +18,23 @@ Usage:
 
   # Custom fold count
   python scripts/run_all_overfitting.py --skip-pbo --n-folds 5
+
+  # Purged/embargoed k-fold (embargo expressed in calendar days)
+  python scripts/run_all_overfitting.py --skip-pbo --embargo-days 30
+
+  # Also run walk-forward analysis for PBO_PARAM_GRIDS families
+  python scripts/run_all_overfitting.py --walk-forward
+
+  # Also run group PBO for composed/overlay strategy families
+  python scripts/run_all_overfitting.py --composed-pbo
 """
 
 import argparse
 import json
 import logging
+import math
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -29,11 +42,15 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from analytics.composed_pbo import run_composed_pbo_groups
 from analytics.overfitting import (
     OverfittingAnalysis,
+    calculate_deflated_sharpe_ratio,
+    calculate_minbtl,
     run_overfitting_analysis,
     overfitting_analysis_to_dict,
 )
+from analytics.overfitting_results import build_walk_forward_result
 from backtesting.results_schema import (
     OVERFITTING_FILE,
     STRATEGY_FILES,
@@ -41,7 +58,7 @@ from backtesting.results_schema import (
 )
 from backtesting.results_schema import strategy_dir as schema_strategy_dir
 from data import HistoricalDataCache, align_dataframes
-from optimization import ParameterSweep
+from optimization import ParameterSweep, WalkForwardAnalysis
 from strategies import (
     AssetStrategy,
     HRPStrategy,
@@ -51,6 +68,7 @@ from strategies import (
     RiskParityStrategy,
     MomentumTopNStrategy,
 )
+from strategies.strategy_loader import StrategyLoader
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -120,24 +138,83 @@ def save_analysis(analysis: OverfittingAnalysis, strategy_key: str) -> Path:
     return out_path
 
 
-def build_n_trials_map(strategy_keys: List[str]) -> Dict[str, int]:
+def _load_class_lookup(strategy_keys: List[str]) -> Dict[str, str]:
     """
-    Estimate n_trials for DSR by counting how many strategies share each
-    family prefix. E.g. hrp_ward, hrp_single, hrp_complete, hrp_average → 4.
-    This is used as a proxy for how many configurations were explored.
+    Map each strategy_key -> its definition's ``class`` field, via
+    ``StrategyLoader``. Keys whose definition can't be loaded map to
+    themselves (forming a singleton class), so they don't crash the batch
+    or get incorrectly grouped with an unrelated family.
     """
-    # Count siblings sharing a 2-word prefix (e.g. "hrp" or "momentum")
-    from collections import Counter
-
-    prefix_counts: Counter = Counter()
+    loader = StrategyLoader()
+    lookup: Dict[str, str] = {}
     for key in strategy_keys:
-        parts = key.split("_")
-        prefix_counts[parts[0]] += 1
+        try:
+            definition = loader.load_definition(key)
+            lookup[key] = definition.get("class") or key
+        except Exception as exc:
+            logger.warning(
+                "Could not load definition for %s (%s); treating as its own class.",
+                key,
+                exc,
+            )
+            lookup[key] = key
+    return lookup
+
+
+def build_n_trials_map(
+    strategy_keys: List[str],
+    class_lookup: Optional[Dict[str, str]] = None,
+) -> Dict[str, int]:
+    """
+    Estimate n_trials (N) for DSR / MinBTL per strategy key.
+
+    Two-tier logic (fixes the old bug of lumping trend_following,
+    trend_signal_rp, trend_signal_mvo together just because they share a
+    "trend" prefix token — they are different strategy classes):
+
+    (a) If a strategy's key matches a ``PBO_PARAM_GRIDS`` family (by prefix)
+        AND its definition ``class`` equals that family's
+        ``strategy_class``, n_trials = the cartesian product size of that
+        family's grid — the TRUE number of configurations swept.
+    (b) Otherwise, group by the definition's ``class`` field and count real
+        siblings sharing that class.
+
+    Floors n_trials at 2 (DSR/MinBTL require N >= 2).
+
+    Parameters
+    ----------
+    class_lookup : dict, optional
+        strategy_key -> definition class name. If None (production
+        default), loaded via ``_load_class_lookup``. Tests pass a
+        synthetic dict directly to avoid touching the filesystem.
+    """
+    if class_lookup is None:
+        class_lookup = _load_class_lookup(strategy_keys)
 
     n_trials_map: Dict[str, int] = {}
+    remaining: List[str] = []
+
     for key in strategy_keys:
-        prefix = key.split("_")[0]
-        n_trials_map[key] = max(prefix_counts[prefix], 2)
+        family = None
+        for fam, cfg in PBO_PARAM_GRIDS.items():
+            if key != fam and not key.startswith(fam + "_"):
+                continue
+            if class_lookup.get(key) == cfg["strategy_class"].__name__:
+                family = fam
+                break
+        if family is not None:
+            grid = PBO_PARAM_GRIDS[family]["param_grid"]
+            n = 1
+            for values in grid.values():
+                n *= len(values)
+            n_trials_map[key] = max(n, 2)
+        else:
+            remaining.append(key)
+
+    class_counts = Counter(class_lookup.get(k, k) for k in remaining)
+    for key in remaining:
+        n_trials_map[key] = max(class_counts[class_lookup.get(key, key)], 2)
+
     return n_trials_map
 
 
@@ -145,8 +222,9 @@ def run_dsr_kfold_batch(
     strategy_keys: List[str],
     n_folds: int,
     n_trials_map: Dict[str, int],
+    embargo_periods: int = 0,
 ) -> List[dict]:
-    """Run DSR + k-fold for every strategy. Returns list of summary rows."""
+    """Run DSR + k-fold (+ MinBTL) for every strategy. Returns summary rows."""
     summary_rows = []
 
     for key in strategy_keys:
@@ -165,18 +243,30 @@ def run_dsr_kfold_batch(
             param_grid={},
             periods_per_year=12,
             n_folds=n_folds,
+            embargo_periods=embargo_periods,
         )
 
-        # Override n_trials to the family-based estimate for DSR
+        # Override n_trials to the honest family/class-based estimate for
+        # DSR and MinBTL (run_overfitting_analysis defaults to N=2 when no
+        # return_matrix is supplied, since it has no other way to know how
+        # many configurations were actually explored for this key).
         if analysis.dsr is not None:
-            from analytics.overfitting import calculate_deflated_sharpe_ratio
-
             analysis.dsr = calculate_deflated_sharpe_ratio(
                 returns=returns,
                 n_trials=n_trials,
                 periods_per_year=12,
             )
             analysis.n_param_combinations = n_trials
+        if analysis.minbtl is not None:
+            analysis.minbtl = calculate_minbtl(
+                observed_sharpe_annualized=(
+                    analysis.dsr.observed_sharpe
+                    if analysis.dsr
+                    else analysis.minbtl.observed_sharpe
+                ),
+                n_trials=n_trials,
+                actual_years=analysis.minbtl.actual_years,
+            )
 
         save_analysis(analysis, key)
 
@@ -213,8 +303,19 @@ def run_dsr_kfold_batch(
     return summary_rows
 
 
-def run_pbo_sweeps(n_folds: int) -> List[dict]:
-    """Run full PBO sweeps for base strategy families."""
+def run_pbo_sweeps(
+    n_folds: int,
+    embargo_periods: int = 0,
+    walk_forward: bool = False,
+) -> List[dict]:
+    """
+    Run full PBO sweeps for base strategy families.
+
+    If ``walk_forward`` is True, also runs ``WalkForwardAnalysis`` on the
+    same ``strategy_class``/``param_grid``/``underlying``/``prices`` already
+    loaded for the PBO sweep, and attaches the result as the ``walkforward``
+    section of that family's overfitting_analysis.json.
+    """
     cache = HistoricalDataCache(cache_dir="data/cache")
     data_dict = {}
     for symbol in SYMBOLS:
@@ -274,7 +375,30 @@ def run_pbo_sweeps(n_folds: int) -> List[dict]:
             param_grid=param_grid,
             periods_per_year=12,
             n_folds=n_folds,
+            embargo_periods=embargo_periods,
         )
+
+        wf_val = "N/A"
+        wf_v = "N/A"
+        if walk_forward:
+            print(f"    Walk-forward: {family} ...")
+            try:
+                wfa = WalkForwardAnalysis(
+                    strategy_class=strategy_class,
+                    param_grid=param_grid,
+                    metric="sharpe_ratio",
+                    initial_capital=10_000.0,
+                    transaction_cost_bps=7.5,
+                )
+                wf_results = wfa.run(underlying=underlying, prices=prices)
+                if wf_results.windows:
+                    analysis.walkforward = build_walk_forward_result(wf_results)
+                    wf_val = f"{analysis.walkforward.overfitting_ratio}"
+                    wf_v = analysis.walkforward.verdict
+                else:
+                    print(f"    WARNING: no walk-forward windows for {family}.")
+            except Exception as exc:
+                print(f"    WARNING: walk-forward failed for {family}: {exc}")
 
         save_analysis(analysis, f"{family}__pbo_sweep")
 
@@ -285,18 +409,20 @@ def run_pbo_sweeps(n_folds: int) -> List[dict]:
         kf_frac = f"{analysis.kfold.fraction_positive:.0%}" if analysis.kfold else "N/A"
         kf_v = analysis.kfold.verdict if analysis.kfold else "N/A"
 
-        pbo_rows.append(
-            {
-                "family": family,
-                "n_configs": return_matrix.shape[1],
-                "dsr": dsr_val,
-                "dsr_verdict": dsr_v,
-                "kfold_frac_pos": kf_frac,
-                "kfold_verdict": kf_v,
-                "pbo": pbo_val,
-                "pbo_verdict": pbo_v,
-            }
-        )
+        row = {
+            "family": family,
+            "n_configs": return_matrix.shape[1],
+            "dsr": dsr_val,
+            "dsr_verdict": dsr_v,
+            "kfold_frac_pos": kf_frac,
+            "kfold_verdict": kf_v,
+            "pbo": pbo_val,
+            "pbo_verdict": pbo_v,
+        }
+        if walk_forward:
+            row["wf_ratio"] = wf_val
+            row["wf_verdict"] = wf_v
+        pbo_rows.append(row)
 
     return pbo_rows
 
@@ -354,6 +480,34 @@ def main() -> None:
         default=10,
         help="Number of k-fold time splits (default: 10).",
     )
+    parser.add_argument(
+        "--embargo-days",
+        type=int,
+        default=0,
+        help=(
+            "Purge/embargo window for k-fold stability, in calendar days "
+            "(converted to periods via periods_per_year=12; default: 0 = "
+            "classic k-fold)."
+        ),
+    )
+    parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help=(
+            "Also run walk-forward analysis for PBO_PARAM_GRIDS families "
+            "(reuses the same price data/grid as the PBO sweep). Ignored "
+            "if --skip-pbo is set."
+        ),
+    )
+    parser.add_argument(
+        "--composed-pbo",
+        action="store_true",
+        help=(
+            "Also run group PBO for composed/overlay strategy families "
+            "(e.g. vol-target variants of the same base strategy) that "
+            "don't otherwise get a PBO from a ParameterSweep."
+        ),
+    )
     args = parser.parse_args()
 
     # Discover strategy keys
@@ -372,17 +526,25 @@ def main() -> None:
         print(f"No strategies found in {RESULTS_DIR}. Run a backtest first.")
         sys.exit(1)
 
+    # embargo-days -> periods, using the monthly (periods_per_year=12)
+    # rebalance cadence run_dsr_kfold_batch / run_pbo_sweeps operate on.
+    embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
+
     print(f"\nBATCH OVERFITTING ANALYSIS")
     print(f"Strategies : {len(strategy_keys)}")
-    print(f"K-Folds    : {args.n_folds}")
+    print(f"K-Folds    : {args.n_folds}  (embargo_periods={embargo_periods})")
     print(f"PBO Sweeps : {'disabled' if args.skip_pbo else 'enabled'}")
+    print(f"Walk-Fwd   : {'enabled' if args.walk_forward else 'disabled'}")
+    print(f"Composed PBO: {'enabled' if args.composed_pbo else 'disabled'}")
     print()
 
     n_trials_map = build_n_trials_map(strategy_keys)
 
     # --- DSR + k-fold for all strategies ---
     print(f"Running DSR + k-fold for {len(strategy_keys)} strategies ...")
-    summary_rows = run_dsr_kfold_batch(strategy_keys, args.n_folds, n_trials_map)
+    summary_rows = run_dsr_kfold_batch(
+        strategy_keys, args.n_folds, n_trials_map, embargo_periods=embargo_periods
+    )
 
     print_summary_table(summary_rows)
     print("Summary:")
@@ -393,10 +555,25 @@ def main() -> None:
     # --- PBO sweeps for base strategy families ---
     if not args.skip_pbo:
         print(f"\nRunning PBO sweeps for {len(PBO_PARAM_GRIDS)} strategy families ...")
-        pbo_rows = run_pbo_sweeps(args.n_folds)
+        pbo_rows = run_pbo_sweeps(
+            args.n_folds,
+            embargo_periods=embargo_periods,
+            walk_forward=args.walk_forward,
+        )
         if pbo_rows:
             print("\nPBO Sweep Results:")
             print_summary_table(pbo_rows)
+
+        if args.composed_pbo:
+            print("\nRunning group PBO for composed/overlay strategy families ...")
+            composed_rows = run_composed_pbo_groups(
+                strategy_keys, RESULTS_DIR.parent, args.n_folds, save_analysis
+            )
+            if composed_rows:
+                print("\nComposed PBO Group Results:")
+                print_summary_table(composed_rows)
+            else:
+                print("  No composed groups with >= 4 usable members found.")
 
     print(f"Results saved to: {RESULTS_DIR}/<strategy>/overfitting_analysis.json\n")
 

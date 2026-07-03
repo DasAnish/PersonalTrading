@@ -707,12 +707,16 @@
             const dsr = data.dsr;
             const pbo = data.pbo;
             const kfold = data.kfold;
+            const minbtl = data.minbtl;
+            const walkforward = data.walkforward;
 
             // Overall verdict
             let verdicts = [];
             if (dsr) verdicts.push(dsr.verdict);
             if (pbo) verdicts.push(pbo.verdict);
             if (kfold) verdicts.push(kfold.verdict);
+            if (minbtl) verdicts.push(minbtl.verdict);
+            if (walkforward) verdicts.push(walkforward.verdict);
             let overall = 'N/A';
             if (verdicts.length > 0) {
                 if (verdicts.every(v => v === 'PASS')) overall = 'PASS';
@@ -838,6 +842,11 @@
                             <span class="label">Pass threshold</span>
                             <span class="val">&ge; ${(kfold.threshold_pass * 100).toFixed(0)}% positive folds</span>
                         </div>
+                        ${kfold.embargo_periods > 0 ? `
+                        <div class="overfitting-row">
+                            <span class="label">Embargo Periods</span>
+                            <span class="val">${kfold.embargo_periods}</span>
+                        </div>` : ''}
                         <div class="chart-container" style="height:180px;margin-top:12px;">
                             <canvas id="kfoldSharpeChart"></canvas>
                         </div>
@@ -847,6 +856,76 @@
                     <div class="overfitting-card">
                         <h3>K-Fold Temporal Stability</h3>
                         <p style="color:#888;">K-fold stability not computed.</p>
+                    </div>`;
+            }
+
+            // MinBTL card
+            if (minbtl) {
+                const minYearsStr = Number.isFinite(minbtl.min_years) ? minbtl.min_years.toFixed(2) : '∞';
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Minimum Backtest Length (MinBTL)</h3>
+                        <div class="overfitting-row">
+                            <span class="label">Min Years Required</span>
+                            <span class="val">${minYearsStr} &nbsp; ${verdictBadge(minbtl.verdict)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Actual Years</span>
+                            <span class="val">${minbtl.actual_years.toFixed(2)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">N Trials</span>
+                            <span class="val">${minbtl.n_trials}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Observed SR (annualised)</span>
+                            <span class="val">${minbtl.observed_sharpe.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Pass threshold</span>
+                            <span class="val">actual &ge; min years</span>
+                        </div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Minimum Backtest Length (MinBTL)</h3>
+                        <p style="color:#888;">MinBTL not computed.</p>
+                    </div>`;
+            }
+
+            // Walk-forward card
+            if (walkforward) {
+                const ratioStr = walkforward.overfitting_ratio === null ? '∞' : walkforward.overfitting_ratio.toFixed(2) + 'x';
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Walk-Forward Analysis</h3>
+                        <div class="overfitting-row">
+                            <span class="label">Overfitting Ratio</span>
+                            <span class="val">${ratioStr} &nbsp; ${verdictBadge(walkforward.verdict)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Avg In-Sample</span>
+                            <span class="val">${walkforward.avg_in_sample.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Avg Out-of-Sample</span>
+                            <span class="val">${walkforward.avg_out_sample.toFixed(3)}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Windows</span>
+                            <span class="val">${walkforward.n_windows}</span>
+                        </div>
+                        <div class="overfitting-row">
+                            <span class="label">Pass threshold</span>
+                            <span class="val">&lt; ${walkforward.threshold_pass}x</span>
+                        </div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="overfitting-card">
+                        <h3>Walk-Forward Analysis</h3>
+                        <p style="color:#888;">Walk-forward not computed — run with <code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;">--walk-forward</code>.</p>
                     </div>`;
             }
 

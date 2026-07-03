@@ -1,8 +1,8 @@
 # Plan State
 
-**Current Phase**: 6
-**Current Phase File**: plan/phase-06-overfitting-foundations.md
-**Current TODO**: Split overfitting_results.py out; add MinBTL
+**Current Phase**: 7
+**Current Phase File**: plan/phase-07-scenario-removal.md
+**Current TODO**: Public run_leave_one_out() + Calmar deltas + rerun mode
 **Last Updated**: 2026-07-02
 
 ## Known residual (out of scope, note for later)
@@ -22,6 +22,11 @@
 - Phase 5: 7/7 TODOs complete ✅ (analytics/report.py md/html export + generate_report.py;
   --report flag on run_backtest; k-fold card in dashboard; analytics/rebalance.py +
   rebalance_report.py; rebalance SKILL now calls real code. 324 passed, +25 tests.)
+- Phase 6: 8/8 TODOs complete ✅ (overfitting.py 747→590, new overfitting_results.py +
+  family_matrix.py + composed_pbo.py; MinBTL, purged k-fold w/ embargo, fixed n_trials
+  by class, walk-forward integration, composed-strategy PBO; --walk-forward/--embargo-days/
+  --composed-pbo flags; MinBTL/WF dashboard cards. 362 passed, +38 tests. inf→null JSON
+  verified. Assumptions: simplified MinBTL (no skew/kurtosis), symmetric fold embargo.)
 - Phase 4: 0/6 TODOs complete
 - Phase 5: 0/7 TODOs complete
 - Phase 6: 0/8 TODOs complete

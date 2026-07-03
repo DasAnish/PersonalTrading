@@ -234,6 +234,8 @@ def print_analysis_report(analysis: OverfittingAnalysis) -> None:
         )
         print(f"Mean / Std:                {k.mean_sharpe:.4f} / {k.std_sharpe:.4f}")
         print(f"Worst Fold Sharpe:         {k.worst_fold_sharpe:.4f}")
+        if k.embargo_periods > 0:
+            print(f"Embargo Periods:           {k.embargo_periods}")
 
         verdict_icon = (
             "✓" if k.verdict == "PASS" else ("⚠" if k.verdict == "WARN" else "✗")
@@ -369,8 +371,19 @@ Examples:
         default="sharpe_ratio",
         help="Sweep optimisation metric (default: sharpe_ratio).",
     )
+    parser.add_argument(
+        "--embargo-days",
+        type=int,
+        default=0,
+        help=(
+            "Purge/embargo window for k-fold stability, in calendar days "
+            "(converted to periods via periods_per_year=12; default: 0 = "
+            "classic k-fold)."
+        ),
+    )
 
     args = parser.parse_args()
+    embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
 
     # Validate mode
     if args.param and args.n_trials:
@@ -470,6 +483,7 @@ Examples:
             dsr_threshold_warn=args.dsr_threshold_warn,
             pbo_threshold_pass=args.pbo_threshold_pass,
             pbo_threshold_warn=args.pbo_threshold_warn,
+            embargo_periods=embargo_periods,
         )
 
     else:
@@ -493,6 +507,7 @@ Examples:
             dsr_threshold_warn=args.dsr_threshold_warn,
             pbo_threshold_pass=args.pbo_threshold_pass,
             pbo_threshold_warn=args.pbo_threshold_warn,
+            embargo_periods=embargo_periods,
         )
 
         # Override n_trials to user-supplied value for DSR

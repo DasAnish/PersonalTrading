@@ -1,8 +1,7 @@
 # Plan State
 
-**Current Phase**: COMPLETE — all 10 phases landed
-**Last Updated**: 2026-07-03
-**Last Updated**: 2026-07-02
+**Current Phase**: 11 — Research Infrastructure (extension phases 11–14 added 2026-07-05)
+**Last Updated**: 2026-07-05
 
 ## Known residual (out of scope, note for later)
 - metrics.json unit inconsistency: results_io.serialize_backtest_results (--all path)
@@ -42,13 +41,10 @@
   VaR/CVaR/HHI/correlation from parquet cache, drift vs target weights via rebalance;
   IB-offline fallback banner; templates/live_risk.html; nav link; 5 tests. 394 passed.
   Verified zero order-placement paths.)
-- Phase 4: 0/6 TODOs complete
-- Phase 5: 0/7 TODOs complete
-- Phase 6: 0/8 TODOs complete
-- Phase 7: 0/5 TODOs complete
-- Phase 8: 0/5 TODOs complete
-- Phase 9: 0/7 TODOs complete
-- Phase 10: 0/6 TODOs complete
+- Phase 11: 0/4 TODOs
+- Phase 12: 0/4 TODOs
+- Phase 13: 0/3 TODOs
+- Phase 14: 0/5 TODOs
 
 ## Notes
 - Baseline (2026-07-02): 239 passed, 4 failed (IB-connection tests, expected offline),

@@ -27,12 +27,28 @@ Baseline (2026-07-02): 239 passed, 4 failed (IB-connection tests — no gateway 
 | 7 | [Scenario Removal Completion](phase-07-scenario-removal.md) | sonnet | ⬜ Not Started |
 | 8 | [CPCV](phase-08-cpcv.md) | sonnet | ⬜ Not Started |
 | 9 | [Block Bootstrap + SPA / Reality Check](phase-09-bootstrap-spa.md) | sonnet | ⬜ Not Started |
-| 10 | [Live Risk Dashboard](phase-10-live-risk-dashboard.md) | sonnet | ⬜ Not Started |
+| 10 | [Live Risk Dashboard](phase-10-live-risk-dashboard.md) | sonnet | ✅ Complete |
+
+Phases 1–10 landed 2026-07-02/03 (commits through b2c9096), pushed to `main`.
+
+## Extension: Research Ingestion + Validation Battery (added 2026-07-05)
+
+Opens the closed strategy-sourcing loop: external research inflow with pre-registered
+hypotheses, mechanism-diversity steering, and the Phase 6–9 statistical battery as the
+per-candidate gate in `/build-strategies`. Out-of-universe holdout testing deferred.
+
+| # | Phase | Model | Status |
+|---|-------|-------|--------|
+| 11 | [Research Infrastructure](phase-11-research-infrastructure.md) | sonnet | ⬜ Not Started |
+| 12 | [Mechanism Taxonomy + Coverage](phase-12-mechanism-taxonomy.md) | sonnet+haiku | ⬜ Not Started |
+| 13 | [Validation Battery](phase-13-validation-battery.md) | sonnet+haiku | ⬜ Not Started |
+| 14 | [Pipeline Wiring + Dashboard](phase-14-pipeline-wiring.md) | sonnet+haiku | ⬜ Not Started |
 
 ## Dependency order
 
 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10.
 Phase 3's runner gates 7/8/9; Phase 4's splitters gate 6/8; Phase 5's rebalance module is reused by 10.
+Extension: 11 and 12 are independent of each other; 13 depends on 6/8/9 (landed); 14 depends on 11+12+13.
 
 ## Cross-phase constraints
 

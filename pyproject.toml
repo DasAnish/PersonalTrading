@@ -53,7 +53,7 @@ Homepage = "https://github.com/DasAnish/PersonalTrading"
 Repository = "https://github.com/DasAnish/PersonalTrading"
 
 [tool.setuptools]
-packages = ["ib_wrapper", "strategies", "backtesting", "analytics", "data"]
+packages = ["ib_wrapper", "strategies", "backtesting", "analytics", "data", "optimization"]
 
 [tool.black]
 line-length = 88

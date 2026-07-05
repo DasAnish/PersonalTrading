@@ -37,7 +37,8 @@ from .core import (
     AllocationStrategy,
     OverlayStrategy,
     StrategyContext,
-    DataRequirements
+    DataRequirements,
+    prune_missing_assets
 )
 
 # Concrete allocation strategies
@@ -144,6 +145,7 @@ __all__ = [
     'OverlayStrategy',
     'StrategyContext',
     'DataRequirements',
+    'prune_missing_assets',
     # Allocation strategies
     'HRPStrategy',
     'EqualWeightStrategy',

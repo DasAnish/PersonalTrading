@@ -519,3 +519,58 @@ class OverlayStrategy(Strategy):
             Number of lookback days required
         """
         pass
+
+
+# ============================================================================
+# Missing-data pruning
+# ============================================================================
+
+
+def prune_missing_assets(
+    strategy: Strategy, available_symbols: set
+) -> Optional[Strategy]:
+    """Recursively drop asset leaves whose symbol has no price data.
+
+    Mutates and returns the strategy tree with unavailable ``AssetStrategy``
+    leaves removed from every ``underlying`` list, so allocation strategies
+    (equal weight, HRP, momentum, etc.) rebalance across only the assets that
+    actually have data instead of silently holding cash for the missing
+    weight share.
+
+    Args:
+        strategy: Root of a strategy tree (asset, allocation, or overlay).
+        available_symbols: Symbols with usable price data (e.g. prices.columns).
+
+    Returns:
+        The pruned strategy, or None if nothing usable remains (a standalone
+        asset with no data, or an allocation whose entire underlying list
+        was dropped).
+    """
+    if isinstance(strategy, AssetStrategy):
+        return strategy if strategy.symbol in available_symbols else None
+
+    if isinstance(strategy, AllocationStrategy):
+        pruned = [
+            prune_missing_assets(s, available_symbols) for s in strategy.underlying
+        ]
+        kept = [s for s in pruned if s is not None]
+        if len(kept) < len(strategy.underlying):
+            dropped_names = [
+                s.name for s, p in zip(strategy.underlying, pruned) if p is None
+            ]
+            logger.warning(
+                f"{strategy.name}: dropping {dropped_names} (no price data)"
+            )
+        if not kept:
+            return None
+        strategy.underlying = kept
+        return strategy
+
+    if isinstance(strategy, OverlayStrategy):
+        pruned = prune_missing_assets(strategy.underlying, available_symbols)
+        if pruned is None:
+            return None
+        strategy.underlying = pruned
+        return strategy
+
+    return strategy

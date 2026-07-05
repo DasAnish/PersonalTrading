@@ -31,7 +31,7 @@ from ib_wrapper.client import IBClient
 from ib_wrapper.config import Config
 
 # Strategy imports
-from strategies import create_strategy, STRATEGY_REGISTRY
+from strategies import create_strategy, STRATEGY_REGISTRY, prune_missing_assets
 from strategies.strategy_loader import StrategyLoader
 from strategies.catalog import extract_strategy_params, get_all_available_strategies
 
@@ -186,10 +186,18 @@ async def run_all_strategies(args, prices, backtest_start, backtest_end):
         rebalance_frequency=REBALANCE_FREQUENCY,
     )
 
+    available_symbols = set(prices.columns)
     all_results = {}
 
     for strategy_key, (strategy, strategy_info) in available_strategies.items():
         try:
+            strategy = prune_missing_assets(strategy, available_symbols)
+            if strategy is None:
+                logger.warning(
+                    f"Skipping {strategy_key}: no assets with price data remain"
+                )
+                continue
+
             logger.info(f"\nRunning {strategy_key}...")
 
             results = run_single_backtest(
@@ -506,6 +514,18 @@ async def main(args):
             transaction_cost_bps=TRANSACTION_COST_BPS,
             rebalance_frequency=REBALANCE_FREQUENCY,
         )
+
+        # Drop any assets that failed to fetch so strategies rebalance across
+        # only the assets with actual price data.
+        available_symbols = set(prices.columns)
+        primary_strategy = prune_missing_assets(primary_strategy, available_symbols)
+        benchmark_strategy = prune_missing_assets(benchmark_strategy, available_symbols)
+        if primary_strategy is None:
+            logger.error(f"{strategy_display}: no assets with price data remain. Exiting.")
+            return
+        if benchmark_strategy is None:
+            logger.error(f"{benchmark_display}: no assets with price data remain. Exiting.")
+            return
 
         # Run primary strategy backtest
         logger.info(f"\nRunning {strategy_display} backtest...")

@@ -3,7 +3,6 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(ls:*)",
       "Bash(timeout 5 python:*)",
@@ -21,6 +20,10 @@
       "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/hrp_single.json:*)",
       "Bash(/c/Users/dasan/OneDrive/Desktop/Projects/PersonalTrading/strategy_definitions/allocations/equal_weight.json:*)",
       "Bash(git push:*)"
-    ]
-  }
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "enabledMcpjsonServers": [
+    "ib-trading"
+  ]
 }

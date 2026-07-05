@@ -12,3 +12,5 @@ in `research/ideas/`.
 | [Dual Momentum (relative + absolute)](ideas/dual-momentum.md) | momentum-cs | built | Antonacci (2014), McGraw-Hill | 2026-07-05 |
 | [Gold as a Conditional Safe-Haven Hedge](ideas/gold-safe-haven-hedge.md) | hedging-overlay | new | Baur & Lucey (2010), The Financial Review | 2026-07-05 |
 | [Halloween Indicator ("Sell in May") seasonal rotation](ideas/halloween-seasonality.md) | seasonality | new | Bouman & Jacobsen (2002), American Economic Review | 2026-07-05 |
+| [Cross-Asset Carry (ex-ante yield ranking)](ideas/cross-asset-carry.md) | carry | new | Koijen, Moskowitz, Pedersen & Vrugt (2018), JFE 127(2) | 2026-07-05 |
+| [Low-Beta Defensive Tilt (long-only BAB)](ideas/low-beta-defensive-tilt.md) | vol-premium | new | Frazzini & Pedersen (2014), JFE 111(1) | 2026-07-05 |

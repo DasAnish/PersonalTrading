@@ -147,6 +147,34 @@ def test_blend_get_and_save(client, monkeypatch, tmp_path):
     assert g["target_weights"] == {"AAA": 1.0}
 
 
+def test_target_allocation(client, monkeypatch):
+    """Blend × budget → per-asset amount and shares at cached close prices."""
+    monkeypatch.setattr(risk, "load_blend", lambda: {"s1": 1.0})
+    monkeypatch.setattr(
+        risk, "blended_target_weights", lambda blend: {"AAA": 0.6, "BBB": 0.4}
+    )
+    monkeypatch.setattr(risk, "load_price_units", lambda: {})
+    monkeypatch.setattr(
+        risk, "close_price_base", lambda sym, units: {"AAA": 50.0, "BBB": 20.0}[sym]
+    )
+    d = client.get("/api/target-allocation?budget=10000").get_json()
+    assert d["budget"] == 10000
+    by = {r["symbol"]: r for r in d["target"]}
+    assert by["AAA"]["amount"] == 6000.0 and by["AAA"]["shares"] == 120.0  # 6000/50
+    assert by["BBB"]["amount"] == 4000.0 and by["BBB"]["shares"] == 200.0  # 4000/20
+
+
+def test_target_allocation_no_price(client, monkeypatch):
+    """A symbol with no cached/manual price yields shares=None, not a crash."""
+    monkeypatch.setattr(risk, "load_blend", lambda: {"s1": 1.0})
+    monkeypatch.setattr(risk, "blended_target_weights", lambda blend: {"LPLA": 1.0})
+    monkeypatch.setattr(risk, "load_price_units", lambda: {})
+    monkeypatch.setattr(risk, "close_price_base", lambda sym, units: None)
+    d = client.get("/api/target-allocation?budget=5000").get_json()
+    row = d["target"][0]
+    assert row["amount"] == 5000.0 and row["price"] is None and row["shares"] is None
+
+
 def test_blend_save_rejects_empty(client, monkeypatch, tmp_path):
     import analytics.blend as bm
 

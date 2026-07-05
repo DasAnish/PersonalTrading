@@ -112,6 +112,12 @@ def print_plan_table(plan) -> None:
 
 
 def main() -> None:
+    # The table header uses Δ; ensure UTF-8 output on Windows (cp1252 console).
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser(
         description="Compute a rebalance plan (current holdings vs target weights) "
         "and print it as a table. Report only — never places orders.",
@@ -177,6 +183,14 @@ Examples:
         "(prices backfilled from the close cache), instead of --positions/--prices.",
     )
     parser.add_argument(
+        "--budget",
+        type=float,
+        default=None,
+        help="Target-allocation mode: size the target from this much cash from "
+        "zero (no current holdings), pricing each asset from the close cache. "
+        "Pair with --blend for the blended target.",
+    )
+    parser.add_argument(
         "--json-out",
         action="store_true",
         help="Also print the plan as JSON (machine-readable) after the table.",
@@ -184,12 +198,7 @@ Examples:
 
     args = parser.parse_args()
 
-    if args.from_snapshot:
-        positions, prices = _load_snapshot()
-    else:
-        positions = _load_dict_arg(args.positions, args.positions_json, "positions")
-        prices = _load_dict_arg(args.prices, args.prices_json, "prices")
-
+    # Target weights first (needed to price a from-budget target book).
     if args.blend:
         weights = blended_target_weights(load_blend())
         if not weights:
@@ -200,11 +209,25 @@ Examples:
     else:
         weights = _load_dict_arg(args.weights, args.weights_json, "weights")
 
+    if args.budget is not None:
+        # Target-allocation mode: build from zero cash, price from the cache.
+        units = load_price_units()
+        positions = {}
+        prices = {sym: (close_price_base(sym, units) or 0.0) for sym in weights}
+        cash = args.budget
+    elif args.from_snapshot:
+        positions, prices = _load_snapshot()
+        cash = args.cash
+    else:
+        positions = _load_dict_arg(args.positions, args.positions_json, "positions")
+        prices = _load_dict_arg(args.prices, args.prices_json, "prices")
+        cash = args.cash
+
     plan = compute_rebalance_plan(
         positions=positions,
         prices=prices,
         target_weights=weights,
-        cash=args.cash,
+        cash=cash,
         hold_threshold=args.hold_threshold,
     )
 

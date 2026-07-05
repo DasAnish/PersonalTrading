@@ -37,16 +37,24 @@
         </div>
         <div id="blendTarget" class="muted" style="font-size:0.85rem; margin-bottom:8px;"></div>
 
-        <h2>Positions</h2>
+        <h2>Target Allocation
+            <span class="muted" style="font-size:0.85rem;">£</span>
+            <input id="budgetInput" type="number" step="500" min="0" value="10000" style="width:120px;padding:4px;font-size:0.9rem;">
+            <button onclick="loadTarget()">Size it</button>
+        </h2>
+        <div id="targetAlloc"></div>
+
+        <h2 style="margin-top:28px;">Current Holdings <span class="muted" style="font-size:0.85rem;">(what you hold now — risk &amp; drift)</span></h2>
+        <h3 style="margin:8px 0 0;font-size:1rem;">Positions</h3>
         <div id="positions"></div>
 
-        <h2>Correlation</h2>
+        <h3 style="margin:12px 0 0;font-size:1rem;">Correlation</h3>
         <div id="correlation" style="overflow-x:auto;"></div>
 
-        <h2>Drift vs Target
+        <h3 style="margin:12px 0 0;font-size:1rem;">Drift vs Target
             <input id="strategyInput" placeholder="override: strategy key" style="font-size:0.9rem;padding:4px;">
             <button onclick="loadRisk()">Load</button>
-        </h2>
+        </h3>
         <div id="drift"></div>
     </main>
 
@@ -153,6 +161,27 @@
             renderBlendTarget(data.target_weights);
         }
 
+        // ---- Target allocation (blend × budget → £ and shares) ----
+        async function loadTarget() {
+            const budget = parseFloat(document.getElementById('budgetInput').value) || 0;
+            const data = await fetchJSON('/api/target-allocation?budget=' + encodeURIComponent(budget));
+            const el = document.getElementById('targetAlloc');
+            if (!data) { el.innerHTML = ''; return; }
+            const rows = data.target || [];
+            if (!rows.length) { el.innerHTML = '<p class="muted">Set a preferred blend above, then size it.</p>'; return; }
+            const anyPrice = rows.some(r => r.price != null);
+            el.innerHTML = `
+                <table><thead><tr><th>Symbol</th><th>Weight</th><th>Amount (£)</th><th>Price (£)</th><th>Shares</th></tr></thead>
+                <tbody>${rows.map(r => `<tr>
+                    <td>${r.symbol}</td>
+                    <td>${pct(r.weight)}</td>
+                    <td>${r.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${r.price != null ? r.price.toFixed(2) : '<span class="muted">n/a</span>'}</td>
+                    <td>${r.shares != null ? r.shares.toFixed(2) : '<span class="muted">set price</span>'}</td>
+                </tr>`).join('')}</tbody></table>
+                <p class="muted" style="font-size:0.85rem;">Target book for £${budget.toLocaleString()} at cached close prices.${anyPrice ? '' : ' No prices — set them in config/price_units.json.'} Report only — enter orders manually.</p>`;
+        }
+
         async function saveBlend() {
             const blend = {};
             for (const r of blendRows) {
@@ -169,10 +198,11 @@
             if (!res.ok) { msg.textContent = data.error || 'Save failed.'; return; }
             msg.textContent = 'Saved.';
             renderBlendTarget(data.target_weights);
-            loadRisk();  // drift now reflects the saved blend
+            loadTarget();  // resize the target book to the new blend
+            loadRisk();    // drift now reflects the saved blend
         }
 
-        loadBlend();
+        loadBlend().then(loadTarget);
         loadRisk();
     </script>
 </body>

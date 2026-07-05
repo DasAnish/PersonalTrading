@@ -316,6 +316,34 @@ def api_get_blend():
     )
 
 
+@risk_bp.route("/api/target-allocation")
+def api_target_allocation():
+    """Target book for the saved blend at a given £ budget: per-asset weight,
+    amount, close price, and share count (a from-cash allocation, not drift)."""
+    try:
+        budget = float(request.args.get("budget", 0) or 0)
+    except (TypeError, ValueError):
+        budget = 0.0
+    blend = load_blend()
+    target = blended_target_weights(blend) if blend else {}
+    units = load_price_units()
+    rows = []
+    for sym, w in sorted(target.items(), key=lambda kv: -kv[1]):
+        price = close_price_base(sym, units)
+        amount = w * budget
+        shares = (amount / price) if price else None
+        rows.append(
+            {
+                "symbol": sym,
+                "weight": round(w, 4),
+                "amount": round(amount, 2),
+                "price": round(price, 2) if price else None,
+                "shares": round(shares, 2) if shares is not None else None,
+            }
+        )
+    return jsonify({"budget": budget, "blend": blend, "target": rows})
+
+
 @risk_bp.route("/api/preferred-blend", methods=["POST"])
 def api_save_blend():
     """Persist a blend {strategy_key: weight}; returns saved blend + target."""

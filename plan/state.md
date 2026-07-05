@@ -43,7 +43,7 @@
   Verified zero order-placement paths.)
 - Phase 11: 4/4 TODOs complete ✅ (research/ backlog + 3 seed ideas + /research-scan skill; commit bf86c25)
 - Phase 12: 4/4 TODOs complete ✅ (strategies/taxonomy.py + scripts/tag_mechanisms.py; 157 definitions tagged, idempotent; coverage: trend 32, div 31, meta 41, mom-cs 26, regime 15, mean-rev 6, vol-prem 6, carry/seasonality 0; 39 tests)
-- Phase 13: 0/3 TODOs
+- Phase 13: 3/3 TODOs complete ✅ (analytics/validation.py 276 + scripts/validate_strategy.py 180; reuses calculate_minbtl/DSR/CPCVEngine/BlockBootstrap.run_fast; 45 tests split across test_validation{,_units}.py; hrp_ward smoke: DSR FAIL 0.78 @ n_trials=4, CPCV+bootstrap PASS, overall FAIL)
 - Phase 14: 0/5 TODOs
 
 ## Notes

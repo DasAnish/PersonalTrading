@@ -25,9 +25,15 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, jsonify, render_template, request
 
+from analytics.blend import (
+    blended_target_weights,
+    latest_target_weights,
+    load_blend,
+    save_blend,
+)
 from analytics.metrics import calculate_cvar, calculate_var
-from backtesting.results_schema import STRATEGY_FILES, strategy_dir
-from data.cache import HistoricalDataCache
+from backtesting.results_schema import STRATEGY_FILES
+from data.cache import HistoricalDataCache, latest_cached_close
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +42,8 @@ risk_bp = Blueprint("risk", __name__, template_folder="templates")
 RESULTS_DIR = Path("results")
 CACHED_POSITIONS = RESULTS_DIR / "live_positions.json"
 DRIFT_THRESHOLD = 0.05  # ±5% flagged
+# Symbols held but excluded from all analysis (e.g. a freebie never traded).
+IGNORED_SYMBOLS = {"IBKR"}
 
 
 @risk_bp.route("/live-risk")
@@ -44,13 +52,40 @@ def live_risk_page():
     return render_template("live_risk.html")
 
 
+def _enrich_positions(positions: list) -> list:
+    """Drop ignored symbols and backfill missing prices from the close cache.
+
+    IB returns a zero/NaN market price when there is no live market-data
+    subscription; in that case we value the position at ``shares × latest
+    cached close`` so weights and risk metrics still compute.
+    """
+    enriched = []
+    for p in positions:
+        symbol = p.get("symbol")
+        if symbol in IGNORED_SYMBOLS:
+            continue
+        shares = float(p.get("shares", 0.0))
+        price = float(p.get("price", 0.0) or 0.0)
+        value = float(p.get("value", 0.0) or 0.0)
+        if price <= 0 or value <= 0:
+            close = latest_cached_close(symbol)
+            if close is not None:
+                price = close
+                value = close * shares
+        enriched.append(
+            {"symbol": symbol, "shares": shares, "price": price, "value": value}
+        )
+    return enriched
+
+
 def _load_positions():
     """
     Return (positions, ib_online, as_of).
 
     positions: list of {symbol, shares, price, value}. Tries IB first; on any
     failure falls back to a cached snapshot (results/live_positions.json) so the
-    page renders with a stale-data banner rather than an error.
+    page renders with a stale-data banner rather than an error. Ignored symbols
+    are dropped and missing prices backfilled from the close cache.
     """
     try:
         import asyncio
@@ -66,17 +101,19 @@ def _load_positions():
                 client.disconnect()  # synchronous — do not await
 
         raw = asyncio.run(asyncio.wait_for(_fetch(), timeout=10))
-        positions = [
-            {
-                "symbol": p.symbol,
-                "shares": float(p.position),
-                "price": float(p.market_price),
-                "value": float(p.market_value),
-            }
-            for p in raw
-            if p.position
-        ]
-        as_of = pd.Timestamp.utcnow().isoformat()
+        positions = _enrich_positions(
+            [
+                {
+                    "symbol": p.symbol,
+                    "shares": float(p.position),
+                    "price": float(p.market_price),
+                    "value": float(p.market_value),
+                }
+                for p in raw
+                if p.position
+            ]
+        )
+        as_of = pd.Timestamp.now("UTC").isoformat()
         return positions, True, as_of
     except Exception as exc:  # IB offline / not installed / no gateway
         logger.info("IB unavailable (%s); using cached positions if present.", exc)
@@ -85,7 +122,7 @@ def _load_positions():
         try:
             data = json.loads(CACHED_POSITIONS.read_text())
             return (
-                data.get("positions", []),
+                _enrich_positions(data.get("positions", [])),
                 False,
                 data.get("as_of", "unknown"),
             )
@@ -128,24 +165,10 @@ def _hhi(weights: np.ndarray) -> float:
 
 
 def _target_weights(strategy_key: Optional[str]) -> dict:
-    """Latest target weights from a strategy's saved weights_history.json."""
+    """Latest target weights from a single strategy's saved weights_history."""
     if not strategy_key:
         return {}
-    path = strategy_dir(RESULTS_DIR, strategy_key) / STRATEGY_FILES["weights_history"]
-    if not path.exists():
-        return {}
-    try:
-        rows = json.loads(path.read_text())
-        if not rows:
-            return {}
-        last = rows[-1]
-        return {
-            k: float(v)
-            for k, v in last.items()
-            if k not in ("date", "timestamp") and isinstance(v, (int, float))
-        }
-    except Exception:
-        return {}
+    return latest_target_weights(strategy_key, RESULTS_DIR)
 
 
 @risk_bp.route("/api/live-risk")
@@ -172,26 +195,41 @@ def api_live_risk():
     else:
         source = "none"
 
-    targets = _target_weights(strategy_key)
+    # Drift/hypothetical target: an explicit ?strategy=<key> overrides; else the
+    # user's saved preferred blend (a weighted sum of the strategies they like).
+    blend = load_blend()
+    if strategy_key:
+        targets = _target_weights(strategy_key)
+        target_source = f"strategy:{strategy_key}"
+        target_label = f"'{strategy_key}'"
+    elif blend:
+        targets = blended_target_weights(blend)
+        target_source = "blend"
+        target_label = "your preferred blend"
+    else:
+        targets = {}
+        target_source = None
+        target_label = None
+
     hypothetical = False
     if not weights and targets:
-        # B: no live/cached positions — drive the metrics off the strategy's
-        # target allocation as a hypothetical portfolio.
+        # B: no live/cached positions — drive the metrics off the target
+        # allocation (blend or single strategy) as a hypothetical portfolio.
         weights = dict(targets)
         source = "target_weights"
         hypothetical = True
 
     if source == "target_weights":
         banner = (
-            f"No live positions — showing hypothetical risk for "
-            f"'{strategy_key}' target weights (not your actual portfolio)."
+            f"No live positions — showing hypothetical risk for {target_label} "
+            f"target weights (not your actual portfolio)."
         )
     elif source == "cached_snapshot":
         banner = "IB Gateway offline — showing cached/last-known positions."
     elif source == "none":
         banner = (
             "No position data. Connect IB and run "
-            "`python scripts/snapshot_positions.py`, or enter a strategy key "
+            "`python scripts/snapshot_positions.py`, or set a preferred blend "
             "below to see its target-allocation risk profile."
         )
     else:
@@ -200,6 +238,7 @@ def api_live_risk():
     payload = {
         "ib_online": ib_online,
         "source": source,
+        "target_source": target_source,
         "hypothetical": hypothetical,
         "as_of": as_of,
         "banner": banner,
@@ -247,3 +286,42 @@ def api_live_risk():
             )
 
     return jsonify(payload)
+
+
+def _available_strategies() -> List[str]:
+    """Strategy keys with a saved weights_history.json (blend candidates)."""
+    root = RESULTS_DIR / "strategies"
+    if not root.exists():
+        return []
+    return sorted(
+        d.name
+        for d in root.iterdir()
+        if d.is_dir()
+        and (d / STRATEGY_FILES["weights_history"]).exists()
+        and not d.name.endswith("__pbo_sweep")
+    )
+
+
+@risk_bp.route("/api/preferred-blend", methods=["GET"])
+def api_get_blend():
+    """Return the saved blend, its resolved target weights, and picker options."""
+    blend = load_blend()
+    return jsonify(
+        {
+            "blend": blend,
+            "target_weights": blended_target_weights(blend) if blend else {},
+            "available_strategies": _available_strategies(),
+        }
+    )
+
+
+@risk_bp.route("/api/preferred-blend", methods=["POST"])
+def api_save_blend():
+    """Persist a blend {strategy_key: weight}; returns saved blend + target."""
+    body = request.get_json(silent=True) or {}
+    blend = body.get("blend", body)
+    try:
+        saved = save_blend({str(k): v for k, v in blend.items()})
+    except (ValueError, TypeError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"blend": saved, "target_weights": blended_target_weights(saved)})

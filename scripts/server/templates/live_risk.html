@@ -28,6 +28,15 @@
 
         <div class="risk-grid" id="cards"></div>
 
+        <h2>Preferred Blend <span class="muted" style="font-size:0.85rem;">(drift &amp; rebalance target — a weighted mix of strategies you like)</span></h2>
+        <div id="blendRows"></div>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+            <button onclick="addBlendRow()">+ Add strategy</button>
+            <button onclick="saveBlend()">Save blend</button>
+            <span id="blendMsg" class="muted"></span>
+        </div>
+        <div id="blendTarget" class="muted" style="font-size:0.85rem; margin-bottom:8px;"></div>
+
         <h2>Positions</h2>
         <div id="positions"></div>
 
@@ -35,7 +44,7 @@
         <div id="correlation" style="overflow-x:auto;"></div>
 
         <h2>Drift vs Target
-            <input id="strategyInput" placeholder="strategy key" style="font-size:0.9rem;padding:4px;">
+            <input id="strategyInput" placeholder="override: strategy key" style="font-size:0.9rem;padding:4px;">
             <button onclick="loadRisk()">Load</button>
         </h2>
         <div id="drift"></div>
@@ -87,16 +96,83 @@
                 : '<p class="muted">No correlation data.</p>';
 
             const drift = data.drift || [];
-            let driftMsg = 'Enter a strategy key to see drift vs its target weights.';
+            let driftMsg = 'Set a preferred blend above (or type a strategy key) to see drift.';
             if (data.source === 'target_weights') {
-                driftMsg = 'Drift needs live positions — you are viewing the target allocation itself (drift would be zero). Connect IB and snapshot positions to see drift.';
+                driftMsg = 'Drift needs live positions — showing the target allocation itself. Snapshot IB positions to see drift.';
+            } else if (data.target_source && data.target_source.startsWith('strategy:')) {
+                driftMsg = `No drift rows for ${data.target_source}.`;
             }
+            const driftHdr = data.target_source === 'blend' ? ' (vs preferred blend)'
+                : (data.target_source ? ` (vs ${data.target_source})` : '');
             document.getElementById('drift').innerHTML = drift.length ? `
+                <p class="muted" style="font-size:0.85rem;">Target${driftHdr}. Rows beyond ±5% are flagged.</p>
                 <table><thead><tr><th>Symbol</th><th>Current</th><th>Target</th><th>Drift</th></tr></thead>
                 <tbody>${drift.map(d => `<tr class="${d.flagged ? 'flagged' : ''}"><td>${d.symbol}</td><td>${pct(d.current_weight)}</td><td>${pct(d.target_weight)}</td><td>${pct(d.drift)}</td></tr>`).join('')}</tbody></table>`
                 : `<p class="muted">${driftMsg}</p>`;
         }
 
+        // ---- Preferred blend editor ----
+        let availableStrategies = [];
+        let blendRows = [];  // [{key, weight}]
+
+        function strategyOptions(sel) {
+            return ['<option value="">— pick strategy —</option>']
+                .concat(availableStrategies.map(s => `<option value="${s}" ${s === sel ? 'selected' : ''}>${s}</option>`))
+                .join('');
+        }
+
+        function renderBlendRows() {
+            const html = blendRows.map((r, i) => `
+                <div style="display:flex;gap:8px;align-items:center;margin:4px 0;">
+                    <select style="flex:1;padding:4px;" onchange="blendRows[${i}].key=this.value">${strategyOptions(r.key)}</select>
+                    <input type="number" step="0.05" min="0" value="${r.weight}" style="width:90px;padding:4px;" placeholder="weight" oninput="blendRows[${i}].weight=this.value">
+                    <button onclick="removeBlendRow(${i})">✕</button>
+                </div>`).join('');
+            document.getElementById('blendRows').innerHTML = html || '<p class="muted">No strategies yet — add one.</p>';
+        }
+
+        function addBlendRow() { blendRows.push({ key: '', weight: '' }); renderBlendRows(); }
+        function removeBlendRow(i) { blendRows.splice(i, 1); renderBlendRows(); }
+
+        function renderBlendTarget(tw) {
+            tw = tw || {};
+            const syms = Object.keys(tw).sort((a, b) => tw[b] - tw[a]);
+            document.getElementById('blendTarget').innerHTML = syms.length
+                ? 'Blended target → ' + syms.map(s => `${s} ${(tw[s] * 100).toFixed(1)}%`).join(' · ')
+                : '';
+        }
+
+        async function loadBlend() {
+            const data = await fetchJSON('/api/preferred-blend');
+            if (!data) return;
+            availableStrategies = data.available_strategies || [];
+            const blend = data.blend || {};
+            blendRows = Object.keys(blend).map(k => ({ key: k, weight: blend[k] }));
+            if (!blendRows.length) blendRows = [{ key: '', weight: '' }];
+            renderBlendRows();
+            renderBlendTarget(data.target_weights);
+        }
+
+        async function saveBlend() {
+            const blend = {};
+            for (const r of blendRows) {
+                const w = parseFloat(r.weight);
+                if (r.key && w > 0) blend[r.key] = w;
+            }
+            const msg = document.getElementById('blendMsg');
+            if (!Object.keys(blend).length) { msg.textContent = 'Add at least one strategy with weight > 0.'; return; }
+            const res = await fetch('/api/preferred-blend', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ blend })
+            });
+            const data = await res.json();
+            if (!res.ok) { msg.textContent = data.error || 'Save failed.'; return; }
+            msg.textContent = 'Saved.';
+            renderBlendTarget(data.target_weights);
+            loadRisk();  // drift now reflects the saved blend
+        }
+
+        loadBlend();
         loadRisk();
     </script>
 </body>

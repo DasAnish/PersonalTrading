@@ -266,3 +266,30 @@ class HistoricalDataCache:
                 logger.error(f"Failed to remove {cache_file.name}: {e}")
 
         logger.info(f"Removed {removed} cache files")
+
+
+def latest_cached_close(symbol: str, cache_dir: str = "data/cache"):
+    """Latest cached close price for a symbol, or None if unavailable.
+
+    Reads the most recently modified ``<symbol>_*.parquet`` file and returns
+    the last finite, positive close. Used to backfill position values when IB
+    returns a zero/NaN market price (e.g. no live market-data subscription).
+    """
+    directory = Path(cache_dir)
+    candidates = sorted(
+        directory.glob(f"{symbol}_*.parquet"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for path in candidates:
+        try:
+            df = pd.read_parquet(path)
+        except Exception:
+            continue
+        if df.empty:
+            continue
+        col = "close" if "close" in df.columns else df.columns[-1]
+        value = df[col].iloc[-1]
+        if pd.notna(value) and value > 0:
+            return float(value)
+    return None

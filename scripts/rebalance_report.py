@@ -34,7 +34,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from analytics.blend import blended_target_weights, load_blend
 from analytics.rebalance import DEFAULT_HOLD_THRESHOLD, compute_rebalance_plan
+from data.cache import latest_cached_close
+
+SNAPSHOT_PATH = Path("results") / "live_positions.json"
+IGNORED_SYMBOLS = {"IBKR"}
 
 
 def _load_dict_arg(file_path: str | None, inline_json: str | None, label: str) -> dict:
@@ -44,6 +49,31 @@ def _load_dict_arg(file_path: str | None, inline_json: str | None, label: str) -
         with open(file_path, "r") as f:
             return json.load(f)
     raise SystemExit(f"Must supply either --{label} <file> or --{label}-json <json>")
+
+
+def _load_snapshot() -> tuple[dict, dict]:
+    """Return (positions {symbol: shares}, prices {symbol: price}) from the
+    live-positions snapshot, backfilling missing prices from the close cache
+    and dropping ignored symbols."""
+    if not SNAPSHOT_PATH.exists():
+        raise SystemExit(
+            f"{SNAPSHOT_PATH} not found — run `python scripts/snapshot_positions.py` "
+            "while IB Gateway is connected first."
+        )
+    data = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    positions, prices = {}, {}
+    for p in data.get("positions", []):
+        symbol = p.get("symbol")
+        if symbol in IGNORED_SYMBOLS:
+            continue
+        shares = float(p.get("shares", 0.0))
+        price = float(p.get("price", 0.0) or 0.0)
+        if price <= 0:
+            close = latest_cached_close(symbol)
+            price = close if close is not None else 0.0
+        positions[symbol] = shares
+        prices[symbol] = price
+    return positions, prices
 
 
 def print_plan_table(plan) -> None:
@@ -134,6 +164,18 @@ Examples:
         help=f"Weight-delta threshold below which a symbol is HOLD (default: {DEFAULT_HOLD_THRESHOLD}).",
     )
     parser.add_argument(
+        "--blend",
+        action="store_true",
+        help="Use the saved preferred blend (config/preferred_blend.json) as the "
+        "target weights instead of --weights.",
+    )
+    parser.add_argument(
+        "--from-snapshot",
+        action="store_true",
+        help="Load current positions and prices from results/live_positions.json "
+        "(prices backfilled from the close cache), instead of --positions/--prices.",
+    )
+    parser.add_argument(
         "--json-out",
         action="store_true",
         help="Also print the plan as JSON (machine-readable) after the table.",
@@ -141,9 +183,21 @@ Examples:
 
     args = parser.parse_args()
 
-    positions = _load_dict_arg(args.positions, args.positions_json, "positions")
-    prices = _load_dict_arg(args.prices, args.prices_json, "prices")
-    weights = _load_dict_arg(args.weights, args.weights_json, "weights")
+    if args.from_snapshot:
+        positions, prices = _load_snapshot()
+    else:
+        positions = _load_dict_arg(args.positions, args.positions_json, "positions")
+        prices = _load_dict_arg(args.prices, args.prices_json, "prices")
+
+    if args.blend:
+        weights = blended_target_weights(load_blend())
+        if not weights:
+            raise SystemExit(
+                "No usable preferred blend — set one in config/preferred_blend.json "
+                "or on the live-risk page first."
+            )
+    else:
+        weights = _load_dict_arg(args.weights, args.weights_json, "weights")
 
     plan = compute_rebalance_plan(
         positions=positions,

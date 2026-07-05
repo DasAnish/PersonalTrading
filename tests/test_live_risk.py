@@ -92,12 +92,68 @@ def test_target_weights_fallback(client, monkeypatch):
 
 
 def test_source_none_when_no_data(client, monkeypatch):
-    """No positions and no strategy target -> source 'none', metrics null."""
+    """No positions, no blend, no strategy target -> source 'none', metrics null."""
     monkeypatch.setattr(risk, "_load_positions", lambda: ([], False, None))
     monkeypatch.setattr(risk, "_target_weights", lambda key: {})
+    monkeypatch.setattr(risk, "load_blend", lambda: {})
     d = client.get("/api/live-risk").get_json()
     assert d["source"] == "none" and d["hypothetical"] is False
     assert d["var_95"] is None and d["weights"] == {}
+
+
+def test_enrich_excludes_ignored_and_backfills(monkeypatch):
+    """IBKR is dropped; a zero-price position is valued from the close cache."""
+    monkeypatch.setattr(risk, "latest_cached_close", lambda sym: 50.0)
+    raw = [
+        {"symbol": "IBKR", "shares": 5, "price": 0.0, "value": 0.0},
+        {"symbol": "VUSA", "shares": 10, "price": 0.0, "value": 0.0},
+    ]
+    out = risk._enrich_positions(raw)
+    assert [p["symbol"] for p in out] == ["VUSA"]
+    assert out[0]["price"] == 50.0 and out[0]["value"] == 500.0
+
+
+def test_drift_defaults_to_blend(client, monkeypatch):
+    """With no strategy key, drift target is the saved blend."""
+    positions = [{"symbol": "AAA", "shares": 10, "price": 100.0, "value": 1000.0}]
+    monkeypatch.setattr(risk, "_load_positions", lambda: (positions, True, "t"))
+    monkeypatch.setattr(risk, "_price_returns", lambda syms: pd.DataFrame())
+    monkeypatch.setattr(risk, "load_blend", lambda: {"demo": 1.0})
+    monkeypatch.setattr(
+        risk, "blended_target_weights", lambda blend: {"AAA": 0.5, "BBB": 0.5}
+    )
+    d = client.get("/api/live-risk").get_json()
+    assert d["target_source"] == "blend"
+    by_sym = {row["symbol"]: row for row in d["drift"]}
+    assert by_sym["AAA"]["flagged"] is True  # 100% held vs 50% target
+
+
+def test_blend_get_and_save(client, monkeypatch, tmp_path):
+    """POST persists a blend; GET returns it with resolved target weights."""
+    import analytics.blend as bm
+
+    cfg = tmp_path / "preferred_blend.json"
+    monkeypatch.setattr(risk, "load_blend", lambda: bm.load_blend(cfg))
+    monkeypatch.setattr(risk, "save_blend", lambda b: bm.save_blend(b, path=cfg))
+    monkeypatch.setattr(risk, "blended_target_weights", lambda blend: {"AAA": 1.0})
+
+    r = client.post("/api/preferred-blend", json={"blend": {"s1": 0.4, "s2": 0.6}})
+    assert r.status_code == 200
+    assert r.get_json()["blend"] == {"s1": 0.4, "s2": 0.6}
+
+    g = client.get("/api/preferred-blend").get_json()
+    assert g["blend"] == {"s1": 0.4, "s2": 0.6}
+    assert g["target_weights"] == {"AAA": 1.0}
+
+
+def test_blend_save_rejects_empty(client, monkeypatch, tmp_path):
+    import analytics.blend as bm
+
+    cfg = tmp_path / "b.json"
+    monkeypatch.setattr(risk, "save_blend", lambda b: bm.save_blend(b, path=cfg))
+    r = client.post("/api/preferred-blend", json={"blend": {}})
+    assert r.status_code == 400
+    assert "error" in r.get_json()
 
 
 def test_snapshot_writer_no_order_paths():

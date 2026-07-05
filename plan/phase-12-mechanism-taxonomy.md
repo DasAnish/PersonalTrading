@@ -12,16 +12,16 @@ Fixed vocabulary: `trend`, `momentum-cs`, `mean-reversion`, `carry`, `vol-premiu
 `hedging-overlay` (vol-target/constraint/leverage), `seasonality`, `meta` (portfolios).
 
 ## TODOs
-- [ ] `strategies/taxonomy.py` (<200 lines) — `MECHANISMS` constant;
+- [x] `strategies/taxonomy.py` (<200 lines) — `MECHANISMS` constant;
       `infer_mechanism(definition: dict) -> str` mapping `class` → mechanism
       (composed = mechanism of underlying; overlay recorded separately);
       `mechanism_coverage(definitions_dir) -> dict[str, int]`
-- [ ] `scripts/tag_mechanisms.py` — walk `strategy_definitions/{allocations,composed,portfolios}/`,
+- [x] `scripts/tag_mechanisms.py` — walk `strategy_definitions/{allocations,composed,portfolios}/`,
       append `mech:<tag>` to each JSON's `tags` array (create if absent); idempotent;
       `--dry-run` prints diff counts; `--coverage` writes `results/mechanism_coverage.json`
-- [ ] `tests/test_taxonomy.py` — inference per known class, tagging idempotency on temp copy,
+- [x] `tests/test_taxonomy.py` — inference per known class, tagging idempotency on temp copy,
       coverage counting
-- [ ] Run live on all 175 definitions; verify loader unaffected
+- [x] Run live on all 175 definitions; verify loader unaffected
 
 ## Validation
 - `pytest tests/test_taxonomy.py` green; full suite no regressions; `black --check` clean

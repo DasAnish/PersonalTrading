@@ -13,6 +13,7 @@
     "ensemble",
     "vol-15",
     "conservative",
-    "risk-managed"
+    "risk-managed",
+    "mech:meta"
   ]
 }

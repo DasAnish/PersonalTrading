@@ -8,15 +8,15 @@ pre-registered hypotheses and a standalone `/research-scan` skill that web-searc
 literature and writes idea files. No Python code; markdown schema + skill authoring only.
 
 ## TODOs
-- [ ] `research/README.md` — document the idea-file schema (frontmatter: title, source,
+- [x] `research/README.md` — document the idea-file schema (frontmatter: title, source,
       mechanism, status new|candidate|built|validated|rejected, date_added; body sections:
       Hypothesis (pre-registered), Rule sketch, Universe fit)
-- [ ] `research/backlog.md` — index table: slug | mechanism | status | source | date added
-- [ ] 2–3 seed idea files in `research/ideas/`: one canonical citation for an
+- [x] `research/backlog.md` — index table: slug | mechanism | status | source | date added
+- [x] 2–3 seed idea files in `research/ideas/`: one canonical citation for an
       already-implemented strategy marked `built` (e.g. dual momentum, Antonacci 2014),
       one genuinely new idea marked `new` (implementable long-only on the 13 UK ETFs,
       monthly rebalance)
-- [ ] `.claude/skills/research-scan/SKILL.md` — WebSearch/WebFetch over arXiv q-fin, SSRN,
+- [x] `.claude/skills/research-scan/SKILL.md` — WebSearch/WebFetch over arXiv q-fin, SSRN,
       AQR/Robeco/Man/Alpha Architect, quant blogs; optional topic scope via args; dedupe
       against backlog.md AND strategy_definitions/; write idea file with hypothesis BEFORE
       any backtest; update backlog index; cap ~5 ideas/run; NEVER touch strategy_definitions/

@@ -12,6 +12,7 @@
     "ensemble",
     "trend-following",
     "skewness",
-    "mvo"
+    "mvo",
+    "mech:meta"
   ]
 }

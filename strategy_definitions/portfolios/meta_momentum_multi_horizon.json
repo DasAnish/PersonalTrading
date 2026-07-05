@@ -13,6 +13,7 @@
   "tags": [
     "ensemble",
     "momentum",
-    "multi-lookback"
+    "multi-lookback",
+    "mech:meta"
   ]
 }

@@ -13,6 +13,7 @@
     "ensemble",
     "defensive",
     "risk-managed",
-    "conservative"
+    "conservative",
+    "mech:meta"
   ]
 }

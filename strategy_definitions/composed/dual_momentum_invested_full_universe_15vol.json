@@ -38,6 +38,7 @@
     "trend-filter",
     "full-universe",
     "vol-15",
-    "fully-invested"
+    "fully-invested",
+    "mech:trend"
   ]
 }

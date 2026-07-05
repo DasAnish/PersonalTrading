@@ -13,6 +13,7 @@
     "ensemble",
     "trend-signal",
     "mvo",
-    "risk-parity"
+    "risk-parity",
+    "mech:meta"
   ]
 }

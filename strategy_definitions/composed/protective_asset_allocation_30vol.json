@@ -4,7 +4,7 @@
   "name": "Protective Asset Allocation + 30% Vol Target",
   "description": "Keller & Keuning PAA with 30% vol overlay: allocates to risky assets (VUSA, SSLN, SGLN, IWRD) proportionally to how many pass their 12-month SMA trend test, shifting remaining weight to VUTY bonds. Higher vol target suits aggressive profiles willing to accept larger drawdowns for greater upside.",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
@@ -26,6 +26,7 @@
     "core-4",
     "vol-30",
     "aggressive",
-    "trend-filter"
+    "trend-filter",
+    "mech:regime"
   ]
 }

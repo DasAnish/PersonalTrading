@@ -28,6 +28,7 @@
     "mvo",
     "core-4",
     "vol-15",
-    "conservative"
+    "conservative",
+    "mech:trend"
   ]
 }

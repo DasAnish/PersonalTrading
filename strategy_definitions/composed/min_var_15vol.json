@@ -22,6 +22,7 @@
     "min-variance",
     "core-4",
     "vol-15",
-    "risk-managed"
+    "risk-managed",
+    "mech:diversification"
   ]
 }

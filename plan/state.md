@@ -41,8 +41,8 @@
   VaR/CVaR/HHI/correlation from parquet cache, drift vs target weights via rebalance;
   IB-offline fallback banner; templates/live_risk.html; nav link; 5 tests. 394 passed.
   Verified zero order-placement paths.)
-- Phase 11: 0/4 TODOs
-- Phase 12: 0/4 TODOs
+- Phase 11: 4/4 TODOs complete ✅ (research/ backlog + 3 seed ideas + /research-scan skill; commit bf86c25)
+- Phase 12: 4/4 TODOs complete ✅ (strategies/taxonomy.py + scripts/tag_mechanisms.py; 157 definitions tagged, idempotent; coverage: trend 32, div 31, meta 41, mom-cs 26, regime 15, mean-rev 6, vol-prem 6, carry/seasonality 0; 39 tests)
 - Phase 13: 0/3 TODOs
 - Phase 14: 0/5 TODOs
 

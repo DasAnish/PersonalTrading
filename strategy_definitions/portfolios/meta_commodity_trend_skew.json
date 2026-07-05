@@ -12,6 +12,7 @@
     "ensemble",
     "commodity",
     "trend-following",
-    "skewness"
+    "skewness",
+    "mech:meta"
   ]
 }

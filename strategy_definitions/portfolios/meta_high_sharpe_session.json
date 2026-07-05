@@ -16,6 +16,7 @@
     "momentum",
     "aaa",
     "mean-reversion",
-    "trend-following"
+    "trend-following",
+    "mech:meta"
   ]
 }

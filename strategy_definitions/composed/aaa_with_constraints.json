@@ -11,8 +11,8 @@
     "type": "composed",
     "class": "ConstraintStrategy",
     "parameters": {
-      "min_weight": 0.10,
-      "max_weight": 0.30
+      "min_weight": 0.1,
+      "max_weight": 0.3
     },
     "underlying": {
       "type": "allocation",
@@ -37,6 +37,7 @@
     "min-variance",
     "core-4",
     "constrained",
-    "vol-15"
+    "vol-15",
+    "mech:regime"
   ]
 }

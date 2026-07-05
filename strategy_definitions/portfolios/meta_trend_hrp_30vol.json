@@ -12,6 +12,7 @@
     "ensemble",
     "trend-following",
     "hrp",
-    "vol-30"
+    "vol-30",
+    "mech:meta"
   ]
 }

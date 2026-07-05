@@ -21,6 +21,7 @@
     "equal-weight",
     "core-4",
     "vol-15",
-    "benchmark"
+    "benchmark",
+    "mech:diversification"
   ]
 }

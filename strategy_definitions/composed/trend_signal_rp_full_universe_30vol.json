@@ -4,7 +4,7 @@
   "name": "Trend-Signal Risk Parity Full Universe + 30% Vol Target",
   "description": "EWMA trend signals used as proportional risk budgets in a risk parity framework across all 13 assets scaled to 30% annualised volatility target. Combines momentum-aware risk budgeting with full-universe diversification at a higher risk budget.",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
@@ -37,6 +37,7 @@
     "risk-parity",
     "full-universe",
     "vol-30",
-    "risk-managed"
+    "risk-managed",
+    "mech:trend"
   ]
 }

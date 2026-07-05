@@ -37,6 +37,7 @@
     "momentum",
     "trend-filter",
     "full-universe",
-    "vol-30"
+    "vol-30",
+    "mech:trend"
   ]
 }

@@ -1,7 +1,7 @@
 {
   "type": "allocation",
   "class": "TrendSignalMVOStrategy",
-  "name": "Trend-Signal MVO (Conservative, \u00ce\u00bb=3)",
+  "name": "Trend-Signal MVO (Conservative, Î»=3)",
   "description": "Trend-Signal MVO across all 13 assets with risk aversion lambda=3. Higher lambda penalises variance more heavily, producing a more diversified and lower-drawdown portfolio than the default lambda=1.",
   "parameters": {
     "lookback_days": 252,
@@ -23,5 +23,8 @@
     "assets/crud",
     "assets/wcoa",
     "assets/vuty"
+  ],
+  "tags": [
+    "mech:trend"
   ]
 }

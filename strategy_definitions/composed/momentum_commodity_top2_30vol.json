@@ -27,6 +27,7 @@
     "momentum",
     "commodity",
     "vol-30",
-    "concentrated"
+    "concentrated",
+    "mech:momentum-cs"
   ]
 }

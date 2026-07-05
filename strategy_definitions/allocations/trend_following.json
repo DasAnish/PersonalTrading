@@ -24,5 +24,8 @@
     "assets/crud",
     "assets/wcoa",
     "assets/vuty"
+  ],
+  "tags": [
+    "mech:trend"
   ]
 }

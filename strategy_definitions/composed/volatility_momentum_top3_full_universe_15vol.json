@@ -30,5 +30,8 @@
       "assets/wcoa",
       "assets/vuty"
     ]
-  }
+  },
+  "tags": [
+    "mech:momentum-cs"
+  ]
 }

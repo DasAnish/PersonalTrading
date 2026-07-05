@@ -22,6 +22,7 @@
     "risk-parity",
     "core-4",
     "vol-30",
-    "risk-managed"
+    "risk-managed",
+    "mech:diversification"
   ]
 }

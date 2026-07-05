@@ -25,6 +25,7 @@
     "mean-reversion",
     "contrarian",
     "core-4",
-    "vol-30"
+    "vol-30",
+    "mech:mean-reversion"
   ]
 }

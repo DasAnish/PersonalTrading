@@ -4,7 +4,7 @@
   "name": "Skewness-Weighted Full Universe + 30% Vol Target",
   "description": "Skewness-weighted allocation across all 13 assets (penalising left-skewed/crash-risk assets) scaled to 30% annualised volatility target. Combines tail-risk awareness with full-universe diversification across equities, AI, commodities, precious metals, and bonds at a higher risk budget.",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
@@ -35,6 +35,7 @@
     "skewness",
     "full-universe",
     "vol-30",
-    "risk-managed"
+    "risk-managed",
+    "mech:vol-premium"
   ]
 }

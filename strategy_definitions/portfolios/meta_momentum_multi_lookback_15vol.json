@@ -14,6 +14,7 @@
     "ensemble",
     "momentum",
     "multi-lookback",
-    "vol-15"
+    "vol-15",
+    "mech:meta"
   ]
 }

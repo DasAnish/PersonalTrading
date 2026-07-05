@@ -12,5 +12,8 @@
     "assets/aigc",
     "assets/iind",
     "assets/imeu"
+  ],
+  "tags": [
+    "mech:diversification"
   ]
 }

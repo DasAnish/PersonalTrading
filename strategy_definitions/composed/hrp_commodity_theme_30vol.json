@@ -27,6 +27,7 @@
     "commodity",
     "vol-30",
     "risk-managed",
-    "inflation-hedge"
+    "inflation-hedge",
+    "mech:diversification"
   ]
 }

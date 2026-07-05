@@ -29,6 +29,7 @@
     "trend-filter",
     "core-4",
     "vol-15",
-    "fully-invested"
+    "fully-invested",
+    "mech:trend"
   ]
 }

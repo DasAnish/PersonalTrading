@@ -16,6 +16,7 @@
     "trend-signal",
     "mvo",
     "risk-parity",
-    "vol-15"
+    "vol-15",
+    "mech:meta"
   ]
 }

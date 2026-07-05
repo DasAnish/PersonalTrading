@@ -35,6 +35,7 @@
     "skewness",
     "full-universe",
     "vol-15",
-    "risk-managed"
+    "risk-managed",
+    "mech:vol-premium"
   ]
 }

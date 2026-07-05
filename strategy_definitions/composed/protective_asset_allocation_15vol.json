@@ -26,6 +26,7 @@
     "core-4",
     "vol-15",
     "defensive",
-    "trend-filter"
+    "trend-filter",
+    "mech:regime"
   ]
 }

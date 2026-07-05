@@ -35,6 +35,7 @@
     "ensemble",
     "hrp",
     "trend-following",
-    "diversified"
+    "diversified",
+    "mech:meta"
   ]
 }

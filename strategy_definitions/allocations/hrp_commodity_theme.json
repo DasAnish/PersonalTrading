@@ -13,5 +13,8 @@
     "assets/brnt",
     "assets/crud",
     "assets/wcoa"
+  ],
+  "tags": [
+    "mech:diversification"
   ]
 }

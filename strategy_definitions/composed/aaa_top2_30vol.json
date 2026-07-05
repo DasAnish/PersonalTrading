@@ -29,6 +29,7 @@
     "min-variance",
     "core-4",
     "vol-30",
-    "concentrated"
+    "concentrated",
+    "mech:regime"
   ]
 }

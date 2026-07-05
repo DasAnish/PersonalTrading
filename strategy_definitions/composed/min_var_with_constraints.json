@@ -21,6 +21,7 @@
   "tags": [
     "min-variance",
     "core-4",
-    "constrained"
+    "constrained",
+    "mech:diversification"
   ]
 }

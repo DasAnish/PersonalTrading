@@ -15,6 +15,14 @@
       "lookback_days": 252,
       "vol_lookback_days": 63
     },
-    "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-  }
+    "underlying": [
+      "assets/vusa",
+      "assets/ssln",
+      "assets/sgln",
+      "assets/iwrd"
+    ]
+  },
+  "tags": [
+    "mech:momentum-cs"
+  ]
 }

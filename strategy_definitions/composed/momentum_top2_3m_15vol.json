@@ -25,6 +25,7 @@
     "momentum",
     "core-4",
     "vol-15",
-    "short-lookback"
+    "short-lookback",
+    "mech:momentum-cs"
   ]
 }

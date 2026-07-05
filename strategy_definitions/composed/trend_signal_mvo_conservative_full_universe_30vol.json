@@ -4,7 +4,7 @@
   "name": "Trend-Signal MVO Conservative Full Universe + 30% Vol Target",
   "description": "Conservative Trend-Signal MVO (risk aversion lambda=3) across all 13 assets scaled to 30% annualised volatility. Higher lambda produces a more diversified, lower-drawdown portfolio; full-universe exposure spans equities, AI, commodities, precious metals, and bonds at a higher risk budget.",
   "parameters": {
-    "target_vol": 0.30,
+    "target_vol": 0.3,
     "lookback_days": 252
   },
   "underlying": {
@@ -38,6 +38,7 @@
     "full-universe",
     "vol-30",
     "conservative",
-    "risk-managed"
+    "risk-managed",
+    "mech:trend"
   ]
 }

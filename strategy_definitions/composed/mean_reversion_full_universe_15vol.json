@@ -34,6 +34,7 @@
     "mean-reversion",
     "contrarian",
     "full-universe",
-    "vol-15"
+    "vol-15",
+    "mech:mean-reversion"
   ]
 }

@@ -37,6 +37,7 @@
     "trend-following",
     "full-universe",
     "vol-15",
-    "short-lookback"
+    "short-lookback",
+    "mech:trend"
   ]
 }

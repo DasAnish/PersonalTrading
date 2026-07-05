@@ -36,6 +36,7 @@
     "trend-following",
     "core-4",
     "constrained",
-    "conservative"
+    "conservative",
+    "mech:trend"
   ]
 }

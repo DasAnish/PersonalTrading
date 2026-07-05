@@ -28,6 +28,7 @@
     "momentum",
     "trend-filter",
     "core-4",
-    "vol-30"
+    "vol-30",
+    "mech:trend"
   ]
 }

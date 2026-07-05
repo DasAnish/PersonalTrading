@@ -13,6 +13,7 @@
   "tags": [
     "ensemble",
     "all-weather",
-    "risk-managed"
+    "risk-managed",
+    "mech:meta"
   ]
 }

@@ -37,6 +37,7 @@
     "momentum",
     "min-variance",
     "full-universe",
-    "vol-30"
+    "vol-30",
+    "mech:regime"
   ]
 }

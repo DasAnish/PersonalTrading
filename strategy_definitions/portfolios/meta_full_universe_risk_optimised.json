@@ -16,6 +16,7 @@
     "risk-parity",
     "hrp",
     "vol-15",
-    "risk-managed"
+    "risk-managed",
+    "mech:meta"
   ]
 }

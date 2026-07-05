@@ -14,6 +14,7 @@
     "ensemble",
     "all-weather",
     "contrarian",
-    "risk-managed"
+    "risk-managed",
+    "mech:meta"
   ]
 }

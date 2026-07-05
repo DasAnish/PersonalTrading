@@ -2,7 +2,7 @@
   "type": "allocation",
   "class": "SkewnessWeightedStrategy",
   "name": "Skewness-Weighted",
-  "description": "Equal-weight allocation tilted away from assets with negative return skewness across all 13 assets. Skewness is a proxy for tail/crash risk \u2014 assets with more left-skewed returns receive lower weights. 50% blend between equal weight and pure skewness score.",
+  "description": "Equal-weight allocation tilted away from assets with negative return skewness across all 13 assets. Skewness is a proxy for tail/crash risk — assets with more left-skewed returns receive lower weights. 50% blend between equal weight and pure skewness score.",
   "parameters": {
     "lookback_days": 252,
     "skew_tilt": 0.5,
@@ -22,5 +22,8 @@
     "assets/crud",
     "assets/wcoa",
     "assets/vuty"
+  ],
+  "tags": [
+    "mech:vol-premium"
   ]
 }

@@ -21,6 +21,7 @@
   "tags": [
     "risk-parity",
     "core-4",
-    "constrained"
+    "constrained",
+    "mech:diversification"
   ]
 }

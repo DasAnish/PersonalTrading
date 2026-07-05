@@ -55,3 +55,28 @@ def test_blended_skips_missing_strategy(tmp_path):
 
 def test_blended_empty_blend(tmp_path):
     assert blend_mod.blended_target_weights({}, results_dir=tmp_path) == {}
+
+
+def test_close_price_base_scaling(tmp_path):
+    """close_price_base applies pence->pounds scale and manual overrides."""
+    import pandas as pd
+
+    from data import cache as cache_mod
+
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    # A pence-quoted ETF at 5000 (=£50) and a GBP-quoted one at 100.
+    for sym, close in (("EQQQ", 5000.0), ("VUSA", 100.0)):
+        pd.DataFrame({"close": [close]}).to_parquet(
+            cache_dir / f"{sym}_20200101_20260101.parquet"
+        )
+    units = {
+        "scale_to_base": {"EQQQ": 0.01, "LPLA": 0.8},
+        "manual_close": {"LPLA": 250.0},
+    }
+    assert cache_mod.close_price_base("EQQQ", units, cache_dir=str(cache_dir)) == 50.0
+    assert cache_mod.close_price_base("VUSA", units, cache_dir=str(cache_dir)) == 100.0
+    # LPLA has no cache file -> manual_close 250 USD * 0.8 FX = 200 GBP.
+    assert cache_mod.close_price_base("LPLA", units, cache_dir=str(cache_dir)) == 200.0
+    # Unknown symbol, no data -> None.
+    assert cache_mod.close_price_base("ZZZ", units, cache_dir=str(cache_dir)) is None

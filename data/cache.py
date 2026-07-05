@@ -6,6 +6,7 @@ the same historical data from Interactive Brokers, which helps avoid
 rate limit issues during development and testing.
 """
 
+import json
 import os
 import re
 import pandas as pd
@@ -14,6 +15,8 @@ from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
+
+PRICE_UNITS_PATH = Path("config") / "price_units.json"
 
 _CACHE_FILENAME_RE = re.compile(
     r"^(?P<symbol>.+)_(?P<start>\d{8})_(?P<end>\d{8})\.parquet$"
@@ -293,3 +296,34 @@ def latest_cached_close(symbol: str, cache_dir: str = "data/cache"):
         if pd.notna(value) and value > 0:
             return float(value)
     return None
+
+
+def load_price_units(path: Path = PRICE_UNITS_PATH) -> dict:
+    """Load the per-symbol price-unit / FX config (empty if absent/invalid)."""
+    if not Path(path).exists():
+        return {"scale_to_base": {}, "manual_close": {}}
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Could not read price units %s: %s", path, exc)
+        return {"scale_to_base": {}, "manual_close": {}}
+    data.setdefault("scale_to_base", {})
+    data.setdefault("manual_close", {})
+    return data
+
+
+def close_price_base(symbol: str, units: dict = None, cache_dir: str = "data/cache"):
+    """Per-share close in the base currency, or None if unavailable.
+
+    Uses ``manual_close[symbol]`` if set, else the latest cached close, then
+    multiplies by ``scale_to_base[symbol]`` (default 1.0) to convert the raw
+    quote unit (e.g. LSE pence, or a non-GBP currency) into the base currency.
+    """
+    if units is None:
+        units = load_price_units()
+    scale = float(units.get("scale_to_base", {}).get(symbol, 1.0))
+    manual = units.get("manual_close", {}).get(symbol)
+    if manual is not None:
+        return float(manual) * scale
+    raw = latest_cached_close(symbol, cache_dir=cache_dir)
+    return None if raw is None else raw * scale

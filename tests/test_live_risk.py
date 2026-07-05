@@ -103,7 +103,8 @@ def test_source_none_when_no_data(client, monkeypatch):
 
 def test_enrich_excludes_ignored_and_backfills(monkeypatch):
     """IBKR is dropped; a zero-price position is valued from the close cache."""
-    monkeypatch.setattr(risk, "latest_cached_close", lambda sym: 50.0)
+    monkeypatch.setattr(risk, "load_price_units", lambda: {})
+    monkeypatch.setattr(risk, "close_price_base", lambda sym, units: 50.0)
     raw = [
         {"symbol": "IBKR", "shares": 5, "price": 0.0, "value": 0.0},
         {"symbol": "VUSA", "shares": 10, "price": 0.0, "value": 0.0},

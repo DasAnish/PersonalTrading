@@ -33,7 +33,7 @@ from analytics.blend import (
 )
 from analytics.metrics import calculate_cvar, calculate_var
 from backtesting.results_schema import STRATEGY_FILES
-from data.cache import HistoricalDataCache, latest_cached_close
+from data.cache import HistoricalDataCache, close_price_base, load_price_units
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ def _enrich_positions(positions: list) -> list:
     subscription; in that case we value the position at ``shares × latest
     cached close`` so weights and risk metrics still compute.
     """
+    units = load_price_units()
     enriched = []
     for p in positions:
         symbol = p.get("symbol")
@@ -68,7 +69,7 @@ def _enrich_positions(positions: list) -> list:
         price = float(p.get("price", 0.0) or 0.0)
         value = float(p.get("value", 0.0) or 0.0)
         if price <= 0 or value <= 0:
-            close = latest_cached_close(symbol)
+            close = close_price_base(symbol, units)
             if close is not None:
                 price = close
                 value = close * shares

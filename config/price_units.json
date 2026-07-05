@@ -1,0 +1,16 @@
+{
+  "base_currency": "GBP",
+  "_note": "Per-share close is valued as (cached close OR manual_close) x scale_to_base, giving a price in base_currency. LSE ETFs quoted in pence use 0.01; GBP-quoted use 1.0 (the default for any symbol not listed). Non-GBP holdings need an FX factor (e.g. USD->GBP). Verify these against real quotes and update the FX factor / LPLA price periodically — this is a close-price valuation, not live.",
+  "scale_to_base": {
+    "COMM": 0.01,
+    "EQQQ": 0.01,
+    "IMEU": 0.01,
+    "IWRD": 0.01,
+    "SGLN": 0.01,
+    "SSLN": 0.01,
+    "LPLA": 0.79
+  },
+  "manual_close": {
+    "LPLA": null
+  }
+}

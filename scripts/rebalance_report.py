@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from analytics.blend import blended_target_weights, load_blend
 from analytics.rebalance import DEFAULT_HOLD_THRESHOLD, compute_rebalance_plan
-from data.cache import latest_cached_close
+from data.cache import close_price_base, load_price_units
 
 SNAPSHOT_PATH = Path("results") / "live_positions.json"
 IGNORED_SYMBOLS = {"IBKR"}
@@ -61,6 +61,7 @@ def _load_snapshot() -> tuple[dict, dict]:
             "while IB Gateway is connected first."
         )
     data = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    units = load_price_units()
     positions, prices = {}, {}
     for p in data.get("positions", []):
         symbol = p.get("symbol")
@@ -69,7 +70,7 @@ def _load_snapshot() -> tuple[dict, dict]:
         shares = float(p.get("shares", 0.0))
         price = float(p.get("price", 0.0) or 0.0)
         if price <= 0:
-            close = latest_cached_close(symbol)
+            close = close_price_base(symbol, units)
             price = close if close is not None else 0.0
         positions[symbol] = shares
         prices[symbol] = price

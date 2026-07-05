@@ -77,7 +77,7 @@ def main() -> None:
     import pandas as pd
 
     snapshot = {
-        "as_of": pd.Timestamp.utcnow().isoformat(),
+        "as_of": pd.Timestamp.now("UTC").isoformat(),
         "positions": positions,
     }
     out_path = Path(args.out)

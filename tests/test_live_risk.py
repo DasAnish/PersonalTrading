@@ -70,6 +70,43 @@ def test_drift_flagging(client, monkeypatch):
     assert by_sym["BBB"]["flagged"] is True  # 0 held vs 50% target
 
 
+def test_target_weights_fallback(client, monkeypatch):
+    """No positions + a strategy key -> hypothetical risk from target weights."""
+    monkeypatch.setattr(risk, "_load_positions", lambda: ([], False, None))
+    monkeypatch.setattr(risk, "_target_weights", lambda key: {"AAA": 0.6, "BBB": 0.4})
+    idx = pd.date_range("2024-01-01", periods=300, freq="B")
+    rng = __import__("numpy").random.default_rng(1)
+    rets = pd.DataFrame(
+        {"AAA": rng.normal(0.001, 0.02, 300), "BBB": rng.normal(0.001, 0.02, 300)},
+        index=idx,
+    )
+    monkeypatch.setattr(risk, "_price_returns", lambda syms: rets[syms])
+
+    d = client.get("/api/live-risk?strategy=demo").get_json()
+    assert d["source"] == "target_weights" and d["hypothetical"] is True
+    assert d["weights"] == {"AAA": 0.6, "BBB": 0.4}
+    assert d["var_95"] is not None and d["cvar_95"] is not None
+    assert abs(d["hhi"] - (0.6**2 + 0.4**2)) < 1e-6
+    # Drift is suppressed in hypothetical mode (current == target).
+    assert d["drift"] == []
+
+
+def test_source_none_when_no_data(client, monkeypatch):
+    """No positions and no strategy target -> source 'none', metrics null."""
+    monkeypatch.setattr(risk, "_load_positions", lambda: ([], False, None))
+    monkeypatch.setattr(risk, "_target_weights", lambda key: {})
+    d = client.get("/api/live-risk").get_json()
+    assert d["source"] == "none" and d["hypothetical"] is False
+    assert d["var_95"] is None and d["weights"] == {}
+
+
+def test_snapshot_writer_no_order_paths():
+    """The IB snapshot writer must not contain any order-placement calls."""
+    src = Path("scripts/snapshot_positions.py").read_text().lower()
+    for forbidden in ("placeorder", "bracketorder", "submitorder", "cancelorder"):
+        assert forbidden not in src
+
+
 def test_no_order_paths_in_source():
     src = Path("scripts/server/risk.py").read_text().lower()
     for forbidden in ("placeorder", "bracketorder", "submitorder", "cancelorder"):

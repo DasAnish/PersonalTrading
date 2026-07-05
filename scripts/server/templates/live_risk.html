@@ -64,10 +64,20 @@
                 <div class="risk-card"><h3>Portfolio Value</h3><div class="big">${data.total_value ? '£' + data.total_value.toLocaleString() : 'n/a'}</div></div>`;
 
             const pos = data.positions || [];
-            document.getElementById('positions').innerHTML = pos.length ? `
-                <table><thead><tr><th>Symbol</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th></tr></thead>
-                <tbody>${pos.map(p => `<tr><td>${p.symbol}</td><td>${p.shares}</td><td>${p.price}</td><td>${p.value.toLocaleString()}</td><td>${pct((data.weights||{})[p.symbol])}</td></tr>`).join('')}</tbody></table>`
-                : '<p class="muted">No positions.</p>';
+            const weights = data.weights || {};
+            if (pos.length) {
+                document.getElementById('positions').innerHTML = `
+                    <table><thead><tr><th>Symbol</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th></tr></thead>
+                    <tbody>${pos.map(p => `<tr><td>${p.symbol}</td><td>${p.shares}</td><td>${p.price}</td><td>${p.value.toLocaleString()}</td><td>${pct(weights[p.symbol])}</td></tr>`).join('')}</tbody></table>`;
+            } else if (data.source === 'target_weights' && Object.keys(weights).length) {
+                const syms = Object.keys(weights).sort((a, b) => weights[b] - weights[a]);
+                document.getElementById('positions').innerHTML = `
+                    <p class="muted">Hypothetical allocation (target weights — no live positions):</p>
+                    <table><thead><tr><th>Symbol</th><th>Target Weight</th></tr></thead>
+                    <tbody>${syms.map(s => `<tr><td>${s}</td><td>${pct(weights[s])}</td></tr>`).join('')}</tbody></table>`;
+            } else {
+                document.getElementById('positions').innerHTML = '<p class="muted">No positions.</p>';
+            }
 
             const corr = data.correlation || {};
             const syms = Object.keys(corr);
@@ -77,10 +87,14 @@
                 : '<p class="muted">No correlation data.</p>';
 
             const drift = data.drift || [];
+            let driftMsg = 'Enter a strategy key to see drift vs its target weights.';
+            if (data.source === 'target_weights') {
+                driftMsg = 'Drift needs live positions — you are viewing the target allocation itself (drift would be zero). Connect IB and snapshot positions to see drift.';
+            }
             document.getElementById('drift').innerHTML = drift.length ? `
                 <table><thead><tr><th>Symbol</th><th>Current</th><th>Target</th><th>Drift</th></tr></thead>
                 <tbody>${drift.map(d => `<tr class="${d.flagged ? 'flagged' : ''}"><td>${d.symbol}</td><td>${pct(d.current_weight)}</td><td>${pct(d.target_weight)}</td><td>${pct(d.drift)}</td></tr>`).join('')}</tbody></table>`
-                : '<p class="muted">Enter a strategy key to see drift vs its target weights.</p>';
+                : `<p class="muted">${driftMsg}</p>`;
         }
 
         loadRisk();

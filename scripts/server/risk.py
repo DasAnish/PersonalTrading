@@ -159,14 +159,50 @@ def api_live_risk():
     if total_value > 0:
         weights = {p["symbol"]: p["value"] / total_value for p in positions}
 
+    # Source of the weights the risk metrics are computed from:
+    #   ib_live         — live IB positions
+    #   cached_snapshot — results/live_positions.json (IB offline)
+    #   target_weights  — no positions at all; fall back to a strategy's latest
+    #                     target weights so the tab still shows a risk profile
+    #   none            — nothing to show
+    if ib_online:
+        source = "ib_live"
+    elif positions:
+        source = "cached_snapshot"
+    else:
+        source = "none"
+
+    targets = _target_weights(strategy_key)
+    hypothetical = False
+    if not weights and targets:
+        # B: no live/cached positions — drive the metrics off the strategy's
+        # target allocation as a hypothetical portfolio.
+        weights = dict(targets)
+        source = "target_weights"
+        hypothetical = True
+
+    if source == "target_weights":
+        banner = (
+            f"No live positions — showing hypothetical risk for "
+            f"'{strategy_key}' target weights (not your actual portfolio)."
+        )
+    elif source == "cached_snapshot":
+        banner = "IB Gateway offline — showing cached/last-known positions."
+    elif source == "none":
+        banner = (
+            "No position data. Connect IB and run "
+            "`python scripts/snapshot_positions.py`, or enter a strategy key "
+            "below to see its target-allocation risk profile."
+        )
+    else:
+        banner = None
+
     payload = {
         "ib_online": ib_online,
+        "source": source,
+        "hypothetical": hypothetical,
         "as_of": as_of,
-        "banner": (
-            None
-            if ib_online
-            else "IB Gateway offline — showing cached/last-known data."
-        ),
+        "banner": banner,
         "positions": positions,
         "weights": weights,
         "total_value": total_value,
@@ -192,9 +228,9 @@ def api_live_risk():
             payload["cvar_95"] = round(calculate_cvar(port, 0.95), 5)
             payload["correlation"] = returns[cols].corr().round(3).to_dict()
 
-    # Drift vs target weights
-    targets = _target_weights(strategy_key)
-    if targets:
+    # Drift vs target weights — only meaningful against real held positions,
+    # not against the hypothetical target-weights portfolio (drift would be 0).
+    if targets and not hypothetical:
         all_syms = sorted(set(weights) | set(targets))
         for sym in all_syms:
             cur = weights.get(sym, 0.0)

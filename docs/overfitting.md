@@ -216,3 +216,91 @@ Sharpe and Calmar deltas and a `scenario_removal_mode` of `excise` (re-slice the
 value series) or `rerun` (drop each crisis window from prices and re-run the
 backtest). Flags: `--scenario-removal` on `run_backtest.py` (rerun) and
 `run_overfitting.py` (excise).
+
+---
+
+## Validation Battery
+
+Automated validation suite that runs four tests in sequence to determine if a
+strategy is ready for forward deployment: MinBTL → DSR → CPCV → Block bootstrap.
+
+**Verdict rule:**
+- `FAIL`: if MinBTL, DSR, or CPCV verdict is FAIL
+- `WARN`: if bootstrap verdict is WARN (bootstrap caps at WARN, never FAIL)
+- `SKIP`: treated as WARN
+- Otherwise `PASS`
+
+### Usage
+
+```bash
+# Single strategy with all defaults
+python scripts/validate_strategy.py --strategy hrp_ward
+
+# Custom CPCV and bootstrap settings
+python scripts/validate_strategy.py --strategy hrp_ward \
+    --n-trials 10 \
+    --cpcv-folds 6 \
+    --bootstrap-n 500 \
+    --block-months 3 \
+    --embargo-days 10 \
+    --json
+```
+
+### Output
+
+Writes `results/strategies/<strategy_key>/validation.json`:
+```json
+{
+  "strategy_key": "hrp_ward",
+  "generated": "2026-07-05",
+  "tests": [
+    {
+      "name": "dsr",
+      "verdict": "FAIL",
+      "values": {
+        "dsr": 0.778674,
+        "observed_sharpe": 0.6872,
+        "sharpe_reference": 0.4001,
+        "n_trials": 4,
+        "t_periods": 84
+      },
+      "note": ""
+    },
+    {
+      "name": "minbtl",
+      "verdict": "PASS",
+      "values": {
+        "min_years": 2.344,
+        "actual_years": 7.0,
+        "n_trials": 4,
+        "observed_sharpe": 0.6872
+      },
+      "note": ""
+    },
+    {
+      "name": "cpcv",
+      "verdict": "PASS",
+      "values": {
+        "mean_sharpe": 0.727563,
+        "pct5_sharpe": 0.496847,
+        "prob_oos_sharpe_positive": 1.0,
+        "n_combinations": 15
+      },
+      "note": ""
+    },
+    {
+      "name": "bootstrap",
+      "verdict": "PASS",
+      "values": {
+        "realized_sharpe": 0.6872,
+        "sharpe_mean": 0.7229,
+        "sharpe_pct5": 0.1619
+      },
+      "note": "fast mode: resamples realised returns, no backtest re-runs"
+    }
+  ],
+  "overall": "FAIL"
+}
+```
+
+Results are surfaced on the live dashboard (Overfitting → Validation Battery card).

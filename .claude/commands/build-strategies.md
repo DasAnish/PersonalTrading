@@ -64,7 +64,7 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
    | `strategist` | sonnet | Research and propose new strategy candidates |
    | `builder` | haiku | Implement strategies (Python class + JSON definition) |
    | `backtester` | haiku | Run `python scripts/run_backtest.py` and return metrics |
-   | `analyst` | haiku | Run `python scripts/run_overfitting.py` and return DSR/PBO |
+   | `analyst` | haiku | Run `python scripts/validate_strategy.py` (or `run_overfitting.py --param` for param sweeps) and return the verdict |
 
    Each agent is long-lived for the session — do not re-spawn them on each loop iteration.
    Always set `mode: "bypassPermissions"` on every Agent spawn and every SendMessage call so agents never pause to prompt the user.
@@ -105,14 +105,32 @@ To: strategist
 Research 3 new strategy candidates not yet implemented in this codebase.
 
 STEPS:
-1. Read all files in strategy_definitions/ (especially assets/ for the current asset universe)
-2. Read docs/strategies.md for architecture context
-3. Propose 3 candidates using these ideas as inspiration:
+1. Read `research/backlog.md` FIRST. If any idea has `status: new`, read the full
+   idea file(s) in `research/ideas/<slug>.md` for the pre-registered hypothesis and
+   rule sketch, and prefer proposing candidates derived from those ideas over
+   inventing new ones.
+2. Read `results/mechanism_coverage.json` (if present) — it holds a `counts` map of
+   mechanism tag -> number of strategies already built with that mechanism (e.g.
+   mean-reversion 6, vol-premium 6, carry 0, seasonality 0 vs trend 32,
+   diversification 31, meta 41). When inventing a candidate NOT derived from a
+   backlog idea, prefer mechanisms with LOW counts over the already-saturated ones.
+3. Read all files in strategy_definitions/ (especially assets/ for the current asset
+   universe) and docs/strategies.md for architecture context.
+4. Fall back to the current recombination behavior below ONLY when
+   research/backlog.md has no `status: new` idea AND no underrepresented-mechanism
+   candidate is feasible:
    - New overlay compositions (different vol targets, lookback combos, constraint combinations)
    - Meta-portfolio combinations of existing strategies
    - Parameter variants of existing allocation classes (different lookbacks, top_n, linkage methods)
    - Novel allocation algorithms: carry, volatility timing, factor-based, low-beta, quality-weighted
    - Trend + mean-reversion hybrids, regime-switching approaches
+
+Every candidate MUST set `mechanism` to exactly one tag from the fixed vocabulary:
+trend, momentum-cs, mean-reversion, carry, vol-premium, diversification, regime,
+hedging-overlay, seasonality, meta (infer the closest fit from the strategy's design
+if it isn't derived from a backlog idea). A candidate derived from a backlog idea
+MUST also set `research_ref` to that idea's filename slug without `.md` (e.g.
+"dual-momentum" for research/ideas/dual-momentum.md).
 
 EXISTING STRATEGIES (do not suggest these):
 [paste the current contents of strategy_definitions/ subdirectory names]
@@ -129,19 +147,25 @@ RETURN FORMAT — JSON array only, no prose:
     "new_python_class": "NewClassName or null",
     "tunable_params": "param=v1,v2,v3 or null",
     "complexity": "Low|Medium|High",
-    "priority": 1
+    "priority": 1,
+    "mechanism": "trend|momentum-cs|mean-reversion|carry|vol-premium|diversification|regime|hedging-overlay|seasonality|meta",
+    "research_ref": "idea-slug or omit if not derived from a backlog idea"
   }
 ]
 
-Priority order: JSON-only (no new Python) first, then parameter variants, then new Python classes.
+Priority order: candidates derived from a `status: new` backlog idea first, then
+JSON-only (no new Python), then parameter variants, then new Python classes.
 Send your result back via SendMessage to "orchestrator".
 ```
 
 Set `strategist_busy = true`. When the strategist's message arrives:
 - Parse the JSON array
-- Sort: `json_only=true` first, then by complexity ascending
+- Sort: candidates carrying `research_ref` first, then `json_only=true`, then by complexity ascending
 - Deduplicate: discard any candidate whose `key` already exists in `strategy_definitions/`
-- Push remaining to `pending[]`
+- Push remaining to `pending[]` (each entry keeps its `research_ref`/`mechanism` fields if present)
+- For each pushed candidate carrying a `research_ref`: set that idea's frontmatter
+  `status` to `candidate` in `research/ideas/<research_ref>.md` and update the matching
+  `research/backlog.md` row (full lifecycle: new → candidate → built → validated/rejected)
 - Set `strategist_busy = false`
 
 ### Dispatch: Builder
@@ -176,7 +200,9 @@ Send result via SendMessage to "orchestrator".
 ```
 
 Set `builder_busy = true`. When builder's message arrives:
-- If `DONE`: parse fields, push `{key, subfolder, json_only, tunable_params}` to `built[]`
+- If `DONE`: parse fields, push `{key, subfolder, json_only, tunable_params}` to `built[]`,
+  carrying over `research_ref`/`mechanism` from the original candidate object popped from
+  `pending[]` (the builder does not need to echo these back)
 - If `FAILED`: push `{key, reason}` to `skip_log[]`
 - Set `builder_busy = false`
 
@@ -212,13 +238,18 @@ Increment `backtester_count`. When backtester's message arrives:
 
 **Condition**: `analyst_count < 2` — triggered immediately after a successful backtester result (and re-checked each loop turn)
 
-Determine overfitting mode from the `built[]` entry for this key:
+Determine overfitting mode from the `built[]` entry for this key. The validation
+battery (`scripts/validate_strategy.py`) is the **default** mode; the old
+param-sweep script (`scripts/run_overfitting.py --param`) is kept only as the
+exception for candidates that carry `tunable_params` — it answers a different
+question (PBO stability across a param grid) that the single-config battery
+doesn't cover:
 
 | Condition | Mode |
 |-----------|------|
 | `json_only && subfolder in ["composed", "portfolios"]` | `skip` |
-| `tunable_params` is not null | `params` (use the tunable_params value) |
-| otherwise | `n1` |
+| `tunable_params` is not null | `params` (use the tunable_params value; old PBO/DSR sweep) |
+| otherwise | `battery` (validation battery; replaces the old `n1` mode) |
 
 Send (with `run_in_background: true`):
 
@@ -226,7 +257,7 @@ Send (with `run_in_background: true`):
 To: analyst
 
 Run an overfitting check for: strategy_key=<key>
-Mode: <skip|params|n1>
+Mode: <skip|params|battery>
 Params (if mode=params): <tunable_params value>
 
 STEPS:
@@ -235,19 +266,29 @@ If mode == "skip":
 
 If mode == "params":
   Run: python scripts/run_overfitting.py --strategy <key> --param <params>
+  Parse DSR and PBO from the output. Apply verdicts:
+    PASS: DSR >= 0.95 and PBO <= 0.30
+    WARN: DSR in [0.80, 0.95) or PBO in (0.30, 0.50]
+    FAIL: DSR < 0.80 or PBO > 0.50
+  Return format: RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL
 
-If mode == "n1":
-  Run: python scripts/run_overfitting.py --strategy <key> --n-trials 1
+If mode == "battery":
+  Run: python scripts/validate_strategy.py --strategy <key> --json
+  The last stdout line is single-line JSON:
+    {"strategy_key":..., "generated":..., "tests":[{name,verdict,values,note} x4], "overall":"PASS|WARN|FAIL"}
+  Tests are named dsr, minbtl, cpcv, bootstrap. Extract:
+    overall            <- top-level "overall"
+    minbtl_verdict     <- tests[name=minbtl].verdict
+    dsr value+verdict  <- tests[name=dsr].values.dsr and tests[name=dsr].verdict
+    cpcv_prob          <- tests[name=cpcv].values.prob_oos_sharpe_positive
+    boot_p5            <- tests[name=bootstrap].values.sharpe_pct5
+  Return format: RESULT: key=<key> overall=<PASS|WARN|FAIL> minbtl=<verdict> dsr=<value>/<verdict> cpcv_prob=<prob_oos_sharpe_positive> boot_p5=<sharpe_pct5>
 
-Parse DSR and PBO from the output. Apply verdicts:
-  PASS: DSR >= 0.95 and PBO <= 0.30
-  WARN: DSR in [0.80, 0.95) or PBO in (0.30, 0.50]
-  FAIL: DSR < 0.80 or PBO > 0.50
+If the script errors (either mode): return ERROR with reason (do not skip reporting).
 
-If the script errors: return ERROR with reason (do not skip reporting).
-
-RETURN FORMAT (plain text, one line):
-RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL
+RETURN FORMAT (plain text, one line — pick the one matching the mode you ran):
+RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL   (mode=params)
+RESULT: key=<key> overall=PASS|WARN|FAIL minbtl=<verdict> dsr=<value>/<verdict> cpcv_prob=<prob> boot_p5=<pct5>  (mode=battery)
 SKIP: strategy_key=<key>
 ERROR: strategy_key=<key> | reason=<brief>
 
@@ -255,24 +296,43 @@ Send result via SendMessage to "orchestrator".
 ```
 
 Increment `analyst_count`. When analyst's message arrives:
-- Push `{key, metrics, overfitting}` to `analyzed[]`
+- Push `{key, metrics, overfitting, research_ref, mechanism}` to `analyzed[]`, carrying
+  `research_ref`/`mechanism` over from the `built[]` entry for this key (if present)
 - Decrement `analyst_count`
 
 ### Report
 
-When `analyzed[]` has entries, pop each and report:
+When `analyzed[]` has entries, pop each and report. Format depends on which analyst
+mode ran (see Dispatch: Analyst above) — use the `params` line for mode=params, the
+`battery` line for mode=battery:
 
 ```
 ✓ Built: [Strategy Name]
   File: strategy_definitions/[path]/[name].json
   Return: X% | Sharpe: X.XX | Max DD: -X%
-  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]   ← omit if skipped
+  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]                          ← mode=params
+  Overfitting: [PASS/WARN/FAIL] overall | MinBTL=[verdict] DSR=X.XXX/[verdict] CPCV_p=X.XX Boot_p5=X.XXX  ← mode=battery
 
 Next: [what the pipeline is currently doing — e.g. "backtesting momentum_carry while researching next candidates..."]
 ```
 
-Increment `strategy_count`. If `strategy_count % 3 == 0`:
-> Suggest the user run `/backtest-all` and `/dashboard` to review all results.
+**Research backlog status update**: if the popped `analyzed[]` entry carries a
+`research_ref`, update both `research/ideas/<research_ref>.md` (frontmatter `status`
+field) and the matching row in `research/backlog.md`:
+- Set `status: built` first (the backtest succeeded — this is always true by the
+  time an entry reaches `analyzed[]`).
+- Then, if an overfitting verdict was produced (mode=params or mode=battery):
+  `validated` when the overall verdict is PASS or WARN, `rejected` when it is FAIL.
+- If mode was `skip` (no verdict available), leave status at `built` — do not guess
+  a validated/rejected outcome for a single-config composed/portfolio strategy.
+
+Increment `strategy_count`.
+- If `strategy_count % 3 == 0`: suggest the user run `/backtest-all` and `/dashboard` to review all results.
+- If `strategy_count % 5 == 0`: also suggest the user run `python scripts/run_all_overfitting.py --spa` —
+  this is a library-wide multiple-testing check (White's Reality Check / Hansen's SPA
+  across every strategy vs. the equal-weight benchmark) that corrects for the growing
+  number of strategies tried across the whole session, which per-strategy DSR/MinBTL/CPCV
+  cannot do on their own.
 
 **For JSON-only composed/portfolio strategies** where mode was `skip`, the analyst never runs. Report after the backtest succeeds (do not wait for analyst):
 ```

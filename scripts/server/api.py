@@ -18,6 +18,7 @@ from .data import (
     load_overfitting_analysis,
     load_strategy_tags,
     load_stress_test,
+    load_validation,
 )
 
 MAX_COMPARE_STRATEGIES = 10
@@ -127,6 +128,10 @@ def api_strategy(strategy_key: str):
         omega = _omega_from_history(portfolio_history)
         if omega is not None:
             metrics["omega_ratio"] = omega
+
+    validation = load_validation(strategy_key)
+    if validation is not None:
+        data["validation"] = validation
 
     return jsonify(data)
 

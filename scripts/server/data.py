@@ -12,6 +12,7 @@ from backtesting.results_schema import (
     INDEX_FILE,
     STRESS_TEST_FILE,
     OVERFITTING_FILE,
+    VALIDATION_FILE,
     load_strategy_payload,
 )
 from backtesting.results_schema import strategy_dir as schema_strategy_dir
@@ -290,4 +291,26 @@ def load_stress_test(strategy_key: str) -> dict | None:
             return json.load(f)
     except Exception as e:
         print(f"   [!] Error loading stress_test.json for {strategy_key}: {e}")
+        return None
+
+
+def load_validation(strategy_key: str) -> dict | None:
+    """
+    Load validation.json for a strategy.
+
+    Returns the parsed dict if the file exists, None otherwise.
+    A None result means the strategy has not yet been validated
+    (run with scripts/validate_strategy.py). None is also returned if
+    strategy_key is invalid.
+    """
+    if not is_valid_strategy_key(strategy_key):
+        return None
+    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / VALIDATION_FILE
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"   [!] Error loading validation.json for {strategy_key}: {e}")
         return None

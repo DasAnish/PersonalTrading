@@ -42,7 +42,7 @@ per-candidate gate in `/build-strategies`. Out-of-universe holdout testing defer
 | 11 | [Research Infrastructure](phase-11-research-infrastructure.md) | sonnet | ✅ Complete |
 | 12 | [Mechanism Taxonomy + Coverage](phase-12-mechanism-taxonomy.md) | sonnet+haiku | ✅ Complete |
 | 13 | [Validation Battery](phase-13-validation-battery.md) | sonnet+haiku | ✅ Complete |
-| 14 | [Pipeline Wiring + Dashboard](phase-14-pipeline-wiring.md) | sonnet+haiku | ⬜ Not Started |
+| 14 | [Pipeline Wiring + Dashboard](phase-14-pipeline-wiring.md) | sonnet+haiku | ✅ Complete |
 
 ## Dependency order
 

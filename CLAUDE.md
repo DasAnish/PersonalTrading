@@ -19,6 +19,7 @@
 | Web dashboard usage & API | [docs/dashboard.md](docs/dashboard.md) |
 | Session log, next actions, known bugs | [docs/session_log.md](docs/session_log.md) |
 | Full file/directory reference | [docs/project-structure.md](docs/project-structure.md) |
+| Research backlog & idea schema | [research/README.md](research/README.md) |
 | Session history | `ai_iterations/` |
 | Architecture decisions | `decisions/` |
 

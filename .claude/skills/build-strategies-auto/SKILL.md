@@ -55,7 +55,21 @@ Read all JSON files in `strategy_definitions/` — including `assets/`, `allocat
 
 ### Step 2 — Select the next strategy to build
 
-Based on what you've read plus your knowledge of systematic trading approaches, pick one new strategy not yet implemented. Work through this priority order:
+First, read `research/backlog.md`. If any idea has `status: new`, read the full idea
+file in `research/ideas/<slug>.md` (pre-registered hypothesis + rule sketch) and
+prefer building that idea next — set `research_ref` to the idea's filename slug
+(without `.md`) and `mechanism` to its frontmatter `mechanism` tag for use in Step 5.
+
+If the backlog has no `status: new` idea, read `results/mechanism_coverage.json`
+(if present) and prefer a mechanism with a LOW count over an already-saturated one
+(e.g. mean-reversion/vol-premium/carry/seasonality tend to be underrepresented vs.
+trend/diversification/meta). Tag the strategy you build with a `mechanism` from the
+fixed vocabulary — trend, momentum-cs, mean-reversion, carry, vol-premium,
+diversification, regime, hedging-overlay, seasonality, meta — even when it isn't
+derived from a backlog idea.
+
+Only fall back to the priority order below when no backlog idea and no clear
+underrepresented-mechanism candidate is feasible:
 
 **Priority 1 — JSON-only compositions** (no Python needed):
 - New parameter variants of existing allocations (e.g. momentum with top_n=3, trend with shorter lookback 252d, HRP with average linkage)
@@ -98,35 +112,62 @@ python scripts/run_backtest.py --strategy <slug_name>
 
 Run **immediately after a successful validate**. Skip if the strategy type is composed/portfolio (JSON-only compositions with N=1 trivially pass).
 
-For allocation strategies with tunable parameters, use at least 3 variants:
+For allocation strategies with tunable parameters, use the old param-sweep script
+(unchanged — it answers a different question, PBO stability across a param grid,
+that the single-config battery below doesn't cover):
 ```bash
 # Examples:
 python scripts/run_overfitting.py --strategy hrp --param linkage_method=single,complete,ward
 python scripts/run_overfitting.py --strategy momentum --param top_n=1,2,3
 python scripts/run_overfitting.py --strategy trend_following --param lookback_days=126,252,504
-# If no tunable params, use Mode 2 with N=1:
-python scripts/run_overfitting.py --strategy <strategy_key> --n-trials 1
 ```
+Note the DSR and PBO verdict for the report.
 
-Note the DSR and PBO verdict for the report. If the script errors, log and skip this step.
+For allocation strategies WITHOUT tunable params, run the validation battery
+(replaces the old bare `--n-trials 1` DSR check):
+```bash
+python scripts/validate_strategy.py --strategy <strategy_key> --json
+```
+The last stdout line is single-line JSON:
+`{"strategy_key":..., "generated":..., "tests":[{name,verdict,values,note} x4], "overall":"PASS|WARN|FAIL"}`
+(tests named `dsr`, `minbtl`, `cpcv`, `bootstrap`). Extract `overall`, the `minbtl`
+verdict, `tests[dsr].values.dsr` + verdict, `tests[cpcv].values.prob_oos_sharpe_positive`,
+and `tests[bootstrap].values.sharpe_pct5` for the report.
+
+If either script errors, log and skip this step.
 
 ### Step 5 — Report and loop
 
-Print:
+Print (use the `params` line if Step 4b ran the param sweep, the `battery` line if
+it ran the validation battery):
 ```
 ✓ Built: [Strategy Name]
   File: strategy_definitions/[path]/[name].json
   Return: X% | Sharpe: X.XX | Max DD: -X%
-  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]   ← include if Step 4b was run
+  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]                          ← params mode
+  Overfitting: [PASS/WARN/FAIL] overall | MinBTL=[verdict] DSR=X.XXX/[verdict] CPCV_p=X.XX Boot_p5=X.XXX  ← battery mode
 
 Next: researching the next strategy...
 ```
+
+If this strategy carries a `research_ref` (Step 2), update that idea's frontmatter
+`status` in `research/ideas/<research_ref>.md` and the matching row in
+`research/backlog.md`: `built` (backtest succeeded), then `validated` when the
+overfitting verdict is PASS/WARN or `rejected` when it is FAIL. Leave it at `built`
+if Step 4b was skipped (composed/portfolio, no verdict available).
 
 Then immediately go back to Step 1.
 
 After every 3 strategies built, also print:
 ```
 --- 3 strategies built. Run /backtest-all and /dashboard to review results. ---
+```
+
+After every 5 strategies built, also print:
+```
+--- 5 strategies built. Run `python scripts/run_all_overfitting.py --spa` for a
+library-wide multiple-testing check (White's Reality Check / Hansen's SPA) — this
+corrects for the growing number of strategies tried across the whole session. ---
 ```
 
 ---

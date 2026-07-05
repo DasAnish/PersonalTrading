@@ -101,6 +101,70 @@ Output: `results/param_sweep_<strategy>.csv` or `results/walk_forward_<strategy>
 
 ---
 
+---
+
+## Validation Battery
+
+Runs a four-test validation suite (MinBTL → DSR → CPCV → Block bootstrap) to
+determine if a strategy is ready for forward deployment.
+
+```bash
+# Single strategy with defaults
+python scripts/validate_strategy.py --strategy hrp_ward
+
+# Custom CPCV and bootstrap parameters
+python scripts/validate_strategy.py --strategy hrp_ward \
+  --n-trials 10 \
+  --cpcv-folds 6 \
+  --bootstrap-n 500 \
+  --block-months 3 \
+  --embargo-days 10
+
+# JSON output to results/strategies/<key>/validation.json
+python scripts/validate_strategy.py --strategy hrp_ward --json
+```
+
+Options:
+- `--strategy KEY` — Strategy key to validate
+- `--n-trials N` — Trials for DSR / MinBTL (default: 4)
+- `--cpcv-folds K` — CPCV fold count (default: 6)
+- `--bootstrap-n N` — Bootstrap iterations (default: 500)
+- `--block-months M` — Bootstrap block size in months (default: 3)
+- `--embargo-days D` — Embargo (purge) days for CPCV (default: 10)
+- `--json` — Write validation.json; suppress console output
+
+Output: `results/strategies/<strategy_key>/validation.json`
+
+---
+
+## Mechanism Coverage & Tagging
+
+Infer and tag strategy definitions with their economic mechanisms (from a
+10-category vocabulary: trend, momentum-cs, mean-reversion, carry, vol-premium,
+diversification, regime, hedging-overlay, seasonality, meta).
+
+```bash
+# Show mechanism coverage across all definitions
+python scripts/tag_mechanisms.py --coverage
+
+# Dry-run: show counts without writing
+python scripts/tag_mechanisms.py --coverage --dry-run
+
+# Write mech:<mechanism> tags into definitions
+python scripts/tag_mechanisms.py
+```
+
+Options:
+- `--coverage` — Print mechanism counts to console
+- `--dry-run` — Don't write tags back to definitions
+- `--definitions-dir PATH` — Override default `strategy_definitions/` location
+
+Output: Each definition in `strategy_definitions/` gains a `tags` array with
+entries like `"mech:trend"`. Used by `/build-strategies` strategist stage to
+steer ideation toward underrepresented mechanisms.
+
+---
+
 ## Backward Compatibility
 
 - `run_hrp_backtest.py` — deprecated, forwards to `run_backtest.py`

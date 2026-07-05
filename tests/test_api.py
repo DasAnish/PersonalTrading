@@ -38,6 +38,44 @@ def _write_strategy(tmp_path, key: str, values):
     (strat_dir / "info.json").write_text("{}")
 
 
+def _write_validation(tmp_path, key: str):
+    """Create a validation.json fixture for a strategy."""
+    strat_dir = tmp_path / "strategies" / key
+    strat_dir.mkdir(parents=True, exist_ok=True)
+    validation_data = {
+        "strategy_key": key,
+        "generated": "2026-01-01",
+        "tests": [
+            {
+                "name": "dsr",
+                "verdict": "PASS",
+                "values": {"dsr": 0.85, "observed_sharpe": 0.92},
+                "note": "",
+            },
+            {
+                "name": "minbtl",
+                "verdict": "PASS",
+                "values": {"min_years": 1.5, "actual_years": 5.0},
+                "note": "",
+            },
+            {
+                "name": "cpcv",
+                "verdict": "PASS",
+                "values": {"prob_oos_sharpe_positive": 0.95},
+                "note": "",
+            },
+            {
+                "name": "bootstrap",
+                "verdict": "PASS",
+                "values": {"sharpe_mean": 0.78},
+                "note": "fast mode",
+            },
+        ],
+        "overall": "PASS",
+    }
+    (strat_dir / "validation.json").write_text(json.dumps(validation_data))
+
+
 class TestIsValidStrategyKey:
     def test_accepts_simple_keys(self):
         assert is_valid_strategy_key("hrp_ward")
@@ -98,3 +136,25 @@ class TestStrategyKeyPathTraversal:
     def test_valid_key_not_found_still_404s_normally(self, client):
         resp = client.get("/api/strategy/nonexistent_strategy")
         assert resp.status_code == 404
+
+
+class TestValidationPayload:
+    def test_validation_json_included_when_present(self, client, tmp_path):
+        """When validation.json exists, it should be included in the strategy payload."""
+        _write_strategy(tmp_path, "test_strat", [100, 101, 102])
+        _write_validation(tmp_path, "test_strat")
+        resp = client.get("/api/strategy/test_strat")
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert "validation" in body
+        assert body["validation"]["overall"] == "PASS"
+        assert len(body["validation"]["tests"]) == 4
+        assert body["validation"]["tests"][0]["name"] == "dsr"
+
+    def test_validation_omitted_when_absent(self, client, tmp_path):
+        """When validation.json does not exist, the key should be omitted from payload."""
+        _write_strategy(tmp_path, "test_strat2", [100, 101, 102])
+        resp = client.get("/api/strategy/test_strat2")
+        assert resp.status_code == 200
+        body = resp.get_json()
+        assert "validation" not in body

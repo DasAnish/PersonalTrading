@@ -40,6 +40,7 @@ STRATEGY_FILES: dict = {
 
 STRESS_TEST_FILE = "stress_test.json"
 OVERFITTING_FILE = "overfitting_analysis.json"
+VALIDATION_FILE = "validation.json"
 INDEX_FILE = "strategies_index.json"
 
 PathLike = Union[str, Path]

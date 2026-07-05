@@ -697,6 +697,13 @@
                     return;
                 }
                 renderOverfittingAnalysis(data, container, strategyKey);
+
+                // Also render validation battery if it exists in the loaded data
+                const strategyData = loadedData[strategyKey];
+                if (strategyData && strategyData.validation) {
+                    renderValidationBattery(strategyData.validation, container);
+                }
+
                 overfittingLoaded = true;
             } catch (e) {
                 container.innerHTML = `<p style="color:#dc2626;">Error loading overfitting data: ${e.message}</p>`;
@@ -1073,6 +1080,64 @@
             if (bootstrap && bootstrap.sharpe && bootstrap.sharpe.dist && bootstrap.sharpe.dist.length > 0) {
                 renderBootstrapHistogram(bootstrap.sharpe.dist);
             }
+        }
+
+        function renderValidationBattery(validation, container) {
+            if (!validation || !validation.tests) return;
+
+            let html = '<h2 style="margin-top: 40px; border-top: 2px solid #e0e0e0; padding-top: 20px;">Validation Battery</h2>';
+
+            // Overall verdict
+            const overall = validation.overall || 'N/A';
+            html += `
+                <div class="overall-verdict overall-${overall}">
+                    Overall Verdict: ${overall}
+                    &nbsp;·&nbsp; Validated: ${validation.generated || 'unknown'}
+                </div>`;
+
+            html += '<div class="overfitting-grid">';
+
+            // Render each test as a card
+            validation.tests.forEach(test => {
+                const verdict = test.verdict || 'SKIP';
+                html += `
+                    <div class="overfitting-card">
+                        <h3>${test.name.toUpperCase()}</h3>
+                        <div class="overfitting-row">
+                            <span class="label">Verdict</span>
+                            <span class="val">${verdictBadge(verdict)}</span>
+                        </div>`;
+
+                // Display values from the test
+                if (test.values && typeof test.values === 'object') {
+                    Object.entries(test.values).forEach(([key, value]) => {
+                        let displayValue = value;
+                        if (typeof value === 'number') {
+                            displayValue = value.toFixed(3);
+                        }
+                        html += `
+                            <div class="overfitting-row">
+                                <span class="label">${key.replace(/_/g, ' ')}</span>
+                                <span class="val">${displayValue}</span>
+                            </div>`;
+                    });
+                }
+
+                // Add note if present
+                if (test.note) {
+                    html += `
+                        <div style="padding: 8px 0; border-top: 1px solid #f0f0f0; margin-top: 8px;">
+                            <span style="font-size: 0.85em; color: #666; font-style: italic;">${test.note}</span>
+                        </div>`;
+                }
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+
+            // Append to container
+            container.innerHTML += html;
         }
 
         function renderLogitHistogram(logits) {

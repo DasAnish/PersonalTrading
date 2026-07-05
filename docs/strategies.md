@@ -36,6 +36,55 @@ Core files: `strategies/core.py`, `strategies/__init__.py`
 
 ---
 
+## Mechanism Taxonomy
+
+Every strategy is tagged with its underlying economic mechanism from a fixed
+10-category vocabulary. This enables systematic coverage measurement and
+guides diversification of new ideas away from over-mined clusters.
+
+| Mechanism | Classes | Use |
+|-----------|---------|-----|
+| **trend** | TrendFollowingStrategy, TrendSignalMVOStrategy, TrendSignalRPStrategy, DualMomentumStrategy | Price momentum; buy uptrends, sell downtrends |
+| **momentum-cs** | MomentumTopNStrategy, VolatilityMomentumStrategy | Cross-sectional momentum; rank and overweight relative winners |
+| **mean-reversion** | MeanReversionStrategy | Contrarian; profit from temporary dislocations |
+| **carry** | *(none yet)* | Return generation from interest-rate or volatility spread harvesting |
+| **vol-premium** | SkewnessWeightedStrategy | Harvest volatility premium; penalise negative skew |
+| **diversification** | HRPStrategy, EqualWeightStrategy, MinimumVarianceStrategy, RiskParityStrategy | Risk reduction through decorrelation and diversification |
+| **regime** | AdaptiveAssetAllocationStrategy, ProtectiveAssetAllocationStrategy | Adapt allocations to market regimes (risk-on/risk-off) |
+| **hedging-overlay** | VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy | Modify another strategy's risk/return (composed definitions) |
+| **seasonality** | *(none yet)* | Exploit recurring patterns (calendar, seasonal) |
+| **meta** | MetaPortfolioStrategy | Combine multiple strategies (portfolio definitions) |
+
+### Classification Rules
+
+**Allocations** (type = `"allocation"`): mapped to a single mechanism by their
+class name (see `strategies/taxonomy.py::_ALLOCATION_CLASS_TO_MECHANISM`).
+
+**Composed** (type = `"composed"`): inherit the mechanism of their wrapped
+`underlying` strategy, but *override* when wrapped by an overlay
+(e.g., `TrendFollowingStrategy` + `VolatilityTargetStrategy` → `hedging-overlay`).
+
+**Portfolios** (type = `"portfolio"`): always `meta`.
+
+### Tagging and Discovery
+
+Strategy definitions can store mechanism tags in a `tags` array (each tag
+formatted as `"mech:<mechanism>"`, e.g. `"mech:trend"`). Tags are auto-populated
+via `scripts/tag_mechanisms.py`:
+
+```bash
+# Scan all definitions and tag with inferred mechanisms
+python scripts/tag_mechanisms.py --coverage
+
+# Show counts per mechanism
+python scripts/tag_mechanisms.py --coverage --dry-run
+```
+
+Mechanisms are used by `/build-strategies` strategist stage to steer ideation
+toward underrepresented mechanisms.
+
+---
+
 ## HRP Algorithm
 
 Three-stage process:

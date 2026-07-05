@@ -1,6 +1,6 @@
 # Plan State
 
-**Current Phase**: 11 — Research Infrastructure (extension phases 11–14 added 2026-07-05)
+**Current Phase**: COMPLETE — extension phases 11–14 landed 2026-07-05
 **Last Updated**: 2026-07-05
 
 ## Known residual (out of scope, note for later)
@@ -44,7 +44,7 @@
 - Phase 11: 4/4 TODOs complete ✅ (research/ backlog + 3 seed ideas + /research-scan skill; commit bf86c25)
 - Phase 12: 4/4 TODOs complete ✅ (strategies/taxonomy.py + scripts/tag_mechanisms.py; 157 definitions tagged, idempotent; coverage: trend 32, div 31, meta 41, mom-cs 26, regime 15, mean-rev 6, vol-prem 6, carry/seasonality 0; 39 tests)
 - Phase 13: 3/3 TODOs complete ✅ (analytics/validation.py 276 + scripts/validate_strategy.py 180; reuses calculate_minbtl/DSR/CPCVEngine/BlockBootstrap.run_fast; 45 tests split across test_validation{,_units}.py; hrp_ward smoke: DSR FAIL 0.78 @ n_trials=4, CPCV+bootstrap PASS, overall FAIL)
-- Phase 14: 0/5 TODOs
+- Phase 14: 5/5 TODOs complete ✅ (strategist reads backlog+coverage w/ research_ref/mechanism fields + candidate status transition; analyst battery mode default, params kept for sweeps; status write-back new→candidate→built→validated/rejected; every-5th --spa suggestion; dashboard validation card + API payload; docs refreshed; build-strategies-auto skill aligned)
 
 ## Notes
 - Baseline (2026-07-02): 239 passed, 4 failed (IB-connection tests, expected offline),

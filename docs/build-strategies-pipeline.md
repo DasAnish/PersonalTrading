@@ -18,11 +18,21 @@ With `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enabled, the command is redesigned a
 Orchestrator (main Claude)
   ├── queues: pending[], built[], analyzed[], skip_log[]
   │
-  ├──[strategist]  Sonnet  Research candidates → fills pending[]
+  ├──[strategist]  Sonnet  research/backlog.md + mechanism_coverage.json → fills pending[]
   ├──[builder]     Haiku   Implements strategies → fills built[]
   ├──[backtester]  Haiku   Runs run_backtest.py → triggers analyst
-  └──[analyst]     Haiku   Runs run_overfitting.py → fills analyzed[]
+  └──[analyst]     Haiku   Runs validate_strategy.py (battery) or run_overfitting.py --param
+                           (param sweep) → fills analyzed[]
 ```
+
+**Research wiring**: the strategist prefers candidates derived from `status: new`
+ideas in `research/backlog.md` (reading the full idea file in `research/ideas/` for
+the pre-registered hypothesis), tagging such candidates with `research_ref` and
+`mechanism`. When no backlog idea is available it still tags every candidate with a
+`mechanism`, preferring tags that are underrepresented in `results/mechanism_coverage.json`.
+When a `research_ref`-tagged candidate reaches `analyzed[]`, the orchestrator writes
+the resulting status (`built` → `validated`/`rejected`) back to both the idea file's
+frontmatter and the matching row in `research/backlog.md`.
 
 ### Pipeline Parallelism
 
@@ -56,11 +66,15 @@ Run once at command start:
 
 ```
 1. TeamCreate: team_name="strategy-pipeline"
-2. Agent(name="strategist",  team_name="strategy-pipeline", model="haiku")
+2. Agent(name="strategist",  team_name="strategy-pipeline", model="sonnet")
 3. Agent(name="builder",     team_name="strategy-pipeline", model="haiku")
 4. Agent(name="backtester",  team_name="strategy-pipeline", model="haiku")
 5. Agent(name="analyst",     team_name="strategy-pipeline", model="haiku")
 ```
+
+The strategist runs on Sonnet (it reads the research backlog and mechanism
+coverage data and has to reason about which candidates are worth proposing);
+the other three stages are mechanical enough to run on Haiku.
 
 ---
 
@@ -77,10 +91,10 @@ Each orchestrator turn checks and dispatches:
 
 | Sender | Action |
 |--------|--------|
-| `strategist` | Sort by JSON-only first; deduplicate vs `strategy_definitions/`; push to `pending[]` |
-| `builder` | `DONE` → push to `built[]`; `FAILED` → push to `skip_log[]` |
+| `strategist` | Sort `research_ref`-tagged candidates first, then JSON-only; deduplicate vs `strategy_definitions/`; push to `pending[]` |
+| `builder` | `DONE` → push to `built[]` (carrying `research_ref`/`mechanism` forward); `FAILED` → push to `skip_log[]` |
 | `backtester` | `OK` → store metrics, dispatch analyst; `FAIL` → push to `skip_log[]` |
-| `analyst` | Push to `analyzed[]`; orchestrator reports to user |
+| `analyst` | Push to `analyzed[]`; orchestrator reports to user and, if `research_ref` is set, updates that idea's status in `research/ideas/` + `research/backlog.md` |
 
 ---
 
@@ -88,7 +102,7 @@ Each orchestrator turn checks and dispatches:
 
 **Strategist** returns JSON array:
 ```json
-[{"name":"...", "key":"...", "description":"...", "json_only":true, "reuses_class":"...", "tunable_params":"...", "complexity":"Low|Medium|High", "priority":1}]
+[{"name":"...", "key":"...", "description":"...", "json_only":true, "reuses_class":"...", "tunable_params":"...", "complexity":"Low|Medium|High", "priority":1, "mechanism":"trend|momentum-cs|mean-reversion|carry|vol-premium|diversification|regime|hedging-overlay|seasonality|meta", "research_ref":"idea-slug (optional)"}]
 ```
 
 **Builder** returns plain string:
@@ -103,9 +117,10 @@ OK: strategy_key=<key> | return=X% | sharpe=X.XX | maxdd=-X%
 FAIL: strategy_key=<key> | error=<brief>
 ```
 
-**Analyst** returns plain string:
+**Analyst** returns plain string — format depends on mode:
 ```
-RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL
+RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL   (mode=params)
+RESULT: key=<key> overall=PASS|WARN|FAIL minbtl=<verdict> dsr=<value>/<verdict> cpcv_prob=<prob> boot_p5=<pct5>  (mode=battery)
 SKIP: strategy_key=<key>
 ERROR: strategy_key=<key> | reason=<brief>
 ```
@@ -119,8 +134,18 @@ After a successful backtest, the orchestrator decides what to send the analyst:
 | Strategy Type | Mode |
 |---------------|------|
 | `composed` or `portfolio` (JSON-only) | `skip` — N=1 trivially passes DSR |
-| `allocation` with tunable params | `params` — run with `--param <variants>` |
-| `allocation` without tunable params | `n1` — run with `--n-trials 1` |
+| `allocation` with tunable params | `params` — `run_overfitting.py --param <variants>` (PBO/DSR across the param grid) |
+| `allocation` without tunable params | `battery` (default) — `validate_strategy.py --json` (MinBTL → DSR → CPCV → block bootstrap) |
+
+`battery` replaces the old `n1` mode (a bare `--n-trials 1` DSR run); `params` is
+unchanged and stays the exception for candidates with a param grid to sweep, since
+the single-config battery doesn't answer the PBO-across-variants question.
+
+Every 5th built strategy, the orchestrator also suggests
+`python scripts/run_all_overfitting.py --spa` — a library-wide White's Reality
+Check / Hansen's SPA test across all strategies vs. the equal-weight benchmark,
+which corrects for the growing number of strategies tried across the whole
+session (something no single strategy's battery result can do on its own).
 
 ---
 
@@ -152,6 +177,10 @@ Must be set before running `/build-strategies`.
 | `.claude/skills/build-strategies/SKILL.md` | Legacy sub-agent variant (simple fallback) |
 | `.claude/skills/build-strategies-auto/SKILL.md` | Unattended inline variant (no agents) |
 | `scripts/run_backtest.py` | Backtester script |
-| `scripts/run_overfitting.py` | Analyst script |
+| `scripts/validate_strategy.py` | Analyst script — default validation battery mode |
+| `scripts/run_overfitting.py` | Analyst script — `params` mode (param sweep) |
+| `scripts/run_all_overfitting.py` | Library-wide SPA / Reality Check (every 5th strategy) |
+| `research/backlog.md` / `research/ideas/` | Pre-registered idea backlog the strategist draws from |
+| `results/mechanism_coverage.json` | Mechanism-tag counts the strategist uses to pick underrepresented mechanisms |
 | `strategy_definitions/` | JSON strategy definitions |
-| `results/strategies/` | Saved backtest + overfitting results |
+| `results/strategies/` | Saved backtest + overfitting/validation results |

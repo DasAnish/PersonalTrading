@@ -40,7 +40,7 @@ def _format_values(values: dict) -> str:
     return " ".join(f"{k}={_format_value(v)}" for k, v in values.items())
 
 
-def _discover_strategy_keys(results_dir: str, fallback: str) -> list:
+def _discover_strategy_keys(results_dir: str, fallback: str | None = None) -> list:
     """Every strategy key with a saved portfolio_history.json, for n_trials sizing.
 
     Mirrors ``scripts/run_all_overfitting.py``'s discovery so the default
@@ -49,7 +49,7 @@ def _discover_strategy_keys(results_dir: str, fallback: str) -> list:
     """
     strategies_root = Path(results_dir) / "strategies"
     if not strategies_root.exists():
-        return [fallback]
+        return [] if fallback is None else [fallback]
     keys = sorted(
         d.name
         for d in strategies_root.iterdir()
@@ -57,7 +57,7 @@ def _discover_strategy_keys(results_dir: str, fallback: str) -> list:
         and (d / STRATEGY_FILES["portfolio_history"]).exists()
         and not d.name.endswith("__pbo_sweep")
     )
-    if fallback not in keys:
+    if fallback is not None and fallback not in keys:
         keys.append(fallback)
     return keys
 
@@ -98,7 +98,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validation battery: MinBTL -> DSR -> CPCV -> block bootstrap.",
     )
-    parser.add_argument("--strategy", type=str, required=True, help="Strategy key.")
+    parser.add_argument(
+        "--strategy", type=str, default=None, help="Strategy key (single run)."
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run the battery for every strategy with saved results.",
+    )
     parser.add_argument(
         "--n-trials",
         type=int,
@@ -141,36 +148,93 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _run_and_save(strategy: str, n_trials: int, args) -> ValidationResult:
+    """Run the battery for one key and write its validation.json."""
+    result = run_validation_battery(
+        strategy_key=strategy,
+        results_dir=args.results_dir,
+        n_trials=n_trials,
+        cpcv_folds=args.cpcv_folds,
+        bootstrap_n=args.bootstrap_n,
+        block_months=args.block_months,
+        embargo_days=args.embargo_days,
+    )
+    out_path = strategy_dir(args.results_dir, strategy) / VALIDATION_FILENAME
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(result.to_dict(), f, indent=2)
+        f.write("\n")
+    return result
+
+
+def run_all(args) -> None:
+    """Battery for every strategy with saved results; per-key errors don't abort."""
+    from scripts.run_all_overfitting import build_n_trials_map
+
+    keys = _discover_strategy_keys(args.results_dir)
+    if not keys:
+        print(f"ERROR: no saved strategies under {args.results_dir}/strategies.")
+        sys.exit(1)
+
+    n_trials_map = {} if args.n_trials is not None else build_n_trials_map(keys)
+
+    outcomes: list = []
+    for i, key in enumerate(keys, 1):
+        n_trials = (
+            args.n_trials if args.n_trials is not None else n_trials_map.get(key, 1)
+        )
+        if not args.json:
+            print(f"[{i}/{len(keys)}] {key} (n_trials={n_trials}) ...", flush=True)
+        try:
+            result = _run_and_save(key, n_trials, args)
+            outcomes.append(result.to_dict())
+        except Exception as exc:  # keep the batch going; report at the end
+            outcomes.append(
+                {"strategy_key": key, "overall": "ERROR", "error": str(exc)}
+            )
+            if not args.json:
+                print(f"  ERROR: {exc}")
+
+    if args.json:
+        print(json.dumps(outcomes, separators=(",", ":")))
+        return
+
+    counts: dict = {}
+    for o in outcomes:
+        counts[o["overall"]] = counts.get(o["overall"], 0) + 1
+    width = max(len(o["strategy_key"]) for o in outcomes)
+    print(f"\nVALIDATION BATTERY — {len(outcomes)} strategies\n")
+    for o in sorted(outcomes, key=lambda o: (o["overall"], o["strategy_key"])):
+        print(f"  {o['strategy_key'].ljust(width)}  {o['overall']}")
+    summary = "  ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+    print(f"\nSUMMARY: {summary}\n")
+
+
 def main() -> None:
     args = parse_args()
+
+    if args.all == (args.strategy is not None):
+        print("ERROR: pass exactly one of --strategy <key> or --all.")
+        sys.exit(2)
+
+    if args.all:
+        run_all(args)
+        return
 
     n_trials = args.n_trials
     if n_trials is None:
         n_trials = _resolve_n_trials(args.strategy, args.results_dir, quiet=args.json)
 
     try:
-        result = run_validation_battery(
-            strategy_key=args.strategy,
-            results_dir=args.results_dir,
-            n_trials=n_trials,
-            cpcv_folds=args.cpcv_folds,
-            bootstrap_n=args.bootstrap_n,
-            block_months=args.block_months,
-            embargo_days=args.embargo_days,
-        )
+        result = _run_and_save(args.strategy, n_trials, args)
     except FileNotFoundError as exc:
         print(f"ERROR: {exc}")
         sys.exit(1)
 
-    out_path = strategy_dir(args.results_dir, args.strategy) / VALIDATION_FILENAME
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result.to_dict(), f, indent=2)
-        f.write("\n")
-
     if args.json:
         print(json.dumps(result.to_dict(), separators=(",", ":")))
     else:
+        out_path = strategy_dir(args.results_dir, args.strategy) / VALIDATION_FILENAME
         print(f"\nVALIDATION BATTERY — {args.strategy} (n_trials={n_trials})\n")
         _print_table(result)
         print(f"Saved to: {out_path}\n")

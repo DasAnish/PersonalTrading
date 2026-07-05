@@ -120,20 +120,58 @@ python scripts/validate_strategy.py --strategy hrp_ward \
   --block-months 3 \
   --embargo-days 10
 
-# JSON output to results/strategies/<key>/validation.json
+# Machine-readable single-line JSON on stdout
 python scripts/validate_strategy.py --strategy hrp_ward --json
+
+# Whole library: battery for every strategy with saved results,
+# per-key summary table + verdict counts at the end
+python scripts/validate_strategy.py --all
 ```
 
 Options:
-- `--strategy KEY` — Strategy key to validate
-- `--n-trials N` — Trials for DSR / MinBTL (default: 4)
+- `--strategy KEY` — Strategy key to validate (exactly one of this or `--all`)
+- `--all` — Run the battery for every strategy under `results/strategies/`;
+  per-key errors don't abort the batch
+- `--n-trials N` — Trials for DSR / MinBTL (default: auto per strategy via
+  `build_n_trials_map`, i.e. the strategy's family/sibling count)
 - `--cpcv-folds K` — CPCV fold count (default: 6)
 - `--bootstrap-n N` — Bootstrap iterations (default: 500)
 - `--block-months M` — Bootstrap block size in months (default: 3)
 - `--embargo-days D` — Embargo (purge) days for CPCV (default: 10)
-- `--json` — Write validation.json; suppress console output
+- `--json` — Print single-line JSON to stdout instead of the table
+  (validation.json is always written either way)
 
-Output: `results/strategies/<strategy_key>/validation.json`
+Output: `results/strategies/<strategy_key>/validation.json` (one per strategy)
+
+---
+
+## Full-Scale Run
+
+One command for the whole loop: spins off the dashboard first, then runs
+data load → backtests → mechanism coverage → validation battery as
+subprocess calls to the CLIs above. The dashboard reads `results/` from disk
+on every request, so refreshing the browser shows each step's output live.
+
+```bash
+# Backtest all + coverage + battery, dashboard at http://localhost:5000
+python scripts/full_run.py
+
+# Force fresh IB data, add library-wide SPA check and static reports
+python scripts/full_run.py --refresh --spa --reports
+
+# Headless (no dashboard)
+python scripts/full_run.py --no-dashboard
+```
+
+Options:
+- `--refresh` — Force fresh price data from IB Gateway (default: parquet cache)
+- `--spa` — Also run `run_all_overfitting.py --spa` after the battery
+- `--reports` — Also regenerate static md/html reports for every strategy
+- `--no-dashboard` — Don't spin off the dashboard server
+
+The dashboard keeps running after the script finishes. A failed backtest step
+aborts the run; later steps (coverage/battery/SPA/reports) log failures but
+don't abort each other.
 
 ---
 

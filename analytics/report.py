@@ -577,12 +577,12 @@ def write_report(
 
     if fmt in ("md", "both"):
         md_path = target_dir / "report.md"
-        md_path.write_text(markdown_str)
+        md_path.write_text(markdown_str, encoding="utf-8")
         written["md"] = md_path
 
     if fmt in ("html", "both"):
         html_path = target_dir / "report.html"
-        html_path.write_text(to_html(markdown_str))
+        html_path.write_text(to_html(markdown_str), encoding="utf-8")
         written["html"] = html_path
 
     return written

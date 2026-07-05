@@ -34,7 +34,7 @@ async def _fetch_positions() -> list:
     try:
         raw = await client.get_positions()
     finally:
-        await client.disconnect()
+        client.disconnect()  # synchronous — do not await
     return [
         {
             "symbol": p.symbol,

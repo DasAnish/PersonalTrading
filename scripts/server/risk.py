@@ -63,7 +63,7 @@ def _load_positions():
             try:
                 return await client.get_positions()
             finally:
-                await client.disconnect()
+                client.disconnect()  # synchronous — do not await
 
         raw = asyncio.run(asyncio.wait_for(_fetch(), timeout=10))
         positions = [

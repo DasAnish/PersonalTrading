@@ -38,7 +38,7 @@ class IBClient:
         >>> client = IBClient(config)
         >>> await client.connect()
         >>> bars = await client.get_historical_bars("AAPL", "1 D", "1 min")
-        >>> await client.disconnect()
+        >>> client.disconnect()  # synchronous — not a coroutine
     """
 
     def __init__(self, config: Optional[Config] = None):

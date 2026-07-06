@@ -25,3 +25,9 @@ def strategy_detail(strategy_key: str = None):
         "strategy.html",
         strategy_key=strategy_key or "Strategy",
     )
+
+
+@bp.route("/validation")
+def validation():
+    """Serve the library-wide validation / overfitting (SPA) panel."""
+    return render_template("validation.html")

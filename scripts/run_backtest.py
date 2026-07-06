@@ -80,7 +80,8 @@ LOOKBACK_DAYS = 252  # 1 year for HRP calculation
 BAR_SIZE = "1 day"
 
 # Date range - fetch maximum available history
-END_DATE = datetime.now()
+# Use yesterday to account for cache files that might not have today's data yet
+END_DATE = datetime.now() - timedelta(days=1)
 START_DATE = END_DATE - timedelta(days=365 * 10)  # Try to get 10 years
 
 # Output paths

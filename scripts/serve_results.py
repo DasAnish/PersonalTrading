@@ -15,16 +15,24 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from waitress import serve
+
 from server.app import create_app
 
 if __name__ == "__main__":
+    HOST = "127.0.0.1"
+    PORT = 5000
+
     print("\n" + "=" * 60)
     print("Strategy Backtest Dashboard")
     print("=" * 60)
-    print("\n[*] Starting server...\n")
-    print("[*] Open your browser and navigate to: http://localhost:5000\n")
+    print("\n[*] Starting server (waitress, production WSGI)...\n")
+    print(f"[*] Open your browser and navigate to: http://localhost:{PORT}\n")
     print("Press Ctrl+C to stop the server\n")
     print("=" * 60 + "\n")
 
     app = create_app()
-    app.run(debug=True, port=5000)
+    # waitress is a stable, threaded WSGI server: no debug auto-reloader, so the
+    # process keeps running for as long as you leave it up (it will NOT restart
+    # or die when source files change). Restart it manually to pick up code edits.
+    serve(app, host=HOST, port=PORT)

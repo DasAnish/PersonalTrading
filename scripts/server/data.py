@@ -272,6 +272,71 @@ def load_overfitting_analysis(strategy_key: str) -> dict | None:
         return None
 
 
+def _test_by_name(validation: dict, name: str) -> dict:
+    """Return the test dict with the given name from a validation.json, or {}."""
+    for t in validation.get("tests", []) or []:
+        if t.get("name") == name:
+            return t
+    return {}
+
+
+def build_validation_summary() -> dict:
+    """
+    Assemble the library-wide validation/overfitting summary for the dashboard.
+
+    Returns {"spa": <spa_analysis.json or None>, "strategies": [row, ...]} where
+    each row flattens the per-strategy battery (validation.json) plus its SPA
+    rank stub (from overfitting_analysis.json). Strategies without a
+    validation.json are still listed with overall="—" so the page shows coverage.
+    """
+    rows = []
+    for key in list_strategy_keys():
+        val = load_validation(key)
+        over = load_overfitting_analysis(key) or {}
+        spa_stub = over.get("spa", {}) if isinstance(over, dict) else {}
+        if val is None:
+            rows.append({"key": key, "overall": None, "spa_rank": spa_stub.get("rank")})
+            continue
+        dsr = _test_by_name(val, "dsr")
+        minbtl = _test_by_name(val, "minbtl")
+        cpcv = _test_by_name(val, "cpcv")
+        boot = _test_by_name(val, "bootstrap")
+        rows.append(
+            {
+                "key": key,
+                "overall": val.get("overall"),
+                "dsr": (dsr.get("values") or {}).get("dsr"),
+                "dsr_verdict": dsr.get("verdict"),
+                "minbtl_verdict": minbtl.get("verdict"),
+                "cpcv_prob": (cpcv.get("values") or {}).get("prob_oos_sharpe_positive"),
+                "boot_p5": (boot.get("values") or {}).get("sharpe_pct5"),
+                "spa_rank": spa_stub.get("rank"),
+            }
+        )
+    return {"spa": load_spa_analysis(), "strategies": rows}
+
+
+def load_spa_analysis() -> dict | None:
+    """
+    Load the library-wide results/spa_analysis.json (White's Reality Check /
+    Hansen's SPA across all strategies vs the equal_weight benchmark).
+
+    Returns the parsed dict if present, None otherwise. A None result means the
+    SPA step has not been run yet (scripts/run_all_overfitting.py --spa, or
+    scripts/run_full_analysis.py). This is a single library-wide file, not
+    per-strategy, so it takes no strategy_key.
+    """
+    path = RESULTS_DIR / "spa_analysis.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"   [!] Error loading spa_analysis.json: {e}")
+        return None
+
+
 def load_stress_test(strategy_key: str) -> dict | None:
     """
     Load stress_test.json for a strategy.

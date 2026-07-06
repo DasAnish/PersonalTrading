@@ -31,9 +31,11 @@ Example:
     results = await engine.run_backtest(hrp, start_date, end_date)
 """
 
+import warnings
+
 import pandas as pd
 import numpy as np
-from scipy.cluster.hierarchy import linkage
+from scipy.cluster.hierarchy import linkage, ClusterWarning
 from typing import List
 
 from strategies.core import AllocationStrategy, Strategy, StrategyContext
@@ -307,7 +309,13 @@ class HRPStrategy(AllocationStrategy):
 
         # Perform hierarchical clustering
         # Returns linkage matrix: (N-1) x 4 array
-        link = linkage(d_corr.values, method=self.linkage_method)
+        # scipy emits a ClusterWarning because we pass a square (uncondensed)
+        # distance matrix rather than a condensed vector. This is intentional
+        # (matches the reference HRP implementation) and does not affect the
+        # resulting weights, so we silence just that warning at the call site.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ClusterWarning)
+            link = linkage(d_corr.values, method=self.linkage_method)
 
         # ===== Stage 2: Quasi-Diagonalization =====
 

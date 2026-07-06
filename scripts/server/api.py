@@ -11,6 +11,7 @@ from analytics.metrics import calculate_cagr, calculate_omega_ratio
 
 from .data import (
     RESULTS_DIR,
+    build_validation_summary,
     history_to_series,
     is_valid_strategy_key,
     list_strategy_keys,
@@ -420,3 +421,9 @@ def api_compare(key1: str, key2: str):
             "relative_performance": relative_data,
         }
     )
+
+
+@bp.route("/api/validation-summary")
+def api_validation_summary():
+    """Library-wide validation battery + SPA/Reality-Check summary for the panel."""
+    return jsonify(build_validation_summary())

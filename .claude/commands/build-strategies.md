@@ -357,8 +357,22 @@ When the user says "stop", "pause", or "enough":
    SendMessage("backtester",  "Shutdown: stop after current task.")
    SendMessage("analyst",     "Shutdown: stop after current task.")
    ```
-4. Call `TeamDelete(team_name="strategy-pipeline")`
-5. Print session summary:
+4. **Run the library-wide validation/overfitting analysis.** Every strategy was
+   validated per-strategy during the session, but that does NOT correct for how
+   many strategies were tried. Run the whole-family check now (backtests already
+   exist from the session, so skip them; `--fast` skips the slow PBO sweeps):
+   ```
+   python scripts/run_full_analysis.py --skip-backtest --fast
+   ```
+   This runs `validate_strategy.py --all` + `run_all_overfitting.py --spa` and
+   writes `results/spa_analysis.json`. Read that file and fold its verdict into
+   the session summary (below): report the Reality Check p-value, the SPA
+   consistent p-value, and the best strategy. If the Reality Check p-value is
+   > 0.05, warn the user that no strategy this session provably beats the
+   equal-weight benchmark once multiple-testing is accounted for — the
+   individual PASS/WARN battery verdicts are optimistic on their own.
+5. Call `TeamDelete(team_name="strategy-pipeline")`
+6. Print session summary:
    ```
    Session complete. Built N strategies:
    - strategy_key: Sharpe=X.XX, DSR=X.XXX [PASS/WARN/FAIL]
@@ -367,6 +381,11 @@ When the user says "stop", "pause", or "enough":
    Skipped M:
    - strategy_key: <reason>
    - ...
+
+   Library-wide (multiple-testing corrected):
+   - SPA / Reality Check p = X.XXX  (best: <strategy_key>)
+   - <one-line interpretation>
+   Full panel: python scripts/serve_results.py  ->  /validation
    ```
 
 ---

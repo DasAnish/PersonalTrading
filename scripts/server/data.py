@@ -251,25 +251,29 @@ def get_transactions_data(strategy_data: dict, strategy_name: str = None) -> dic
     return {name: strategy_data["transactions"]}
 
 
-def load_overfitting_analysis(strategy_key: str) -> dict | None:
-    """
-    Load overfitting_analysis.json for a strategy.
-
-    Returns the parsed dict if the file exists, None otherwise.
-    A None result means the strategy has not yet been analysed.
-    None is also returned if strategy_key is invalid.
-    """
-    if not is_valid_strategy_key(strategy_key):
-        return None
-    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / OVERFITTING_FILE
+def _load_json(path, label: str) -> dict | None:
+    """Load a JSON file, returning None if missing or unreadable."""
     if not path.exists():
         return None
     try:
         with open(path, "r") as f:
             return json.load(f)
     except Exception as e:
-        print(f"   [!] Error loading overfitting_analysis.json for {strategy_key}: {e}")
+        print(f"   [!] Error loading {label}: {e}")
         return None
+
+
+def _load_strategy_json(strategy_key: str, filename: str) -> dict | None:
+    """Load a per-strategy JSON artifact; None if key invalid or file absent."""
+    if not is_valid_strategy_key(strategy_key):
+        return None
+    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / filename
+    return _load_json(path, f"{filename} for {strategy_key}")
+
+
+def load_overfitting_analysis(strategy_key: str) -> dict | None:
+    """Load overfitting_analysis.json for a strategy (None = not analysed)."""
+    return _load_strategy_json(strategy_key, OVERFITTING_FILE)
 
 
 def _test_by_name(validation: dict, name: str) -> dict:
@@ -326,56 +330,14 @@ def load_spa_analysis() -> dict | None:
     scripts/run_full_analysis.py). This is a single library-wide file, not
     per-strategy, so it takes no strategy_key.
     """
-    path = RESULTS_DIR / "spa_analysis.json"
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"   [!] Error loading spa_analysis.json: {e}")
-        return None
+    return _load_json(RESULTS_DIR / "spa_analysis.json", "spa_analysis.json")
 
 
 def load_stress_test(strategy_key: str) -> dict | None:
-    """
-    Load stress_test.json for a strategy.
-
-    Returns the parsed dict if the file exists, None otherwise.
-    A None result means the strategy has not yet been stress-tested
-    (run with --stress-test flag). None is also returned if strategy_key
-    is invalid.
-    """
-    if not is_valid_strategy_key(strategy_key):
-        return None
-    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / STRESS_TEST_FILE
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"   [!] Error loading stress_test.json for {strategy_key}: {e}")
-        return None
+    """Load stress_test.json for a strategy (None = not stress-tested)."""
+    return _load_strategy_json(strategy_key, STRESS_TEST_FILE)
 
 
 def load_validation(strategy_key: str) -> dict | None:
-    """
-    Load validation.json for a strategy.
-
-    Returns the parsed dict if the file exists, None otherwise.
-    A None result means the strategy has not yet been validated
-    (run with scripts/validate_strategy.py). None is also returned if
-    strategy_key is invalid.
-    """
-    if not is_valid_strategy_key(strategy_key):
-        return None
-    path = schema_strategy_dir(RESULTS_DIR, strategy_key) / VALIDATION_FILE
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"   [!] Error loading validation.json for {strategy_key}: {e}")
-        return None
+    """Load validation.json for a strategy (None = battery not run)."""
+    return _load_strategy_json(strategy_key, VALIDATION_FILE)

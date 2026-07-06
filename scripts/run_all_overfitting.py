@@ -574,7 +574,30 @@ def main() -> None:
             "the equal_weight benchmark; write results/spa_analysis.json."
         ),
     )
+    parser.add_argument(
+        "--battery",
+        action="store_true",
+        help=(
+            "Also run the per-strategy validation battery (DSR/MinBTL/CPCV/"
+            "bootstrap) by delegating to scripts/validate_strategy.py --all, "
+            "so one command covers both analyses. For the full pipeline "
+            "(backtests included) prefer scripts/run_full_analysis.py."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.battery:
+        import subprocess
+
+        battery_cmd = [
+            sys.executable,
+            str(Path(__file__).parent / "validate_strategy.py"),
+        ]
+        battery_cmd += ["--strategy", args.strategy] if args.strategy else ["--all"]
+        print("Running validation battery (validate_strategy.py) ...")
+        rc = subprocess.run(battery_cmd).returncode
+        if rc != 0:
+            print(f"WARNING: validation battery exited {rc}; continuing.")
 
     # Discover strategy keys
     if args.strategy:

@@ -19,9 +19,30 @@ from waitress import serve
 
 from server.app import create_app
 
+
+def _check_port_free(host: str, port: int) -> None:
+    """Exit with a clear message if something is already bound to host:port.
+
+    On Windows a second server can silently co-bind and the *old* process keeps
+    answering, so a stale server would otherwise mask a restart entirely.
+    """
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex((host, port)) == 0:
+            raise SystemExit(
+                f"ERROR: {host}:{port} is already in use — a dashboard server is "
+                f"probably still running. Stop it first (PowerShell: "
+                f"Get-NetTCPConnection -LocalPort {port} -State Listen | "
+                f"Select OwningProcess), then restart."
+            )
+
+
 if __name__ == "__main__":
     HOST = "127.0.0.1"
     PORT = 5000
+
+    _check_port_free(HOST, PORT)
 
     print("\n" + "=" * 60)
     print("Strategy Backtest Dashboard")

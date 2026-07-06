@@ -18,29 +18,14 @@ description: Research, design, and build new trading strategies using a persiste
 
 **Assets available**: Read dynamically from `strategy_definitions/assets/` at each research iteration. Never hardcode asset lists.
 
-Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), IWRD (world equities), EQQQ (NASDAQ-100), COMM (diversified commodities), AIGC (AI equities), IIND (MSCI India), IMEU (MSCI Europe), WCOA (coal), VUTY (US Treasury bonds), BRNT (Brent crude oil), CRUD (WTI crude oil).
+**Existing strategy classes**: read `strategies/__init__.py` for the current
+class roster and `docs/strategies.md` for descriptions. Do NOT rely on any list
+pasted into a prompt — the library changes every session.
 
-**Existing strategy classes** (in `strategies/`):
-- `HRPStrategy` — Hierarchical Risk Parity (`hrp.py`)
-- `TrendFollowingStrategy` — EWMA momentum with vol scaling (`trend_following.py`)
-- `EqualWeightStrategy` — equal weight allocation (`equal_weight.py`)
-- `MinimumVarianceStrategy` — mean-variance optimisation (`minimum_variance.py`)
-- `RiskParityStrategy` — equal marginal risk contribution (`risk_parity.py`)
-- `MomentumTopNStrategy` — top-N momentum selection (`momentum.py`)
-- `TrendSignalMVOStrategy` — trend signal blended with mean-variance optimisation (`trend_signal_mvo.py`)
-- `MeanReversionStrategy` — mean reversion / contrarian allocation (`mean_reversion.py`)
-- `SkewnessWeightedStrategy` — skewness-weighted allocation (`skewness_weighted.py`)
-- `MetaPortfolioStrategy` — equal-weight meta-portfolio over sub-strategies (`meta_portfolio.py`)
-- `DualMomentumStrategy` — absolute + relative momentum with safe-asset fallback (`dual_momentum.py`)
-- `AdaptiveAssetAllocationStrategy` — momentum ranking + minimum variance (`adaptive_asset_allocation.py`)
-- `TrendSignalRPStrategy` — trend signal blended with risk parity (`trend_signal_rp.py`)
-- Overlays: `VolatilityTargetStrategy`, `ConstraintStrategy`, `LeverageStrategy` (`overlays.py`)
-
-**Existing strategy definitions** (in `strategy_definitions/`):
-- `allocations/`: equal_weight, hrp_single, hrp_ward, hrp_complete, hrp_average, trend_following, trend_following_252, minimum_variance, risk_parity, momentum_top1, momentum_top2, momentum_top3, momentum_top2_6m, trend_signal_mvo, trend_signal_mvo_conservative, trend_signal_rp, mean_reversion, skewness_weighted, dual_momentum, dual_momentum_invested, adaptive_asset_allocation, adaptive_asset_allocation_top3
-- `composed/`: hrp_15vol, hrp_30vol, hrp_average_15vol, trend_15vol, trend_30vol, trend_with_vol_12, trend_constrained_vol_target, hrp_with_constraints, min_var_15vol, min_var_30vol, min_var_with_constraints, risk_parity_15vol, risk_parity_30vol, risk_parity_with_constraints, trend_signal_mvo_15vol, mean_reversion_15vol, aaa_top3_15vol, dual_momentum_15vol, momentum_top2_with_constraints
-- `portfolios/`: meta_trend_hrp_15vol, meta_trend_hrp_30vol, meta_multi_volatility, meta_defensive_core, meta_all_season, meta_momentum_ensemble, meta_high_sharpe, meta_contrarian, meta_risk_managed, meta_ultimate
-- `overlays/`: vol_target_12/15/30pct, constraints_5_40, constraints_10_30
+**Existing strategy definitions**: list the files in
+`strategy_definitions/{allocations,composed,portfolios,overlays}/` at the start
+of every research iteration and paste the *current* listing into the strategist
+prompt. A definition key already present there must never be proposed again.
 
 **Architecture rules**:
 - `AllocationStrategy`: calculates weights across a list of assets — implements `calculate_weights(context)`

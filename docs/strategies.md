@@ -31,6 +31,10 @@ Core files: `strategies/core.py`, `strategies/__init__.py`
 | Trend + MVO | `strategies/trend_signal_mvo.py` | trend signals into mean-variance |
 | Trend + Risk Parity | `strategies/trend_signal_rp.py` | trend signals into risk parity |
 | Meta Portfolio | `strategies/meta_portfolio.py` | combines multiple strategies |
+| Cross-Asset Carry | `strategies/cross_asset_carry.py` | carry-proxy ranking, `top_n=4` |
+| Gold Safe-Haven Overlay | `strategies/gold_safe_haven_overlay.py` | drawdown-triggered gold tilt |
+| Low-Beta Defensive Tilt | `strategies/low_beta_defensive_tilt.py` | bottom-N beta vs IWRD, `bottom_n=5` |
+| Halloween Seasonality | `strategies/halloween_seasonality.py` | Nov–Apr equities / May–Oct defensive (validation: rejected) |
 
 **Overlays**: `VolatilityTargetStrategy`, `ConstraintStrategy`, `LeverageStrategy` — see `strategies/overlays.py`
 
@@ -47,11 +51,11 @@ guides diversification of new ideas away from over-mined clusters.
 | **trend** | TrendFollowingStrategy, TrendSignalMVOStrategy, TrendSignalRPStrategy, DualMomentumStrategy | Price momentum; buy uptrends, sell downtrends |
 | **momentum-cs** | MomentumTopNStrategy, VolatilityMomentumStrategy | Cross-sectional momentum; rank and overweight relative winners |
 | **mean-reversion** | MeanReversionStrategy | Contrarian; profit from temporary dislocations |
-| **carry** | *(none yet)* | Return generation from interest-rate or volatility spread harvesting |
-| **vol-premium** | SkewnessWeightedStrategy | Harvest volatility premium; penalise negative skew |
+| **carry** | CarryTiltStrategy | Return generation from interest-rate or volatility spread harvesting |
+| **vol-premium** | SkewnessWeightedStrategy, LowBetaTiltStrategy | Harvest volatility premium; penalise negative skew / high beta |
 | **diversification** | HRPStrategy, EqualWeightStrategy, MinimumVarianceStrategy, RiskParityStrategy | Risk reduction through decorrelation and diversification |
 | **regime** | AdaptiveAssetAllocationStrategy, ProtectiveAssetAllocationStrategy | Adapt allocations to market regimes (risk-on/risk-off) |
-| **hedging-overlay** | VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy | Modify another strategy's risk/return (composed definitions) |
+| **hedging-overlay** | VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy, GoldSafeHavenOverlayStrategy | Modify another strategy's risk/return; stress-triggered hedges |
 | **seasonality** | *(none yet)* | Exploit recurring patterns (calendar, seasonal) |
 | **meta** | MetaPortfolioStrategy | Combine multiple strategies (portfolio definitions) |
 

@@ -1,6 +1,23 @@
 # Session Log
 
-## Current Status (2026-03-17)
+## Current Status (2026-07-07)
+
+**Status**: Build-strategies pipeline session complete; tooling and cleanup done.
+
+### Completed (2026-07-06/07)
+- Pipeline session built 18 strategies: 4 new classes (CarryTilt, GoldSafeHavenOverlay,
+  LowBetaTilt, HalloweenSeasonality) + 14 JSON variants/metas; all 4 backlog ideas
+  resolved (carry/gold/low-beta validated, halloween rejected)
+- Dashboard now served via waitress (no debug auto-reloader); /validation panel added
+  (SPA/Reality-Check + per-strategy battery); live-risk contrast fixed
+- scripts/run_full_analysis.py: backtest-all -> validate --all -> overfitting+SPA
+- scipy ClusterWarning suppressed at HRP linkage call site
+- Cleanup: deprecated HRP scripts deleted, root test scripts moved to examples/,
+  caveman skills tracked, stale strategy lists removed from build-strategies.md
+- Known follow-up: run `python scripts/run_full_analysis.py --skip-backtest --fast`
+  to populate results/spa_analysis.json for the /validation panel
+
+## Previous Status (2026-03-17)
 
 **Status**: All phases complete. No outstanding tasks.
 

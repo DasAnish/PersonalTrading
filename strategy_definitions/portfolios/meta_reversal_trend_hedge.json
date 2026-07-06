@@ -1,0 +1,20 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Reversal-Trend-Hedge Blend",
+  "description": "Equal-weight meta-portfolio combining three tactical strategies: Mean Reversion (60-day contrarian), Trend Following (momentum), and Gold Safe-Haven Overlay (stress hedge). Blends short-term reversion, trend capture, and crisis protection for balanced tactical diversification.",
+  "parameters": {},
+  "underlying": [
+    "allocations/mean_reversion_60d",
+    "allocations/trend_following",
+    "allocations/gold_safe_haven_overlay"
+  ],
+  "tags": [
+    "ensemble",
+    "mean-reversion",
+    "trend",
+    "hedging",
+    "tactical",
+    "mech:meta"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Skewness-Weighted Full Universe + Constraints 10%-30% + 15% Vol Target",
+  "description": "Skewness-weighted allocation across all 13 assets wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Combines tail-risk awareness across full-universe diversification while preventing extreme concentration and maintaining consistent risk control.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.1,
+      "max_weight": 0.3
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "SkewnessWeightedStrategy",
+      "parameters": {
+        "lookback_days": 252,
+        "skew_tilt": 0.5,
+        "min_weight": 0.05
+      },
+      "underlying": [
+        "assets/vusa",
+        "assets/eqqq",
+        "assets/aigc",
+        "assets/iind",
+        "assets/imeu",
+        "assets/iwrd",
+        "assets/ssln",
+        "assets/sgln",
+        "assets/comm",
+        "assets/brnt",
+        "assets/crud",
+        "assets/wcoa",
+        "assets/vuty"
+      ]
+    }
+  },
+  "tags": [
+    "skewness",
+    "full-universe",
+    "constrained",
+    "vol-15",
+    "risk-managed",
+    "mech:vol-premium"
+  ]
+}

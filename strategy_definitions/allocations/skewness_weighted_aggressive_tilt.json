@@ -1,0 +1,29 @@
+{
+  "type": "allocation",
+  "class": "SkewnessWeightedStrategy",
+  "name": "Skewness-Weighted Aggressive Tilt",
+  "description": "Aggressive skewness tilt across all 13 assets, strongly penalizing assets with negative return skewness (left-skewed, crash-risk assets). 80% blend toward pure skewness score (vs 50% in base), allowing zero-weight allocation to highest-risk assets. Emphasizes tail-risk avoidance over diversification.",
+  "parameters": {
+    "lookback_days": 252,
+    "skew_tilt": 0.8,
+    "min_weight": 0.0
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ],
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

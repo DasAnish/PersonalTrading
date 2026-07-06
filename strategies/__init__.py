@@ -57,6 +57,10 @@ from .dual_momentum import DualMomentumStrategy
 from .adaptive_asset_allocation import AdaptiveAssetAllocationStrategy
 from .trend_signal_rp import TrendSignalRPStrategy
 from .protective_asset_allocation import ProtectiveAssetAllocationStrategy
+from .halloween_seasonality import HalloweenSeasonalityStrategy
+from .cross_asset_carry import CarryTiltStrategy
+from .gold_safe_haven_overlay import GoldSafeHavenOverlayStrategy
+from .low_beta_defensive_tilt import LowBetaTiltStrategy
 
 # Overlay strategies
 from .overlays import (
@@ -162,6 +166,10 @@ __all__ = [
     'AdaptiveAssetAllocationStrategy',
     'TrendSignalRPStrategy',
     'ProtectiveAssetAllocationStrategy',
+    'HalloweenSeasonalityStrategy',
+    'CarryTiltStrategy',
+    'GoldSafeHavenOverlayStrategy',
+    'LowBetaTiltStrategy',
     # Overlay strategies
     'VolatilityTargetStrategy',
     'ConstraintStrategy',

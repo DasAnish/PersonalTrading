@@ -2,7 +2,7 @@
 title: Cross-Asset Carry (ex-ante yield ranking)
 source: "Koijen, Moskowitz, Pedersen & Vrugt (2018), Journal of Financial Economics 127(2) 197–225 — 'Carry'"
 mechanism: carry
-status: new
+status: validated
 date_added: 2026-07-05
 ---
 

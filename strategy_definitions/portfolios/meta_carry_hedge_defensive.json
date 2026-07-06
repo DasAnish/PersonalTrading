@@ -1,0 +1,22 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Carry-Hedge-Defensive Ensemble",
+  "description": "Equal-weight meta-portfolio combining five complementary risk-management and return-enhancement strategies: Carry (ex-ante yield ranking), Gold Safe-Haven (stress hedge), Low-Beta Defensive (systematic risk tilt), Trend Following (momentum), and HRP (diversification). Targets stable risk-adjusted returns across market regimes.",
+  "parameters": {},
+  "underlying": [
+    "allocations/cross_asset_carry",
+    "allocations/gold_safe_haven_overlay",
+    "allocations/low_beta_defensive_tilt",
+    "allocations/trend_following",
+    "allocations/hrp_single"
+  ],
+  "tags": [
+    "ensemble",
+    "carry",
+    "hedging",
+    "defensive",
+    "diversified",
+    "mech:meta"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "type": "allocation",
+  "class": "GoldSafeHavenOverlayStrategy",
+  "name": "Gold Safe-Haven Stress Overlay",
+  "description": "Stress-triggered overlay that dynamically tilts weight toward gold (SGLN) when equity markets experience significant drawdown. Starts with equal-weight base and tilts toward SGLN when equity blend drawdown from 6-month high falls below trigger threshold. Based on Baur & Lucey (2010) finding that gold acts as a safe haven specifically during market stress. Tilt decays back to base weights over subsequent rebalances.",
+  "parameters": {
+    "drawdown_trigger": -0.10,
+    "gold_tilt_pp": 15,
+    "decay_rebalances": 1
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ],
+  "tags": [
+    "mech:hedging-overlay"
+  ]
+}

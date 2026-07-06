@@ -1,0 +1,24 @@
+{
+  "type": "allocation",
+  "class": "HalloweenSeasonalityStrategy",
+  "name": "Halloween Seasonality",
+  "description": "Pure calendar rotation holding an equal-weight equity sleeve (VUSA, EQQQ, IWRD, IMEU, IIND, AIGC) in the Nov-Apr 'winter' months and rotating into a defensive sleeve (VUTY, SGLN) for May-Oct 'summer' months. Implements the Halloween Effect seasonal pattern.",
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ],
+  "tags": [
+    "mech:seasonality"
+  ]
+}

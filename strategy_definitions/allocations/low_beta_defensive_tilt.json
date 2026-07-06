@@ -1,0 +1,28 @@
+{
+  "type": "allocation",
+  "class": "LowBetaTiltStrategy",
+  "name": "Low-Beta Defensive Tilt",
+  "description": "Tilts portfolio toward low-beta (low systematic risk) assets and away from high-beta assets. Estimates each asset's trailing beta to IWRD (world equities) and equal-weights the lowest-beta assets. Implements the long-only leg of the Betting-Against-Beta (BAB) factor, capturing defensive risk-reduction benefits: lower volatility and drawdown with similar or modestly lower total returns, improving risk-adjusted metrics. Naturally favors bonds (VUTY) and gold (SGLN); underweights tech (AIGC, EQQQ) and commodity futures (BRNT, CRUD).",
+  "parameters": {
+    "beta_lookback_days": 126,
+    "bottom_n": 5
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/ssln",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/crud",
+    "assets/wcoa",
+    "assets/vuty"
+  ],
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

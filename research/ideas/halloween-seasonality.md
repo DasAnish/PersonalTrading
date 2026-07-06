@@ -2,7 +2,7 @@
 title: Halloween Indicator ("Sell in May") seasonal rotation
 source: "Bouman & Jacobsen (2002), American Economic Review — 'The Halloween Indicator, Sell in May and Go Away: Another Puzzle'"
 mechanism: seasonality
-status: new
+status: rejected
 date_added: 2026-07-05
 ---
 

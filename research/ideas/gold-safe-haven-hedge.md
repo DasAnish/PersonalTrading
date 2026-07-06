@@ -2,7 +2,7 @@
 title: Gold as a Conditional Safe-Haven Hedge (stress-triggered overlay)
 source: Baur & Lucey (2010), The Financial Review — "Is Gold a Hedge or a Safe Haven? An Analysis of Stocks, Bonds and Gold"
 mechanism: hedging-overlay
-status: new
+status: validated
 date_added: 2026-07-05
 ---
 

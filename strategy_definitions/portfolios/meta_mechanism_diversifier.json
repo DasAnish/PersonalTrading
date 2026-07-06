@@ -1,0 +1,22 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: One-Per-Mechanism Diversifier",
+  "description": "Equal-weight meta-portfolio diversified across four orthogonal return mechanisms: Carry (ex-ante yield ranking), Vol-Premium (low-beta defensive tilt), Regime (protective asset allocation), and Momentum (cross-sectional). Combines independent factor exposures for balanced multi-factor risk premia.",
+  "parameters": {},
+  "underlying": [
+    "allocations/cross_asset_carry_ex_commodities",
+    "allocations/low_beta_defensive_tilt",
+    "allocations/protective_asset_allocation",
+    "allocations/momentum_top2"
+  ],
+  "tags": [
+    "ensemble",
+    "multi-factor",
+    "carry",
+    "defensive",
+    "regime",
+    "momentum",
+    "mech:meta"
+  ]
+}

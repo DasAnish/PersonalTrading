@@ -1,0 +1,18 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Cross-Asset Carry + 15% Vol Target",
+  "description": "Cross-asset carry ranking (ex-ante yield from holding) scaled to 15% annualised volatility. Combines high-carry asset overweighting with volatility control to stabilize returns and limit downside.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": "allocations/cross_asset_carry",
+  "tags": [
+    "carry",
+    "cross-asset",
+    "vol-15",
+    "risk-managed",
+    "mech:carry"
+  ]
+}

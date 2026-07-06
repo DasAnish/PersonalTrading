@@ -1,0 +1,19 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Gold Safe-Haven Overlay + 15% Vol Target",
+  "description": "Stress-triggered gold safe-haven tilt scaled to 15% annualised volatility. Combines dynamic equity-stress hedging with volatility control to capture tail-risk protection during market stress while maintaining consistent risk profile.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": "allocations/gold_safe_haven_overlay",
+  "tags": [
+    "hedging",
+    "safe-haven",
+    "gold",
+    "vol-15",
+    "risk-managed",
+    "mech:hedging-overlay"
+  ]
+}

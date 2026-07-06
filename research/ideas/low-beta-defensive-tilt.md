@@ -2,7 +2,7 @@
 title: Low-Beta Defensive Tilt (long-only Betting-Against-Beta)
 source: "Frazzini & Pedersen (2014), Journal of Financial Economics 111(1) 1–25 — 'Betting Against Beta'"
 mechanism: vol-premium
-status: new
+status: validated
 date_added: 2026-07-05
 ---
 

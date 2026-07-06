@@ -1,0 +1,18 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Low-Beta Defensive Tilt + 30% Vol Target",
+  "description": "Low-beta systematic-risk tilt (defensive orientation) scaled to 30% annualised volatility. Combines systematic risk reduction with higher volatility targeting for increased growth potential while maintaining tail-risk protection.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": "allocations/low_beta_defensive_tilt",
+  "tags": [
+    "defensive",
+    "low-beta",
+    "vol-30",
+    "risk-managed",
+    "mech:vol-premium"
+  ]
+}

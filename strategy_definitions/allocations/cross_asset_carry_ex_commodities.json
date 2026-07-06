@@ -1,0 +1,22 @@
+{
+  "type": "allocation",
+  "class": "CarryTiltStrategy",
+  "name": "Cross-Asset Carry ex-Commodities",
+  "description": "Carry tilt ranked across equity and bond assets only, excluding commodities and precious metals. Equals-weights the top_n high-carry assets from the equity sleeve (VUSA, EQQQ, IWRD, IMEU, IIND, AIGC) and bond assets (VUTY). Focuses on the carry premium where ETF yield proxies are most reliable (bonds + equities).",
+  "parameters": {
+    "top_n": 3
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind",
+    "assets/imeu",
+    "assets/iwrd",
+    "assets/vuty"
+  ],
+  "tags": [
+    "mech:carry",
+    "ex-commodities"
+  ]
+}

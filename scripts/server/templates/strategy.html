@@ -101,7 +101,7 @@
             overflow: hidden;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        .metrics-table thead { background: #667eea; color: white; }
+        .metrics-table thead { background: #4c5cd4; color: white; }
         .metrics-table th { padding: 15px; text-align: left; font-weight: 600; }
         .metrics-table td { padding: 12px 15px; border-bottom: 1px solid #e0e0e0; }
         .metrics-table tbody tr:hover { background: #f9f9f9; }
@@ -129,12 +129,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Strategy Backtest Dashboard</h1>
-            <p>Interactive visualization of portfolio optimization results</p>
+            <h1 id="pageTitle">{{ strategy_key }}</h1>
+            <p id="pageSubtitle">Strategy backtest detail</p>
         </div>
 
         <div class="nav-bar">
             <a href="/" class="btn">← All Strategies</a>
+            <nav class="site-nav" style="margin-left: 16px;"><a href="/" style="font-weight:800;color:#1f2937;">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation">Validation</a></nav>
         </div>
 
         <div class="controls" id="controls">
@@ -196,12 +197,14 @@
 
             <!-- Weights Tab -->
             <div id="weights" class="tab-panel">
+                <div id="weightsScope"></div>
                 <h2>Portfolio Weights Over Time</h2>
                 <div class="chart-container"><canvas id="weightsChart"></canvas></div>
             </div>
 
             <!-- Monthly Returns Tab -->
             <div id="monthly" class="tab-panel">
+                <div id="monthlyScope"></div>
                 <h2>Monthly Returns Heatmap</h2>
                 <div id="monthlyHeatmap" style="overflow-x: auto;"></div>
             </div>
@@ -229,6 +232,7 @@
 
             <!-- Transactions Tab -->
             <div id="transactions" class="tab-panel">
+                <div id="transactionsScope"></div>
                 <h2 style="display: flex; justify-content: space-between; align-items: center;">
                     Transaction History
                     <button class="btn" onclick="exportCSV('transactions')" style="font-size: 0.7em; padding: 6px 12px;">Export CSV</button>
@@ -251,6 +255,7 @@
 
             <!-- Overfitting Tab -->
             <div id="overfitting" class="tab-panel">
+                <div id="overfittingScope"></div>
                 <h2>Overfitting Analysis</h2>
                 <div id="overfittingContent">
                     <p class="loading">Loading overfitting analysis…</p>
@@ -259,6 +264,7 @@
 
             <!-- Stress Periods Tab -->
             <div id="stress" class="tab-panel">
+                <div id="stressScope"></div>
                 <h2>Stress Period Analysis</h2>
                 <p style="color:#555; font-size:0.9em; margin-bottom:24px;">
                     Strategy performance during major historical crises, and
@@ -270,6 +276,7 @@
 
             <!-- Attribution Tab -->
             <div id="attribution" class="tab-panel">
+                <div id="attributionScope"></div>
                 <h2>Performance Attribution</h2>
                 <p style="color:#555; font-size:0.9em; margin-bottom:24px;">
                     Daily return contribution of each asset to total portfolio return.
@@ -362,6 +369,10 @@
         .overall-PASS { background: #d1fae5; color: #065f46; }
         .overall-WARN { background: #fef3c7; color: #92400e; }
         .overall-FAIL { background: #fee2e2; color: #991b1b; }
+
+        .site-nav { font-size: 0.9em; display: flex; gap: 16px; align-items: center; }
+        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; }
+        .site-nav a:hover { text-decoration: underline; }
     </style>
 
     <script>
@@ -445,6 +456,10 @@
             const dataList = strategies.map(s => loadedData[s]).filter(d => d);
             if (dataList.length === 0) return;
 
+            document.getElementById('pageTitle').textContent = strategies.join(' vs ');
+            const desc = (dataList[0].info || {}).description || '';
+            document.getElementById('pageSubtitle').textContent = desc || 'Strategy backtest detail';
+
             const headerRow = document.getElementById('metricsHeaderRow');
             headerRow.innerHTML = '<th>Metric</th>' + strategies.map(s => `<th>${s}</th>`).join('');
 
@@ -458,12 +473,31 @@
             descContainer.innerHTML = descHtml;
 
             attributionRendered = false;
+            updateScopeLabels(strategies);
             displayMetrics(dataList, strategies);
             displayPortfolioChart(dataList, strategies);
             displayDrawdownChart(dataList, strategies);
             displayWeightsChart(dataList[0], strategies[0]);
             displayTransactions(dataList[0]);
             loadMonthlyReturns(strategies[0]);
+        }
+
+        function updateScopeLabels(strategies) {
+            const scopeIds = ['weightsScope', 'transactionsScope', 'monthlyScope', 'overfittingScope', 'stressScope', 'attributionScope'];
+            if (strategies.length > 1) {
+                const msg = `Showing ${strategies[0]} only (comparison not supported on this tab)`;
+                for (const id of scopeIds) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = `<p class="muted" style="font-size:0.85rem;background:#f0f0f0;padding:8px 12px;border-radius:6px;margin-bottom:12px;">${msg}</p>`;
+                    }
+                }
+            } else {
+                for (const id of scopeIds) {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = '';
+                }
+            }
         }
 
         function displayMetrics(dataList, names) {
@@ -486,13 +520,13 @@
             const ctx = document.getElementById('portfolioChart').getContext('2d');
             if (charts.portfolio) charts.portfolio.destroy();
 
-            const dates = (dataList[0].portfolio_history || []).map(p => p.date || p.timestamp).slice(0, 100);
+            const dates = (dataList[0].portfolio_history || []).map(p => p.date || p.timestamp);
 
             const datasets = dataList.map((data, i) => {
                 const color = CHART_COLORS[i % CHART_COLORS.length];
                 return {
                     label: names[i],
-                    data: (data.portfolio_history || []).map(p => p.total_value).slice(0, 100),
+                    data: (data.portfolio_history || []).map(p => p.total_value),
                     borderColor: color.border,
                     backgroundColor: color.bg,
                     tension: 0.4,
@@ -526,10 +560,10 @@
             const ctx = document.getElementById('drawdownChart').getContext('2d');
             if (charts.drawdown) charts.drawdown.destroy();
 
-            const dates = (dataList[0].portfolio_history || []).slice(0, 100).map(p => p.date || p.timestamp);
+            const dates = (dataList[0].portfolio_history || []).map(p => p.date || p.timestamp);
 
             const datasets = dataList.map((data, i) => {
-                const portfolio = (data.portfolio_history || []).slice(0, 100);
+                const portfolio = (data.portfolio_history || []);
                 const values = portfolio.map(p => p.total_value);
                 const runningMax = values.reduce((acc, val) => {
                     acc.push(acc.length === 0 ? val : Math.max(acc[acc.length - 1], val));
@@ -576,7 +610,7 @@
             const assetKeys = Object.keys(history[0])
                 .filter(k => k.endsWith('_value') && k !== 'total_value');
             const symbols = assetKeys.map(k => k.replace('_value', ''));
-            const dates = history.map(r => r.date || r.timestamp).slice(0, 100);
+            const dates = history.map(r => r.date || r.timestamp);
             const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899', '#10b981', '#f97316',
                             '#6366f1', '#14b8a6', '#84cc16', '#f43f5e'];
 
@@ -585,7 +619,7 @@
                 data: history.map(r => {
                     const total = r.total_value;
                     return total ? ((r[`${symbol}_value`] || 0) / total) * 100 : 0;
-                }).slice(0, 100),
+                }),
                 backgroundColor: colors[idx % colors.length],
                 borderColor: colors[idx % colors.length],
                 pointRadius: 0,
@@ -600,7 +634,7 @@
                 data: history.map(r => {
                     const total = r.total_value;
                     return total ? ((r.cash || 0) / total) * 100 : 0;
-                }).slice(0, 100),
+                }),
                 backgroundColor: '#d1d5db',
                 borderColor: '#9ca3af',
                 pointRadius: 0,
@@ -642,7 +676,18 @@
                 return;
             }
 
-            transactions.slice(0, 50).forEach(tx => {
+            // Show newest 50 (reverse the array, take first 50)
+            const toDisplay = transactions.length > 50
+                ? transactions.slice(-50).reverse()
+                : [...transactions].reverse();
+
+            // Caption row inside the tbody (cleared above, so it never
+            // duplicates across the 10s auto-refresh)
+            if (transactions.length > 50) {
+                tbody.innerHTML = `<tr><td colspan="5" style="background:#f8f9ff;color:#666;font-size:0.9em;">Showing newest 50 of ${transactions.length} transactions — use Export CSV for the full history</td></tr>`;
+            }
+
+            toDisplay.forEach(tx => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${tx.date || tx.timestamp}</td>
@@ -688,9 +733,9 @@
                         <div class="overfitting-not-run">
                             <h3>Overfitting analysis not yet run</h3>
                             <p>Run the following command to analyse this strategy:</p>
-                            <code>python scripts/run_overfitting.py --strategy ${strategyKey} --n-trials &lt;N&gt;</code>
+                            <code>python scripts/validate_strategy.py --strategy ${strategyKey}</code>
                             <p style="margin-top:12px;font-size:0.9em;color:#888;">
-                                For a full sweep + PBO analysis use <code style="display:inline;background:#eee;color:#333;padding:2px 6px;border-radius:4px;">--param key=v1,v2,v3</code> instead.
+                                Full library: <code style="display:inline;background:#eee;color:#333;padding:2px 6px;border-radius:4px;">python scripts/run_full_analysis.py --skip-backtest --fast</code>
                             </p>
                             ${err.hint ? `<p style="margin-top:8px;font-size:0.85em;color:#666;">${err.hint}</p>` : ''}
                         </div>`;

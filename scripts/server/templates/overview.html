@@ -17,7 +17,7 @@
             margin-top: 24px;
         }
 
-        .overview-table thead { background: #667eea; color: white; }
+        .overview-table thead { background: #4c5cd4; color: white; }
         .overview-table th { padding: 14px 16px; text-align: left; font-weight: 600; }
         .overview-table td { padding: 12px 16px; border-bottom: 1px solid #e0e0e0; }
         .overview-table tbody tr:hover { background: #f5f7ff; cursor: pointer; }
@@ -186,17 +186,22 @@
             margin-left: auto;
             white-space: nowrap;
         }
+
+        .site-nav { margin: 0 0 16px; font-size: 0.9em; }
+        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 16px; }
+        .site-nav a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Strategy Backtest Dashboard</h1>
-    <nav style="margin:8px 0;"><a href="/live-risk">Live Risk →</a> &nbsp;·&nbsp; <a href="/validation">Validation &amp; Overfitting →</a></nav>
             <p>Overview of all backtested strategies</p>
         </div>
 
         <div class="content">
+            <nav class="site-nav"><a href="/" style="font-weight:800;color:#1f2937;">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation">Validation</a></nav>
+
             <div class="summary-cards" id="summaryCards">
                 <div class="summary-card">
                     <h3>Strategies</h3>

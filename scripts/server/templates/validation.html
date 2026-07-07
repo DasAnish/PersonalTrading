@@ -10,6 +10,9 @@
         .content header h1 { color: #1f2937; }
         .content header nav a { color: #667eea; text-decoration: none; font-weight: 600; }
         .content h2, .content h3 { color: #1f2937; margin: 20px 0 8px; }
+        .site-nav { font-size: 0.9em; }
+        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 16px; }
+        .site-nav a:hover { text-decoration: underline; }
         .muted { color: #6b7280; }
         .spa-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 12px 0; }
         .spa-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
@@ -36,8 +39,8 @@
   <div class="content">
     <header>
         <h1>Validation &amp; Overfitting <span class="muted" style="font-size:0.9rem;">(library-wide)</span></h1>
-        <nav><a href="/">← Overview</a></nav>
     </header>
+    <nav class="site-nav" style="margin:8px 0 16px;"><a href="/">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation" style="font-weight:800;color:#1f2937;">Validation</a></nav>
 
     <p class="muted">
         The per-strategy battery judges each strategy in isolation; the SPA /

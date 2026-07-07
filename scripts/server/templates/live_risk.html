@@ -20,21 +20,30 @@
         .content header h1 { color: #1f2937; }
         .content header nav a { color: #667eea; text-decoration: none; font-weight: 600; }
         .content h2, .content h3 { color: #1f2937; }
+        .site-nav { font-size: 0.9em; }
+        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 16px; }
+        .site-nav a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
   <div class="container">
   <div class="content">
-    <header><h1>Live Risk <span class="muted" style="font-size:0.9rem;">(read-only — no orders)</span></h1>
-        <nav><a href="/">← Overview</a></nav>
-    </header>
+    <header><h1>Live Risk <span class="muted" style="font-size:0.9rem;">(read-only — no orders)</span></h1></header>
+    <nav class="site-nav" style="margin:8px 0 16px;"><a href="/">Overview</a> · <a href="/live-risk" style="font-weight:800;color:#1f2937;">Live Risk</a> · <a href="/validation">Validation</a></nav>
     <main style="max-width: 1100px; margin: 0 auto; padding: 0 16px;">
         <div id="banner"></div>
         <p class="muted" id="asOf"></p>
 
+        <h2 style="margin-top:28px;">Current Holdings <span class="muted" style="font-size:0.85rem;">(what you hold now — risk &amp; drift)</span></h2>
         <div class="risk-grid" id="cards"></div>
 
-        <h2>Preferred Blend <span class="muted" style="font-size:0.85rem;">(drift &amp; rebalance target — a weighted mix of strategies you like)</span></h2>
+        <h3 style="margin:12px 0 0;font-size:1rem;">Positions</h3>
+        <div id="positions"></div>
+
+        <h3 style="margin:12px 0 0;font-size:1rem;">Correlation</h3>
+        <div id="correlation" style="overflow-x:auto;"></div>
+
+        <h2 style="margin-top:28px;">Preferred Blend <span class="muted" style="font-size:0.85rem;">(drift &amp; rebalance target — a weighted mix of strategies you like)</span></h2>
         <div id="blendRows"></div>
         <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
             <button onclick="addBlendRow()">+ Add strategy</button>
@@ -43,24 +52,22 @@
         </div>
         <div id="blendTarget" class="muted" style="font-size:0.85rem; margin-bottom:8px;"></div>
 
-        <h2>Target Allocation
-            <span class="muted" style="font-size:0.85rem;">£</span>
+        <h2 style="margin-top:28px;">Target Allocation</h2>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+            <label style="font-weight:600;">Budget (£)</label>
             <input id="budgetInput" type="number" step="500" min="0" value="10000" style="width:120px;padding:4px;font-size:0.9rem;">
             <button onclick="loadTarget()">Size it</button>
-        </h2>
+        </div>
         <div id="targetAlloc"></div>
 
-        <h2 style="margin-top:28px;">Current Holdings <span class="muted" style="font-size:0.85rem;">(what you hold now — risk &amp; drift)</span></h2>
-        <h3 style="margin:8px 0 0;font-size:1rem;">Positions</h3>
-        <div id="positions"></div>
-
-        <h3 style="margin:12px 0 0;font-size:1rem;">Correlation</h3>
-        <div id="correlation" style="overflow-x:auto;"></div>
-
-        <h3 style="margin:12px 0 0;font-size:1rem;">Drift vs Target
-            <input id="strategyInput" placeholder="override: strategy key" style="font-size:0.9rem;padding:4px;">
+        <h2 style="margin-top:28px;">Drift vs Target</h2>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+            <label style="font-weight:600;">Override blend:</label>
+            <select id="strategyInput" style="font-size:0.9rem;padding:4px;">
+                <option value="">— saved blend —</option>
+            </select>
             <button onclick="loadRisk()">Load</button>
-        </h3>
+        </div>
         <div id="drift"></div>
     </main>
   </div>
@@ -130,6 +137,7 @@
         // ---- Preferred blend editor ----
         let availableStrategies = [];
         let blendRows = [];  // [{key, weight}]
+        let blendDirty = false;
 
         function strategyOptions(sel) {
             return ['<option value="">— pick strategy —</option>']
@@ -140,15 +148,15 @@
         function renderBlendRows() {
             const html = blendRows.map((r, i) => `
                 <div style="display:flex;gap:8px;align-items:center;margin:4px 0;">
-                    <select style="flex:1;padding:4px;" onchange="blendRows[${i}].key=this.value">${strategyOptions(r.key)}</select>
-                    <input type="number" step="0.05" min="0" value="${r.weight}" style="width:90px;padding:4px;" placeholder="weight" oninput="blendRows[${i}].weight=this.value">
+                    <select style="flex:1;padding:4px;" onchange="blendRows[${i}].key=this.value;blendDirty=true">${strategyOptions(r.key)}</select>
+                    <input type="number" step="0.05" min="0" value="${r.weight}" style="width:90px;padding:4px;" placeholder="weight" oninput="blendRows[${i}].weight=this.value;blendDirty=true">
                     <button onclick="removeBlendRow(${i})">✕</button>
                 </div>`).join('');
             document.getElementById('blendRows').innerHTML = html || '<p class="muted">No strategies yet — add one.</p>';
         }
 
-        function addBlendRow() { blendRows.push({ key: '', weight: '' }); renderBlendRows(); }
-        function removeBlendRow(i) { blendRows.splice(i, 1); renderBlendRows(); }
+        function addBlendRow() { blendRows.push({ key: '', weight: '' }); blendDirty=true; renderBlendRows(); }
+        function removeBlendRow(i) { blendRows.splice(i, 1); blendDirty=true; renderBlendRows(); }
 
         function renderBlendTarget(tw) {
             tw = tw || {};
@@ -162,9 +170,18 @@
             const data = await fetchJSON('/api/preferred-blend');
             if (!data) return;
             availableStrategies = data.available_strategies || [];
+
+            // Populate strategyInput select
+            const select = document.getElementById('strategyInput');
+            if (select) {
+                select.innerHTML = '<option value="">— saved blend —</option>' +
+                    availableStrategies.map(s => `<option value="${s}">${s}</option>`).join('');
+            }
+
             const blend = data.blend || {};
             blendRows = Object.keys(blend).map(k => ({ key: k, weight: blend[k] }));
             if (!blendRows.length) blendRows = [{ key: '', weight: '' }];
+            blendDirty = false;
             renderBlendRows();
             renderBlendTarget(data.target_weights);
         }
@@ -178,7 +195,11 @@
             const rows = data.target || [];
             if (!rows.length) { el.innerHTML = '<p class="muted">Set a preferred blend above, then size it.</p>'; return; }
             const anyPrice = rows.some(r => r.price != null);
+            const staleWarning = blendDirty
+                ? '<p style="color:#92400e;background:#fef3c7;padding:6px 10px;border-radius:6px;margin-bottom:12px;">Blend has unsaved changes — sizing the last SAVED blend.</p>'
+                : '';
             el.innerHTML = `
+                ${staleWarning}
                 <table><thead><tr><th>Symbol</th><th>Weight</th><th>Amount (£)</th><th>Price (£)</th><th>Shares</th></tr></thead>
                 <tbody>${rows.map(r => `<tr>
                     <td>${r.symbol}</td>
@@ -187,7 +208,8 @@
                     <td>${r.price != null ? r.price.toFixed(2) : '<span class="muted">n/a</span>'}</td>
                     <td>${r.shares != null ? r.shares.toFixed(2) : '<span class="muted">set price</span>'}</td>
                 </tr>`).join('')}</tbody></table>
-                <p class="muted" style="font-size:0.85rem;">Target book for £${budget.toLocaleString()} at cached close prices.${anyPrice ? '' : ' No prices — set them in config/price_units.json.'} Report only — enter orders manually.</p>`;
+                <p class="muted" style="font-size:0.85rem;">Target book for £${budget.toLocaleString()} at cached close prices.${anyPrice ? '' : ' No prices — set them in config/price_units.json.'} Report only — enter orders manually.</p>
+                <p class="muted" style="font-size:0.8rem;">Weights are normalized on save — e.g. 2 and 1 becomes 67% / 33%.</p>`;
         }
 
         async function saveBlend() {
@@ -205,6 +227,7 @@
             const data = await res.json();
             if (!res.ok) { msg.textContent = data.error || 'Save failed.'; return; }
             msg.textContent = 'Saved.';
+            blendDirty = false;
             renderBlendTarget(data.target_weights);
             loadTarget();  // resize the target book to the new blend
             loadRisk();    // drift now reflects the saved blend

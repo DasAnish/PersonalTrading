@@ -18,7 +18,18 @@ function showTab(tabName, event) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
     document.getElementById(tabName).classList.add('active');
-    if (event) event.target.classList.add('active');
+    if (event) {
+        event.target.classList.add('active');
+    } else {
+        // Find button by onclick attribute if event is null
+        const btn = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
+        if (btn) btn.classList.add('active');
+    }
+
+    // Set URL hash only if it changed
+    if (window.location.hash !== '#' + tabName) {
+        window.location.hash = tabName;
+    }
 
     const loader = TAB_LAZY_LOADERS[tabName];
     if (loader) loader();

@@ -84,13 +84,14 @@
         }
 
         .metric-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            color: #1f2937;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        .metric-card h3 { font-size: 0.9em; text-transform: uppercase; opacity: 0.9; margin-bottom: 10px; }
+        .metric-card h3 { font-size: 0.9em; text-transform: uppercase; color: #6b7280; margin-bottom: 10px; }
         .metric-card .value { font-size: 2em; font-weight: bold; }
 
         .metrics-table {
@@ -142,7 +143,10 @@
             <div class="control-group">
                 <label>Strategies:</label>
                 <div id="strategySelectors"></div>
-                <button class="btn" onclick="addStrategyRow()" style="margin-top: 8px;">+ Add Strategy</button>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button class="btn" onclick="addStrategyRow()">+ Add Strategy</button>
+                    <button class="btn" onclick="Object.keys(loadedData).forEach(k=>delete loadedData[k]); handleStrategyChange();" title="Reload data">↻ Refresh</button>
+                </div>
             </div>
         </div>
 
@@ -507,7 +511,8 @@
             const metricKeys = Object.keys(dataList[0].metrics || {});
             for (const key of metricKeys) {
                 const row = document.createElement('tr');
-                let html = `<td><strong>${key}</strong></td>`;
+                const humanKey = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                let html = `<td><strong>${humanKey}</strong></td>`;
                 for (const data of dataList) {
                     html += `<td>${formatMetric(key, (data.metrics || {})[key])}</td>`;
                 }
@@ -1576,15 +1581,15 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            initializeDashboard();
-            // Auto-refresh loaded strategy data every 10 seconds
-            setInterval(async () => {
-                const strategies = getStrategySelections();
-                if (strategies.length === 0) return;
-                // Bust the cache so fresh data is fetched
-                strategies.forEach(s => delete loadedData[s]);
-                await handleStrategyChange();
-            }, 10000);
+            initializeDashboard().then(() => {
+                // Restore tab from URL hash if present
+                if (window.location.hash) {
+                    const tabName = window.location.hash.slice(1);
+                    if (document.getElementById(tabName)) {
+                        showTab(tabName, null);
+                    }
+                }
+            });
         });
     </script>
 </body>

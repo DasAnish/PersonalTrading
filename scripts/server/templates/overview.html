@@ -59,7 +59,8 @@
             position: relative;
             flex-shrink: 0;
         }
-        .metric-info:hover::after {
+        .metric-info:hover::after,
+        .metric-info:focus::after {
             content: attr(data-tip);
             position: absolute;
             top: calc(100% + 6px);
@@ -69,14 +70,15 @@
             color: #fff;
             padding: 6px 10px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 400;
             white-space: nowrap;
             z-index: 100;
             pointer-events: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
-        .metric-info:hover::before {
+        .metric-info:hover::before,
+        .metric-info:focus::before {
             content: '';
             position: absolute;
             top: calc(100% + 2px);
@@ -95,16 +97,17 @@
         }
 
         .summary-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            color: #1f2937;
             padding: 18px 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .summary-card h3 { font-size: 0.85em; opacity: 0.85; text-transform: uppercase; margin-bottom: 6px; }
+        .summary-card h3 { font-size: 0.85em; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; }
         .summary-card .value { font-size: 1.8em; font-weight: bold; }
-        .summary-card .sub { font-size: 0.8em; opacity: 0.8; margin-top: 2px; }
+        .summary-card .sub { font-size: 0.8em; color: #6b7280; margin-top: 2px; }
 
         .filter-bar {
             display: flex;
@@ -229,6 +232,7 @@
                 <div class="tag-filters" id="tagFilters">
                     <span class="tag-filter-label">Tags:</span>
                 </div>
+                <button class="tag-btn" onclick="init()" title="Reload results">↻ Refresh</button>
                 <span class="filter-count" id="filterCount"></span>
             </div>
 
@@ -236,13 +240,13 @@
                 <thead>
                     <tr>
                         <th><button class="sort-btn" onclick="sortTable('name')">Strategy</button></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio')">Sharpe Ratio</button><span class="metric-info" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr')">CAGR</button><span class="metric-info" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown')">Max Drawdown</button><span class="metric-info" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility')">Volatility</button><span class="metric-info" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return')">Total Return</button><span class="metric-info" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio')">Calmar</button><span class="metric-info" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio')">Omega</button><span class="metric-info" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio')">Sharpe Ratio</button><span class="metric-info" tabindex="0" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr')">CAGR</button><span class="metric-info" tabindex="0" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown')">Max Drawdown</button><span class="metric-info" tabindex="0" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility')">Volatility</button><span class="metric-info" tabindex="0" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return')">Total Return</button><span class="metric-info" tabindex="0" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio')">Calmar</button><span class="metric-info" tabindex="0" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio')">Omega</button><span class="metric-info" tabindex="0" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
                     </tr>
                 </thead>
                 <tbody id="overviewBody">
@@ -491,8 +495,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             init();
-            // Auto-refresh every 10 seconds
-            setInterval(init, 10000);
         });
     </script>
 </body>

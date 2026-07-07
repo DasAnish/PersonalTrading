@@ -228,7 +228,7 @@
             </div>
 
             <div class="filter-bar">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search strategy name..." oninput="applyFilters()">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search strategy name..." oninput="debouncedFilters()">
                 <div class="tag-filters" id="tagFilters">
                     <span class="tag-filter-label">Tags:</span>
                 </div>
@@ -239,14 +239,14 @@
             <table class="overview-table" id="overviewTable">
                 <thead>
                     <tr>
-                        <th><button class="sort-btn" onclick="sortTable('name')">Strategy</button></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio')">Sharpe Ratio</button><span class="metric-info" tabindex="0" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr')">CAGR</button><span class="metric-info" tabindex="0" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown')">Max Drawdown</button><span class="metric-info" tabindex="0" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility')">Volatility</button><span class="metric-info" tabindex="0" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return')">Total Return</button><span class="metric-info" tabindex="0" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio')">Calmar</button><span class="metric-info" tabindex="0" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio')">Omega</button><span class="metric-info" tabindex="0" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
+                        <th><button class="sort-btn" onclick="sortTable('name', event)">Strategy</button></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio', event)">Sharpe Ratio</button><span class="metric-info" tabindex="0" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr', event)">CAGR</button><span class="metric-info" tabindex="0" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown', event)">Max Drawdown</button><span class="metric-info" tabindex="0" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility', event)">Volatility</button><span class="metric-info" tabindex="0" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return', event)">Total Return</button><span class="metric-info" tabindex="0" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio', event)">Calmar</button><span class="metric-info" tabindex="0" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
+                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio', event)">Omega</button><span class="metric-info" tabindex="0" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
                     </tr>
                 </thead>
                 <tbody id="overviewBody">
@@ -261,6 +261,12 @@
         let sortKey = 'sharpe_ratio';
         let sortDir = 'desc';
         let activeTags = new Set();
+        let _debounceTimeout;
+
+        function debouncedFilters() {
+            clearTimeout(_debounceTimeout);
+            _debounceTimeout = setTimeout(applyFilters, 150);
+        }
 
         // fmt() is defined in format.js
 
@@ -429,7 +435,7 @@
             applyFilters();
         }
 
-        function sortTable(key) {
+        function sortTable(key, event) {
             if (sortKey === key) {
                 sortDir = sortDir === 'asc' ? 'desc' : 'asc';
             } else {

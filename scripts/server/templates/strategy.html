@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ strategy_key }} — Strategy Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="{{ url_for('routes.static', filename='js/chart.min.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
     <script src="{{ url_for('routes.static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('routes.static', filename='js/format.js') }}"></script>

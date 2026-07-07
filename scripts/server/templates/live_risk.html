@@ -115,7 +115,16 @@
             const syms = Object.keys(corr);
             document.getElementById('correlation').innerHTML = syms.length ? `
                 <table><thead><tr><th></th>${syms.map(s => `<th>${s}</th>`).join('')}</tr></thead>
-                <tbody>${syms.map(r => `<tr><td>${r}</td>${syms.map(c => `<td>${corr[r][c] != null ? corr[r][c].toFixed(2) : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+                <tbody>${syms.map((r, ri) => `<tr><td>${r}</td>${syms.map((c, ci) => {
+                    const v = corr[r][c];
+                    if (v == null) return '<td></td>';
+                    const isDiag = ri === ci || v === 1;
+                    const h = v >= 0 ? 220 : 10;
+                    const a = Math.min(Math.abs(v) * 0.5, 0.45);
+                    const bg = isDiag ? '' : `background: hsla(${h}, 70%, 50%, ${a});`;
+                    const fw = Math.abs(v) >= 0.7 ? 'font-weight:600;' : '';
+                    return `<td style="${bg}${fw}">${v.toFixed(2)}</td>`;
+                }).join('')}</tr>`).join('')}</tbody></table>`
                 : '<p class="muted">No correlation data.</p>';
 
             const drift = data.drift || [];

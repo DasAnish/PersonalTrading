@@ -66,6 +66,7 @@ from .cross_asset_carry import CarryTiltStrategy
 from .gold_safe_haven_overlay import GoldSafeHavenOverlayStrategy
 from .low_beta_defensive_tilt import LowBetaTiltStrategy
 from .quality_weighted_stability import QualityWeightedStabilityStrategy
+from .presidential_election_cycle import PresidentialCycleSeasonalityStrategy
 
 # Overlay strategies
 from .overlays import (
@@ -180,6 +181,7 @@ __all__ = [
     'GoldSafeHavenOverlayStrategy',
     'LowBetaTiltStrategy',
     'QualityWeightedStabilityStrategy',
+    'PresidentialCycleSeasonalityStrategy',
     # Overlay strategies
     'VolatilityTargetStrategy',
     'ConstraintStrategy',

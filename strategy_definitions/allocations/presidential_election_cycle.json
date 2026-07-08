@@ -1,0 +1,27 @@
+{
+  "type": "allocation",
+  "class": "PresidentialCycleSeasonalityStrategy",
+  "name": "Presidential Election Cycle Seasonality",
+  "description": "Deterministic 4-year calendar rotation keyed off months elapsed since the most recent US presidential inauguration (Jan 20, inauguration years 2025, 2029, ... and equivalently 2021, 2017, ... for historical backtest dates). Tilts the equity sleeve (VUSA, EQQQ, IWRD, IMEU, IIND, AIGC) up in the historically strong second/third cycle year and toward the defensive sleeve (VUTY, SGLN) in the historically weak first cycle year, holding a neutral equal-weight baseline across the full universe in the fourth (election) year. Based on Herbst & Slinkman (1984) 'Political-Economic Cycles in the U.S. Stock Market'; a genuinely disputed, low-power effect given only ~12-15 non-overlapping historical cycles.",
+  "parameters": {
+    "tilt_magnitude_pp": 15
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/iwrd",
+    "assets/imeu",
+    "assets/iind",
+    "assets/aigc",
+    "assets/vuty",
+    "assets/sgln",
+    "assets/brnt",
+    "assets/comm",
+    "assets/crud",
+    "assets/ssln",
+    "assets/wcoa"
+  ],
+  "tags": [
+    "mech:seasonality"
+  ]
+}

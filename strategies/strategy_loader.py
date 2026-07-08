@@ -68,6 +68,49 @@ class StrategyLoader:
                 return json.load(f)
             return yaml.safe_load(f)
 
+    def _load_universe(self) -> Dict[str, List[str]]:
+        """Load and cache the shared asset universe (strategy_definitions/universe.json)."""
+        if "__universe__" not in self._cache:
+            universe_path = self.config_dir / "universe.json"
+            with open(universe_path, "r") as f:
+                self._cache["__universe__"] = json.load(f)
+        return self._cache["__universe__"]
+
+    def _expand_universe_ref(self, ref: str) -> List[str]:
+        """Expand a single "universe:<group>" string into its asset ref list."""
+        group = ref.split(":", 1)[1]
+        universe = self._load_universe()
+        if group not in universe:
+            raise ValueError(f"Unknown universe group: {group!r}")
+        return universe[group]
+
+    def _resolve_underlying_refs(self, underlying) -> List[Any]:
+        """
+        Resolve an allocation's "underlying" field to a flat list of refs/dicts.
+
+        Supports a symbolic group reference (e.g. "universe:commodity" or
+        "universe:all") either as the entire "underlying" value, or mixed
+        into a list alongside explicit asset refs (e.g.
+        ["universe:equity", "universe:commodity", "assets/vuty"]) — the
+        latter form preserves explicit ordering/position for strategies
+        that depend on it (e.g. ProtectiveAssetAllocationStrategy treats
+        the *last* asset as the safe asset). New assets added to
+        universe.json automatically flow into every strategy that
+        references that group, in either form.
+        """
+        if isinstance(underlying, str):
+            if not underlying.startswith("universe:"):
+                raise ValueError(f"Invalid underlying ref string: {underlying!r}")
+            return self._expand_universe_ref(underlying)
+
+        resolved = []
+        for item in underlying:
+            if isinstance(item, str) and item.startswith("universe:"):
+                resolved.extend(self._expand_universe_ref(item))
+            else:
+                resolved.append(item)
+        return resolved
+
     def _find_strategy_file(self, strategy_key: str) -> Optional[Path]:
         """
         Find strategy definition file by key.
@@ -192,7 +235,7 @@ class StrategyLoader:
 
         if strategy_type in ("allocation", "portfolio"):
             strategy_class = self._get_class(class_name)
-            underlying_refs = definition.get("underlying", [])
+            underlying_refs = self._resolve_underlying_refs(definition.get("underlying", []))
             underlying_list = []
             for ref in underlying_refs:
                 if isinstance(ref, str):

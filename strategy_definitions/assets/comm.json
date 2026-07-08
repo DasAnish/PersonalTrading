@@ -7,5 +7,11 @@
     "symbol": "COMM",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00BDFL4P12",
+    "asset_class": "commodity",
+    "sub_class": "broad_commodity_swap",
+    "ter_bps": 19
   }
 }

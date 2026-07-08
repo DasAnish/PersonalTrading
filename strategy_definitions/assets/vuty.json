@@ -7,5 +7,11 @@
     "symbol": "VUTY",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00BZ163M45",
+    "asset_class": "bond",
+    "sub_class": "us_treasury",
+    "ter_bps": 5
   }
 }

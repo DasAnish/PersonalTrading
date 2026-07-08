@@ -25,7 +25,7 @@ A production-ready Python trading system for portfolio optimization and backtest
 
 ## Backtesting Specifications
 
-- **Symbols**: VUSA, SSLN, SGLN, IWRD, EQQQ, BRNT, CRUD, COMM, COMML, AIGC, IIND, IMEU, WCOA, VUTY (UK ETFs, GBP, SMART exchange)
+- **Symbols**: 30-asset universe defined in `strategy_definitions/universe.json` (equity/bond/commodity groups), backed by per-asset definitions in `strategy_definitions/assets/*.json`. Core original set: VUSA, SSLN (silver ETC), SGLN (gold ETC), IWRD, EQQQ, BRNT, CRUD, COMM, COMML (USD line of COMM, excluded from universe groups as a near-duplicate), AIGC (WisdomTree Broad Commodities ETC — corrected from a stale "AI" label), IIND, IMEU, WCOA, VUTY, plus 17 newly added UCITS ETFs spanning bonds, European/EM equity, and thematic/ESG equity. See `docs/strategies.md` for the universe abstraction and full asset list.
 - **Rebalancing**: Monthly (end of month)
 - **Transaction Costs**: 7.5 bps per trade
 - **Position Sizing**: `Units = (NAV × Weight) / Price`

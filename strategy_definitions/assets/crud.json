@@ -7,5 +7,11 @@
     "symbol": "CRUD",
     "currency": "USD",
     "exchange": "LSE"
+  },
+  "metadata": {
+    "isin": "GB00B15KXV33",
+    "asset_class": "commodity",
+    "sub_class": "energy_wti_crude",
+    "ter_bps": 49
   }
 }

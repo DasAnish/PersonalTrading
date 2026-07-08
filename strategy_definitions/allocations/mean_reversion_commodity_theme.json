@@ -2,19 +2,12 @@
   "type": "allocation",
   "class": "MeanReversionStrategy",
   "name": "Mean Reversion Commodity Theme",
-  "description": "Short-term mean reversion (20-day contrarian) applied to commodities and precious metals only. Ranks SSLN, SGLN, COMM, BRNT, CRUD, WCOA by trailing return, overweighting recent underperformers scaled by inverse volatility. Exploits short-horizon price reversal in commodity markets for inflation-sensitive mean-reversion edge.",
+  "description": "Short-term mean reversion (20-day contrarian) applied to commodities and precious metals only. Ranks SSLN, SGLN, COMM, BRNT, CRUD, WCOA, AIGC by trailing return, overweighting recent underperformers scaled by inverse volatility. Exploits short-horizon price reversal in commodity markets for inflation-sensitive mean-reversion edge.",
   "parameters": {
     "lookback_days": 20,
     "vol_lookback_days": 63
   },
-  "underlying": [
-    "assets/ssln",
-    "assets/sgln",
-    "assets/comm",
-    "assets/brnt",
-    "assets/crud",
-    "assets/wcoa"
-  ],
+  "underlying": "universe:commodity",
   "tags": [
     "mech:mean-reversion",
     "commodity-theme"

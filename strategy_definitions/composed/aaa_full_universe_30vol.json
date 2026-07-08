@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Adaptive Asset Allocation Full Universe + 30% Vol Target",
-  "description": "Two-step Keller & Keuning allocation (6-month momentum top-4 selection + min-var optimisation) across all 13 assets, scaled to 30% annualised volatility. Higher vol budget allows more aggressive exposure during strong momentum regimes across equities, AI, commodities, and bonds.",
+  "description": "Two-step Keller & Keuning allocation (6-month momentum top-4 selection + min-var optimisation) across the full asset universe, scaled to 30% annualised volatility. Higher vol budget allows more aggressive exposure during strong momentum regimes across equities, commodities, and bonds.",
   "parameters": {
     "target_vol": 0.3,
     "lookback_days": 252
@@ -16,21 +16,7 @@
       "min_weight": 0.025,
       "max_weight": 0.4
     },
-    "underlying": [
-      "assets/vusa",
-      "assets/eqqq",
-      "assets/aigc",
-      "assets/iind",
-      "assets/imeu",
-      "assets/iwrd",
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa",
-      "assets/vuty"
-    ]
+    "underlying": "universe:all"
   },
   "tags": [
     "aaa",

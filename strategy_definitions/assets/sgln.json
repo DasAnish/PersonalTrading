@@ -2,6 +2,13 @@
   "type": "asset",
   "class": "AssetStrategy",
   "name": "SGLN",
-  "description": "iShares MSCI EM UCITS ETF (GBP)",
-  "parameters": {"symbol": "SGLN", "currency": "GBP", "exchange": "SMART"}
+  "description": "iShares Physical Gold ETC (GBP, LSE)",
+  "parameters": {"symbol": "SGLN", "currency": "GBP", "exchange": "SMART"},
+  "metadata": {
+    "isin": "IE00B4ND3602",
+    "asset_class": "commodity",
+    "sub_class": "precious_metal_gold",
+    "ter_bps": 12,
+    "correction_note": "Description previously read 'iShares MSCI EM UCITS ETF', which does not correspond to this ticker. SGLN is the well-known iShares Physical Gold ETC; the symbol/currency/exchange parameters were already correct, only the description was stale."
+  }
 }

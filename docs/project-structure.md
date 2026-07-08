@@ -241,7 +241,8 @@ Declarative JSON strategy definitions. The loader in `strategies/strategy_loader
 |------|-------------|
 | `README.md` | Guide to writing and composing strategy definitions |
 | `CUSTOM_STRATEGIES.md` | Notes on adding new custom strategies |
-| `assets/` | Individual instrument definitions (VUSA, SSLN, SGLN, IWRD, EQQQ, BRNT, CRUD, COMM, COMML, AIGC, IIND, IMEU, WCOA, VUTY) — 14 UK ETFs |
+| `assets/` | Individual instrument definitions — 31 UCITS ETFs (grouped into equity/bond/commodity via `universe.json`; `comml` is a standalone USD-line duplicate of `comm`, deliberately excluded from the groups) |
+| `universe.json` | Central asset universe. Groups (`equity`, `bond`, `commodity`, `europe_equity`, `em_equity`, `all`) are referenced by strategy definitions via `"underlying": "universe:<group>"`, so adding an asset here flows automatically into every strategy pointing at that group — no per-strategy edits needed |
 | `allocations/` | Weight-calculation strategies (HRP, trend following, equal weight, momentum, risk parity, minimum variance) |
 | `overlays/` | Weight-transformation overlays (volatility targets at 12/15/30%, box constraints) |
 | `composed/` | Multi-layer strategies — an allocation wrapped in one or more overlays |

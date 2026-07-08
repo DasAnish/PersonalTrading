@@ -2,7 +2,7 @@
   "type": "allocation",
   "class": "HRPStrategy",
   "name": "HRP Commodity Theme",
-  "description": "Hierarchical Risk Parity (Ward linkage) applied to hard assets and commodities: precious metals (SSLN silver, SGLN gold), energy (BRNT crude, CRUD oil), broad commodities (COMM), and agriculture/industrial (WCOA). Ward clustering captures the natural hierarchy between precious metals, energy cycles, and industrial commodity demand. Pure commodity diversification for inflation protection.",
+  "description": "Hierarchical Risk Parity (Ward linkage) applied to hard assets and commodities: precious metals (SSLN silver, SGLN gold), energy (BRNT crude, CRUD oil), and broad commodities (COMM, WCOA, AIGC). Ward clustering captures the natural hierarchy between precious metals, energy cycles, and broad commodity demand. Pure commodity diversification for inflation protection.",
   "parameters": {
     "linkage_method": "ward"
   },
@@ -12,7 +12,8 @@
     "assets/comm",
     "assets/brnt",
     "assets/crud",
-    "assets/wcoa"
+    "assets/wcoa",
+    "assets/aigc"
   ],
   "tags": [
     "mech:diversification"

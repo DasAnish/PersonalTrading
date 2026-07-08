@@ -42,13 +42,29 @@ logger = logging.getLogger(__name__)
 CARRY_PRIORS: Dict[str, float] = {
     # Bonds: strong positive carry (yield-to-maturity, roll-down)
     'VUTY': 0.035,  # US Treasuries: ~3.5% typical yield
+    'HYLD': 0.060,  # Global high yield corporate bonds: ~6% typical yield
+    'AGGU': 0.045,  # Global aggregate bond (USD hedged): ~4.5% typical yield
+    'SEGA': 0.025,  # EUR govt bonds: ~2.5% typical yield
+    'TIGG': 0.070,  # India INR govt bonds: ~7% typical local-currency yield
     # Equities: moderate positive carry (dividend yield)
     'VUSA': 0.020,  # US equities: ~2% dividend yield
     'EQQQ': 0.008,  # Tech equities: ~0.8% dividend yield
     'IWRD': 0.025,  # Global equities: ~2.5% dividend yield
     'IMEU': 0.030,  # European equities: ~3% dividend yield
     'IIND': 0.020,  # Indian equities: ~2% dividend yield
-    'AIGC': 0.015,  # AI/tech: ~1.5% dividend yield
+    'ASHR': 0.020,  # China A-shares: ~2% dividend yield
+    'SAEM': 0.025,  # EM ESG screened equities: ~2.5% dividend yield
+    'CACX': 0.030,  # France CAC 40: ~3% dividend yield
+    'CSX5': 0.030,  # Eurozone large cap: ~3% dividend yield
+    'IEMU': 0.030,  # EMU equities: ~3% dividend yield
+    'WCLD': 0.003,  # Thematic cloud computing: ~0.3% dividend yield (growth-tilted)
+    'WSML': 0.018,  # World small cap: ~1.8% dividend yield
+    'AWESGS': 0.018,  # ACWI ESG universal (CHF hedged): ~1.8% dividend yield
+    'EMMCHA': 0.025,  # EM diversified: ~2.5% dividend yield
+    'EXXW': 0.040,  # Asia Pacific dividend-select: ~4% dividend yield
+    'EXX5': 0.035,  # US dividend-select: ~3.5% dividend yield
+    'EXI2': 0.022,  # Global titans large cap: ~2.2% dividend yield
+    'EXSA': 0.028,  # STOXX Europe 600: ~2.8% dividend yield
     # Precious metals: negative carry (storage costs, no coupon)
     'SGLN': -0.005,  # Silver: storage costs, no yield
     'SSLN': -0.005,  # Gold: storage costs, no yield
@@ -56,7 +72,9 @@ CARRY_PRIORS: Dict[str, float] = {
     'BRNT': 0.000,  # Brent oil: contango/backwardation dependent
     'CRUD': 0.000,  # Crude oil: contango/backwardation dependent
     'COMM': 0.000,  # Broad commodity: roll-dependent
-    'WCOA': 0.000,  # Coal: commodity carry
+    'ICOM': 0.000,  # Broad commodity, USD-quoted line (same fund as COMM)
+    'WCOA': 0.000,  # Enhanced broad commodity: roll-dependent
+    'AIGC': 0.000,  # Broad commodities ETC: roll-dependent (not AI/tech — see asset metadata correction)
 }
 
 

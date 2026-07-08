@@ -7,5 +7,11 @@
     "symbol": "IMEU",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00B1YZSC51",
+    "asset_class": "equity",
+    "sub_class": "europe_developed",
+    "ter_bps": 12
   }
 }

@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "HRP Growth Theme + 15% Vol Target",
-  "description": "Hierarchical Risk Parity (Ward linkage) over growth-oriented assets (VUSA, EQQQ, AIGC, IIND, IMEU) scaled to 15% annualised volatility. Captures secular equity and tech growth trends with HRP clustering for sector and geography diversification within the growth universe.",
+  "description": "Hierarchical Risk Parity (Ward linkage) over growth-oriented assets (VUSA, EQQQ, WCLD, IIND, IMEU) scaled to 15% annualised volatility. Captures secular equity and tech growth trends with HRP clustering for sector and geography diversification within the growth universe.",
   "parameters": {
     "target_vol": 0.15,
     "lookback_days": 252
@@ -16,7 +16,7 @@
     "underlying": [
       "assets/vusa",
       "assets/eqqq",
-      "assets/aigc",
+      "assets/wcld",
       "assets/iind",
       "assets/imeu"
     ]

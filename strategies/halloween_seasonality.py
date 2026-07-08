@@ -36,11 +36,18 @@ logger = logging.getLogger(__name__)
 # Winter months: November-April
 WINTER_MONTHS = {11, 12, 1, 2, 3, 4}
 
-# Equity sleeve (summer rotation OUT of equities)
-EQUITY_SLEEVE = {'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND', 'AIGC'}
+# Equity sleeve (summer rotation OUT of equities).
+# AIGC is deliberately excluded: it is WisdomTree Broad Commodities ETC, not
+# an equity/AI product (an earlier asset-definition label error implied
+# otherwise).
+EQUITY_SLEEVE = {
+    'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND',
+    'ASHR', 'SAEM', 'CACX', 'CSX5', 'IEMU', 'WCLD', 'WSML',
+    'AWESGS', 'EMMCHA', 'EXXW', 'EXX5', 'EXI2', 'EXSA',
+}
 
 # Defensive sleeve (summer rotation INTO defensives)
-DEFENSIVE_SLEEVE = {'VUTY', 'SGLN'}
+DEFENSIVE_SLEEVE = {'VUTY', 'SGLN', 'AGGU', 'SEGA'}
 
 
 class HalloweenSeasonalityStrategy(AllocationStrategy):

@@ -2,22 +2,8 @@
   "type": "allocation",
   "class": "EqualWeightStrategy",
   "name": "Equal-Weight",
-  "description": "Equal weight across all 13 assets (1/N benchmark) spanning global equities (VUSA, EQQQ, AIGC, IIND, IMEU, IWRD), precious metals (SSLN, SGLN), commodities (COMM, BRNT, CRUD, WCOA), and bonds (VUTY).",
-  "underlying": [
-    "assets/vusa",
-    "assets/eqqq",
-    "assets/aigc",
-    "assets/iind",
-    "assets/imeu",
-    "assets/iwrd",
-    "assets/ssln",
-    "assets/sgln",
-    "assets/comm",
-    "assets/brnt",
-    "assets/crud",
-    "assets/wcoa",
-    "assets/vuty"
-  ],
+  "description": "Equal weight across the full asset universe (1/N benchmark) spanning global/regional equities, precious metals, energy & broad commodities, and a diversified bond sleeve.",
+  "underlying": "universe:all",
   "tags": [
     "mech:diversification"
   ]

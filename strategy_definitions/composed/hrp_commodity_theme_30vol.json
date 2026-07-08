@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "HRP Commodity Theme + 30% Vol Target",
-  "description": "Hierarchical Risk Parity (Ward linkage) over hard assets and commodities (SSLN, SGLN, COMM, BRNT, CRUD, WCOA) scaled to 30% annualised volatility. Higher vol budget amplifies commodity and inflation-hedge exposure with HRP diversification across metals, energy, and broad commodities.",
+  "description": "Hierarchical Risk Parity (Ward linkage) over hard assets and commodities (SSLN, SGLN, COMM, BRNT, CRUD, WCOA, AIGC) scaled to 30% annualised volatility. Higher vol budget amplifies commodity and inflation-hedge exposure with HRP diversification across metals, energy, and broad commodities.",
   "parameters": {
     "target_vol": 0.3,
     "lookback_days": 252
@@ -13,14 +13,7 @@
     "parameters": {
       "linkage_method": "ward"
     },
-    "underlying": [
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa"
-    ]
+    "underlying": "universe:commodity"
   },
   "tags": [
     "hrp",

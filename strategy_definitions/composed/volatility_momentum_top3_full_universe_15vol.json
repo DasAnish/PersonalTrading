@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Volatility-Adjusted Momentum Top-3 Full Universe + 15% Vol Target",
-  "description": "Selects top 3 assets by risk-adjusted momentum (12-month return / 63-day vol) from all 13 assets, weights by inverse volatility, then scales to 15% annualised volatility. Applies the Sharpe-momentum signal across equities, AI, commodities, precious metals, and bonds.",
+  "description": "Selects top 3 assets by risk-adjusted momentum (12-month return / 63-day vol) from the full asset universe, weights by inverse volatility, then scales to 15% annualised volatility. Applies the Sharpe-momentum signal across equities, commodities, precious metals, and bonds.",
   "parameters": {
     "target_vol": 0.15,
     "lookback_days": 252
@@ -15,21 +15,7 @@
       "lookback_days": 252,
       "vol_lookback_days": 63
     },
-    "underlying": [
-      "assets/vusa",
-      "assets/eqqq",
-      "assets/aigc",
-      "assets/iind",
-      "assets/imeu",
-      "assets/iwrd",
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa",
-      "assets/vuty"
-    ]
+    "underlying": "universe:all"
   },
   "tags": [
     "mech:momentum-cs"

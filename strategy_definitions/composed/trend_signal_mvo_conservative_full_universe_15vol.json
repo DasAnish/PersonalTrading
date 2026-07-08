@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Trend-Signal MVO Conservative Full Universe + 15% Vol Target",
-  "description": "Conservative Trend-Signal MVO (risk aversion lambda=3) across all 13 assets scaled to 15% annualised volatility. Higher lambda produces a more diversified, lower-drawdown portfolio; full-universe exposure spans equities, AI, commodities, precious metals, and bonds with consistent risk control.",
+  "description": "Conservative Trend-Signal MVO (risk aversion lambda=3) across the full asset universe scaled to 15% annualised volatility. Higher lambda produces a more diversified, lower-drawdown portfolio; full-universe exposure spans equities, commodities, precious metals, and bonds with consistent risk control.",
   "parameters": {
     "target_vol": 0.15,
     "lookback_days": 252
@@ -16,21 +16,7 @@
       "risk_aversion": 3.0,
       "signal_threshold": 0.05
     },
-    "underlying": [
-      "assets/vusa",
-      "assets/eqqq",
-      "assets/aigc",
-      "assets/iind",
-      "assets/imeu",
-      "assets/iwrd",
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa",
-      "assets/vuty"
-    ]
+    "underlying": "universe:all"
   },
   "tags": [
     "trend-signal",

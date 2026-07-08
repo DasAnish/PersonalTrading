@@ -1,0 +1,17 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "CACX",
+  "description": "Amundi CAC 40 UCITS ETF Dist (GBP, LSE line of Euronext Paris-native fund)",
+  "parameters": {
+    "symbol": "CACX",
+    "currency": "GBP",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "FR0007052782",
+    "asset_class": "equity",
+    "sub_class": "france_large_cap",
+    "ter_bps": 25
+  }
+}

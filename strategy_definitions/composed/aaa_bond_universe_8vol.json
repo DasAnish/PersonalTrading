@@ -1,0 +1,29 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Adaptive Asset Allocation - Bond Universe + 8% Vol Target",
+  "description": "Adaptive Asset Allocation (6-month momentum screen + min-variance optimization within top bonds) applied to the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), then scaled to 8% annualised volatility target. Combines regime-responsive bond selection within fixed-income markets with volatility control.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "AdaptiveAssetAllocationStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 126,
+      "min_weight": 0.05,
+      "max_weight": 0.6
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "aaa",
+    "momentum",
+    "min-variance",
+    "bond-universe",
+    "vol-8",
+    "mech:regime"
+  ]
+}

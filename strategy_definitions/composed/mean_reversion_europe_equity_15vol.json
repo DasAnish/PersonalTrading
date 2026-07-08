@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Mean Reversion - Europe Equity Universe + 15% Vol Target",
+  "description": "Applies short-term contrarian strategy (20-day trailing-return reversal, inverse volatility weighting) to the Europe equity universe (developed European equities), capturing mean-reversion opportunities across European markets, then scales to 15% annualised volatility target. Tests mean-reversion mechanics within European equity markets.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MeanReversionStrategy",
+    "parameters": {
+      "lookback_days": 20,
+      "vol_lookback_days": 63
+    },
+    "underlying": "universe:europe_equity"
+  },
+  "tags": [
+    "mean-reversion",
+    "europe-equity",
+    "vol-15",
+    "mech:mean-reversion"
+  ]
+}

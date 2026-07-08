@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-3 Europe Equity + 15% Vol Target",
+  "description": "Selects the top 3 assets by 12-month trailing return from the European equity universe (broad Europe, EMU, France CAC 40, EURO STOXX 50, STOXX Europe 600), weights by inverse volatility, then scales to 15% annualised volatility. Rotates between overlapping regional equity flavours to capture within-Europe leadership.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 252
+    },
+    "underlying": "universe:europe_equity"
+  },
+  "tags": [
+    "momentum",
+    "europe-equity",
+    "vol-15",
+    "mech:momentum-cs"
+  ]
+}

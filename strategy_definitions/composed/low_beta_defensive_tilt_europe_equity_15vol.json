@@ -1,0 +1,27 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Low-Beta Defensive Tilt - Europe Equity Universe + 15% Vol Target",
+  "description": "Low-beta systematic-risk tilt (defensive orientation) applied to the Europe equity universe (developed European equities), capturing regional low-beta opportunities with volatility control scaled to 15% annualised volatility. Emphasizes tail-risk protection and consistent drawdown management within European markets.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "LowBetaTiltStrategy",
+    "parameters": {
+      "beta_lookback_days": 126,
+      "bottom_n": 3
+    },
+    "underlying": "universe:europe_equity"
+  },
+  "tags": [
+    "defensive",
+    "low-beta",
+    "europe-equity",
+    "vol-15",
+    "risk-managed",
+    "mech:vol-premium"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "HRP Bond Universe + 8% Vol Target",
+  "description": "Hierarchical Risk Parity (Ward linkage) across the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), scaled to 8% annualised volatility target. A diversified fixed-income sleeve spanning duration, credit and local-currency EM rate risk.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "HRPStrategy",
+    "parameters": {
+      "linkage_method": "ward"
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "hrp",
+    "bond-universe",
+    "vol-8",
+    "risk-managed",
+    "mech:diversification"
+  ]
+}

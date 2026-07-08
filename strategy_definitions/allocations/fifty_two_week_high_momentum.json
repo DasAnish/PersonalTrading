@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "FiftyTwoWeekHighStrategy",
+  "name": "52-Week High Momentum",
+  "description": "Ranks assets by price / rolling_252d_max(price) and holds the top_n nearest their 52-week high. George & Hwang (2015) show this signal subsumes trailing-return momentum through anchoring rather than continuation.",
+  "parameters": {
+    "top_n": 3,
+    "lookback_days": 252,
+    "weighting": "equal"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

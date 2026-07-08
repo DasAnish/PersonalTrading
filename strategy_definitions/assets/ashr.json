@@ -1,0 +1,17 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "ASHR",
+  "description": "Xtrackers Harvest CSI300 UCITS ETF 1D (USD, LSE)",
+  "parameters": {
+    "symbol": "ASHR",
+    "currency": "USD",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "LU0875160326",
+    "asset_class": "equity",
+    "sub_class": "china_a_shares",
+    "ter_bps": 65
+  }
+}

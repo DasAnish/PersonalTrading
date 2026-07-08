@@ -1,0 +1,18 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "EXXW",
+  "description": "iShares Dow Jones Asia Pacific Select Dividend 50 UCITS ETF (DE) (EUR, Xetra)",
+  "parameters": {
+    "symbol": "EXXW",
+    "currency": "EUR",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "DE000A0H0744",
+    "asset_class": "equity",
+    "sub_class": "asia_pacific_dividend",
+    "ter_bps": 31,
+    "correction_note": "German-domiciled/listed fund; no LSE listing exists. Not yet live-tested via IB — confirm exchange=SMART resolves correctly once IB Gateway access is restored."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Mean Reversion - Bond Universe + 8% Vol Target",
+  "description": "Applies short-term contrarian strategy (20-day trailing-return reversal, inverse volatility weighting) to the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), capturing mean-reversion opportunities across the bond sleeve, then scales to 8% annualised volatility target. Tests mean-reversion mechanics within fixed-income markets.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MeanReversionStrategy",
+    "parameters": {
+      "lookback_days": 20,
+      "vol_lookback_days": 63
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "mean-reversion",
+    "bond-universe",
+    "vol-8",
+    "mech:mean-reversion"
+  ]
+}

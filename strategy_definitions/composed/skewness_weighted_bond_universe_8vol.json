@@ -1,0 +1,27 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Skewness-Weighted Bond Tilt + 8% Vol Target",
+  "description": "Skewness-weighted tilt applied to the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), reducing weight on bonds with left-skewed return distributions (tail/crash risk proxy), then scales to 8% annualised volatility target. Captures tail-risk management within a fixed-income sleeve.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "SkewnessWeightedStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "skew_tilt": 0.5,
+      "min_weight": 0.05
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "skewness-weighted",
+    "bond-universe",
+    "vol-8",
+    "tail-risk",
+    "mech:vol-premium"
+  ]
+}

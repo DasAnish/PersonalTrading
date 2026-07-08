@@ -1,0 +1,27 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Low-Beta Defensive Tilt - Bond Universe + 8% Vol Target",
+  "description": "Low-beta systematic-risk tilt (defensive orientation) applied to the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), capturing regional low-beta bond opportunities with volatility control scaled to 8% annualised volatility. Emphasizes tail-risk protection and consistent drawdown management within fixed-income markets.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "LowBetaTiltStrategy",
+    "parameters": {
+      "beta_lookback_days": 126,
+      "bottom_n": 3
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "defensive",
+    "low-beta",
+    "bond-universe",
+    "vol-8",
+    "risk-managed",
+    "mech:vol-premium"
+  ]
+}

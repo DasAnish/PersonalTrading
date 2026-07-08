@@ -62,8 +62,10 @@ from .adaptive_asset_allocation import AdaptiveAssetAllocationStrategy
 from .trend_signal_rp import TrendSignalRPStrategy
 from .protective_asset_allocation import ProtectiveAssetAllocationStrategy
 from .halloween_seasonality import HalloweenSeasonalityStrategy
+from .turn_of_month_seasonality import TurnOfMonthSeasonalityStrategy
 from .cross_asset_carry import CarryTiltStrategy
 from .gold_safe_haven_overlay import GoldSafeHavenOverlayStrategy
+from .bond_duration_hedge_overlay import BondDurationHedgeOverlayStrategy
 from .low_beta_defensive_tilt import LowBetaTiltStrategy
 from .quality_weighted_stability import QualityWeightedStabilityStrategy
 
@@ -176,8 +178,10 @@ __all__ = [
     'TrendSignalRPStrategy',
     'ProtectiveAssetAllocationStrategy',
     'HalloweenSeasonalityStrategy',
+    'TurnOfMonthSeasonalityStrategy',
     'CarryTiltStrategy',
     'GoldSafeHavenOverlayStrategy',
+    'BondDurationHedgeOverlayStrategy',
     'LowBetaTiltStrategy',
     'QualityWeightedStabilityStrategy',
     # Overlay strategies

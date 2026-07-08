@@ -1,0 +1,28 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend Following - Europe Equity Universe + 15% Vol Target",
+  "description": "Applies systematic trend following (EWMA momentum, risk-parity weighted) to the Europe equity universe (developed European equities, regional diversification), capturing European regional/style trends independently of other markets, then scales to 15% annualised volatility. Tests trend mechanics across European equity volatility and correlation regime.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendFollowingStrategy",
+    "parameters": {
+      "lookback_days": 504,
+      "half_life_days": 60,
+      "smooth_window": 5,
+      "signal_threshold": 0.1,
+      "min_volatility": 0.001
+    },
+    "underlying": "universe:europe_equity"
+  },
+  "tags": [
+    "trend",
+    "europe-equity",
+    "vol-15",
+    "mech:trend"
+  ]
+}

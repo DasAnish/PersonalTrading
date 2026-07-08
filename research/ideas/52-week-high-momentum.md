@@ -2,7 +2,7 @@
 title: 52-Week High Momentum
 source: "George & Hwang (2004), The Journal of Finance 59(5) 2145–2176 — 'The 52-Week High and Momentum Investing'"
 mechanism: momentum-cs
-status: candidate
+status: validated
 date_added: 2026-07-08
 ---
 

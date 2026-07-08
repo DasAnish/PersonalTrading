@@ -1,3 +1,5 @@
 {
-  "blend": {}
+  "blend": {
+    "min_var_with_constraints": 100.0
+  }
 }

@@ -154,6 +154,15 @@ async def get_historical_data(
     elif "date" in df.columns:
         df = df[df["date"] >= start_date]
 
+    if df.empty:
+        return json.dumps({
+            "error": (
+                f"No data for '{symbol}' in the last {duration_days} days. "
+                f"Source '{source}' has no rows after {start_date:%Y-%m-%d} "
+                "(cache may be stale — refresh it with IB Gateway online)."
+            )
+        })
+
     tail = df.tail(10).copy()
     if isinstance(tail.index, pd.DatetimeIndex):
         tail.index = tail.index.strftime("%Y-%m-%d")
@@ -405,7 +414,8 @@ async def get_backtest_results(strategy_key: str) -> str:
 def _load_best_cache(symbol: str) -> Optional[pd.DataFrame]:
     """
     Scan data/cache/ for parquet files matching *symbol* and load the
-    largest one (most rows = most complete history).
+    freshest one.  Filenames follow SYMBOL_STARTDATE_ENDDATE.parquet, so
+    sort by the end-date suffix (newest first) with file size as tiebreak.
     """
     cache_dir = PROJECT_ROOT / "data" / "cache"
     if not cache_dir.exists():
@@ -413,17 +423,23 @@ def _load_best_cache(symbol: str) -> Optional[pd.DataFrame]:
 
     candidates = sorted(
         cache_dir.glob(f"{symbol}_*.parquet"),
-        key=lambda p: p.stat().st_size,
+        key=lambda p: (p.stem.rsplit("_", 1)[-1], p.stat().st_size),
         reverse=True,
     )
     if not candidates:
         return None
 
     try:
-        return pd.read_parquet(candidates[0])
+        df = pd.read_parquet(candidates[0])
     except Exception as exc:
         logger.warning("Failed to load cache for %s: %s", symbol, exc)
         return None
+
+    # Some cache files carry 'date' as both the index and a column, which
+    # breaks reset_index() downstream — keep only the index copy.
+    if df.index.name is not None and df.index.name in df.columns:
+        df = df.drop(columns=[df.index.name])
+    return df
 
 
 def _read_strategy_results(strategy_key: str) -> Optional[dict]:

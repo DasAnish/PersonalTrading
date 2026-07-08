@@ -166,6 +166,10 @@ class MarketDataService:
                             df = df.drop(columns=['date'])
                         df.index = dates
                         df.index.name = 'date'
+                        # util.df keeps 'date' as a column; drop it so the
+                        # index is the only copy (reset_index breaks otherwise)
+                        if 'date' in df.columns:
+                            df = df.drop(columns=['date'])
                         df = df[~df.index.duplicated(keep='first')]
                 except Exception as e:
                     logger.warning(f"Could not set datetime index: {e}")

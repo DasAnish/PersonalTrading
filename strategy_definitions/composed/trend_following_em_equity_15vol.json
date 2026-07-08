@@ -1,0 +1,28 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend Following - EM Equity Universe + 15% Vol Target",
+  "description": "Applies systematic trend following (EWMA momentum, risk-parity weighted) to the emerging-market equity universe (India, China A-shares, EM IMI ESG screened, UBS Core MSCI EM), capturing EM regional/style trends independently of developed markets, then scales to 15% annualised volatility. Tests trend mechanics across a structurally distinct volatility and correlation regime.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendFollowingStrategy",
+    "parameters": {
+      "lookback_days": 504,
+      "half_life_days": 60,
+      "smooth_window": 5,
+      "signal_threshold": 0.1,
+      "min_volatility": 0.001
+    },
+    "underlying": "universe:em_equity"
+  },
+  "tags": [
+    "trend",
+    "em-equity",
+    "vol-15",
+    "mech:trend"
+  ]
+}

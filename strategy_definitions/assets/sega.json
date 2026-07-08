@@ -1,0 +1,17 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "SEGA",
+  "description": "iShares Core € Govt Bond UCITS ETF (Dist) (EUR, LSE)",
+  "parameters": {
+    "symbol": "SEGA",
+    "currency": "EUR",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00B4WXJJ64",
+    "asset_class": "bond",
+    "sub_class": "eur_govt_bond",
+    "ter_bps": 7
+  }
+}

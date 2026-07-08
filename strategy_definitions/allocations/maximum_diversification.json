@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MaximumDiversificationStrategy",
+  "name": "Maximum Diversification",
+  "description": "Maximum Diversification Portfolio optimises the diversification ratio (weighted average constituent volatility / portfolio volatility) across the full asset universe: global/regional equities, precious metals, energy & broad commodities, and a diversified bond sleeve. Rewards low pairwise correlation via SLSQP optimisation. Long-only with weights summing to 1.",
+  "parameters": {
+    "cov_lookback_days": 252,
+    "max_weight_cap": null
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "EXX5",
+  "description": "iShares Dow Jones U.S. Select Dividend UCITS ETF (DE) (EUR, Xetra)",
+  "parameters": {
+    "symbol": "EXX5",
+    "currency": "EUR",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "DE000A0D8Q49",
+    "asset_class": "equity",
+    "sub_class": "us_dividend",
+    "ter_bps": 31,
+    "correction_note": "German-domiciled/listed fund; no LSE listing exists. Not yet live-tested via IB — confirm exchange=SMART resolves correctly once IB Gateway access is restored."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-10 Expanded Universe + 15% Vol Target",
+  "description": "Selects the top 10 assets by 12-month trailing return from the full 30-asset expanded universe (equities, EM/Europe equity flavours, precious metals, energy, broad commodities, and a 5-asset bond sleeve), weights by inverse volatility, then scales to 15% annualised volatility. A wider-breadth companion to the concentrated Top-3 full-universe strategy, sized for the larger post-expansion asset count.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 10,
+      "lookback_days": 252
+    },
+    "underlying": "universe:all"
+  },
+  "tags": [
+    "momentum",
+    "expanded-universe",
+    "vol-15",
+    "mech:momentum-cs"
+  ]
+}

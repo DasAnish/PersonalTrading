@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-3 EM Equity + 15% Vol Target",
+  "description": "Selects the top 3 assets by 12-month trailing return from the emerging-market equity universe (India, China A-shares, EM IMI ESG screened, UBS Core MSCI EM), weights by inverse volatility, then scales to 15% annualised volatility. Rotates across EM regional/style leadership rather than a single blended EM fund.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 252
+    },
+    "underlying": "universe:em_equity"
+  },
+  "tags": [
+    "momentum",
+    "em-equity",
+    "vol-15",
+    "mech:momentum-cs"
+  ]
+}

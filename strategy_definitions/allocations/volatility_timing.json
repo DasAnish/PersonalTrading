@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "VolatilityTimingStrategy",
+  "name": "Volatility Timing",
+  "description": "Cross-sectionally reweights assets inversely to trailing realised variance, exploiting volatility clustering. Weights each asset proportional to 1/variance over the lookback window, then renormalizes to sum to 1.",
+  "parameters": {
+    "lookback_days": 63,
+    "mode": "vol_timing"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:regime"
+  ]
+}

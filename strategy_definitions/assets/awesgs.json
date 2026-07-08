@@ -1,0 +1,18 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "AWESGS",
+  "description": "UBS MSCI ACWI ESG Universal Low Carbon Select UCITS ETF, CHF-hedged (Acc) (CHF, SIX)",
+  "parameters": {
+    "symbol": "AWESGS",
+    "currency": "CHF",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00BDQZN774",
+    "asset_class": "equity",
+    "sub_class": "esg_universal_acwi_hedged",
+    "ter_bps": 26,
+    "correction_note": "User's working name was 'UBS MSCI USA NSL UCITS ETF'; verified real fund is ACWI-based (global, ~57% US-weighted), not MSCI USA. No LSE listing exists — only trades on SIX Swiss Exchange (also Xetra/Borsa Italiana for other share classes of the same family)."
+  }
+}

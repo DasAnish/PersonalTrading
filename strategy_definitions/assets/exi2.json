@@ -1,0 +1,18 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "EXI2",
+  "description": "iShares Dow Jones Global Titans 50 UCITS ETF (DE), Dist (EUR, Xetra)",
+  "parameters": {
+    "symbol": "EXI2",
+    "currency": "EUR",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "DE0006289382",
+    "asset_class": "equity",
+    "sub_class": "global_titans_large_cap",
+    "ter_bps": 51,
+    "correction_note": "German-domiciled/listed fund; no LSE listing exists. Not yet live-tested via IB — confirm exchange=SMART resolves correctly once IB Gateway access is restored."
+  }
+}

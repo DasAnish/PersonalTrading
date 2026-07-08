@@ -2,25 +2,11 @@
   "type": "allocation",
   "class": "ProtectiveAssetAllocationStrategy",
   "name": "Protective Asset Allocation (Fast, 6m)",
-  "description": "Fast-responding Keller & Keuning PAA across all 13 assets using 6-month (126-day) SMA instead of 12-month. Shifts weight defensively to VUTY bonds more quickly when risky assets fall below their moving average, capturing medium-term regime changes with faster reaction time.",
+  "description": "Fast-responding Keller & Keuning PAA across the full equity + commodity risky universe using 6-month (126-day) SMA instead of 12-month. Shifts weight defensively to VUTY bonds (the single safe asset) more quickly when risky assets fall below their moving average, capturing medium-term regime changes with faster reaction time.",
   "parameters": {
     "lookback_days": 126
   },
-  "underlying": [
-    "assets/vusa",
-    "assets/eqqq",
-    "assets/aigc",
-    "assets/iind",
-    "assets/imeu",
-    "assets/iwrd",
-    "assets/ssln",
-    "assets/sgln",
-    "assets/comm",
-    "assets/brnt",
-    "assets/crud",
-    "assets/wcoa",
-    "assets/vuty"
-  ],
+  "underlying": ["universe:equity", "universe:commodity", "assets/vuty"],
   "tags": [
     "mech:regime"
   ]

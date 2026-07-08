@@ -7,5 +7,11 @@
     "symbol": "BRNT",
     "currency": "USD",
     "exchange": "LSE"
+  },
+  "metadata": {
+    "isin": "JE00B78CGV99",
+    "asset_class": "commodity",
+    "sub_class": "energy_brent_crude",
+    "ter_bps": 49
   }
 }

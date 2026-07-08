@@ -81,7 +81,8 @@ mcp = FastMCP(
     "ib-trading",
     instructions=(
         "Tools for Interactive Brokers market data, portfolio management, and "
-        "backtesting UK ETFs (VUSA, SSLN, SGLN, IWRD, EQQQ, BRNT, CRUD, COMM, COMML). "
+        "backtesting a 30-asset UCITS ETF universe (equities, bonds, precious metals, "
+        "and commodities) defined in strategy_definitions/universe.json. "
         "Market data tools fall back to local parquet cache when IB Gateway is "
         "offline. Portfolio tools require a live IB connection on port 4001."
     ),
@@ -120,6 +121,7 @@ async def get_historical_data(
     client = await _get_ib_client()
     df: Optional[pd.DataFrame] = None
     source = "live"
+    live_error: Optional[str] = None
 
     if client is not None:
         try:
@@ -134,6 +136,7 @@ async def get_historical_data(
             )
         except Exception as exc:
             logger.warning("Live fetch failed for %s: %s", symbol, exc)
+            live_error = str(exc)
             df = None
 
     if df is None or df.empty:
@@ -141,11 +144,14 @@ async def get_historical_data(
         df = _load_best_cache(symbol)
 
     if df is None or df.empty:
+        if client is None:
+            reason = "IB Gateway is offline"
+        elif live_error:
+            reason = f"live fetch failed ({live_error})"
+        else:
+            reason = "IB returned no bars for this contract/exchange/currency combination"
         return json.dumps({
-            "error": (
-                f"No data found for '{symbol}'. "
-                "IB Gateway is offline and no local cache exists for this symbol."
-            )
+            "error": f"No data found for '{symbol}'. {reason} and no local cache exists for this symbol."
         })
 
     # Trim to requested date range when loading from cache
@@ -166,6 +172,11 @@ async def get_historical_data(
     tail = df.tail(10).copy()
     if isinstance(tail.index, pd.DatetimeIndex):
         tail.index = tail.index.strftime("%Y-%m-%d")
+    # Guard against cache/live data that already carries a 'date' column under
+    # the same name as the index (older pipeline runs hit this) — reset_index()
+    # raises "cannot insert date, already exists" in that case.
+    if tail.index.name and tail.index.name in tail.columns:
+        tail = tail.drop(columns=[tail.index.name])
 
     return json.dumps(
         {

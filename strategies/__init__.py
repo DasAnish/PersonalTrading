@@ -46,11 +46,15 @@ from .hrp import HRPStrategy
 from .equal_weight import EqualWeightStrategy
 from .trend_following import TrendFollowingStrategy
 from .minimum_variance import MinimumVarianceStrategy
+from .maximum_diversification import MaximumDiversificationStrategy
 from .risk_parity import RiskParityStrategy
 from .momentum import MomentumTopNStrategy
+from .fifty_two_week_high import FiftyTwoWeekHighStrategy
+from .volatility_timing import VolatilityTimingStrategy
 from .volatility_momentum import VolatilityMomentumStrategy
 from .trend_signal_mvo import TrendSignalMVOStrategy
 from .mean_reversion import MeanReversionStrategy
+from .long_term_reversal import LongTermReversalStrategy
 from .skewness_weighted import SkewnessWeightedStrategy
 from .meta_portfolio import MetaPortfolioStrategy
 from .dual_momentum import DualMomentumStrategy
@@ -61,6 +65,7 @@ from .halloween_seasonality import HalloweenSeasonalityStrategy
 from .cross_asset_carry import CarryTiltStrategy
 from .gold_safe_haven_overlay import GoldSafeHavenOverlayStrategy
 from .low_beta_defensive_tilt import LowBetaTiltStrategy
+from .quality_weighted_stability import QualityWeightedStabilityStrategy
 
 # Overlay strategies
 from .overlays import (
@@ -155,11 +160,15 @@ __all__ = [
     'EqualWeightStrategy',
     'TrendFollowingStrategy',
     'MinimumVarianceStrategy',
+    'MaximumDiversificationStrategy',
     'RiskParityStrategy',
     'MomentumTopNStrategy',
+    'FiftyTwoWeekHighStrategy',
+    'VolatilityTimingStrategy',
     'VolatilityMomentumStrategy',
     'TrendSignalMVOStrategy',
     'MeanReversionStrategy',
+    'LongTermReversalStrategy',
     'SkewnessWeightedStrategy',
     'MetaPortfolioStrategy',
     'DualMomentumStrategy',
@@ -170,6 +179,7 @@ __all__ = [
     'CarryTiltStrategy',
     'GoldSafeHavenOverlayStrategy',
     'LowBetaTiltStrategy',
+    'QualityWeightedStabilityStrategy',
     # Overlay strategies
     'VolatilityTargetStrategy',
     'ConstraintStrategy',

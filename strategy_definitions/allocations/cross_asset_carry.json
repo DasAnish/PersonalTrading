@@ -2,25 +2,11 @@
   "type": "allocation",
   "class": "CarryTiltStrategy",
   "name": "Cross-Asset Carry Tilt",
-  "description": "Ranks all 13 assets by ex-ante carry (expected return from holding with flat prices) and equal-weights the top_n high-carry assets, zeroing low-carry assets. Bonds (VUTY) have the highest carry (yield-to-maturity); equities have moderate carry (dividend yield); precious metals (SGLN, SSLN) have negative carry (storage costs). Implements Koijen, Moskowitz, Pedersen & Vrugt (2018) carry factor in long-only ETF form.",
+  "description": "Ranks the full asset universe by ex-ante carry (expected return from holding with flat prices) and equal-weights the top_n high-carry assets, zeroing low-carry assets. Bonds (VUTY) have the highest carry (yield-to-maturity); equities have moderate carry (dividend yield); precious metals (SGLN, SSLN) have negative carry (storage costs). Implements Koijen, Moskowitz, Pedersen & Vrugt (2018) carry factor in long-only ETF form.",
   "parameters": {
     "top_n": 4
   },
-  "underlying": [
-    "assets/vusa",
-    "assets/eqqq",
-    "assets/aigc",
-    "assets/iind",
-    "assets/imeu",
-    "assets/iwrd",
-    "assets/ssln",
-    "assets/sgln",
-    "assets/comm",
-    "assets/brnt",
-    "assets/crud",
-    "assets/wcoa",
-    "assets/vuty"
-  ],
+  "underlying": "universe:all",
   "tags": [
     "mech:carry"
   ]

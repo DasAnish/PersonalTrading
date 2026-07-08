@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Minimum Variance Full Universe + 15% Vol Target",
-  "description": "Minimum Variance optimisation across all 13 assets (global equities, AI, commodities, precious metals, bonds) scaled to 15% annualised volatility. Seeks the globally lowest-volatility portfolio from the full investable universe, then applies vol scaling for consistent risk budgeting.",
+  "description": "Minimum Variance optimisation across the full asset universe (global/regional equities, precious metals, energy & broad commodities, and bonds) scaled to 15% annualised volatility. Seeks the globally lowest-volatility portfolio from the full investable universe, then applies vol scaling for consistent risk budgeting.",
   "parameters": {
     "target_vol": 0.15,
     "lookback_days": 252
@@ -11,21 +11,7 @@
     "type": "allocation",
     "class": "MinimumVarianceStrategy",
     "parameters": {},
-    "underlying": [
-      "assets/vusa",
-      "assets/eqqq",
-      "assets/aigc",
-      "assets/iind",
-      "assets/imeu",
-      "assets/iwrd",
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa",
-      "assets/vuty"
-    ]
+    "underlying": "universe:all"
   },
   "tags": [
     "min-variance",

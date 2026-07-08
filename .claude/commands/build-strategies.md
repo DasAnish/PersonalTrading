@@ -33,6 +33,42 @@ prompt. A definition key already present there must never be proposed again.
 - All new strategies need: a Python class in `strategies/` + a JSON definition in `strategy_definitions/`
 - JSON definitions use `"underlying"` arrays referencing other definition paths (e.g. `"assets/vusa"`)
 
+**Combining assets / sub-selecting the universe**: `strategy_definitions/universe.json`
+is the canonical, always-current asset registry, grouped by `equity`, `bond`,
+`commodity`, `europe_equity`, `em_equity`, and `all` (every asset, union of the
+three top-level classes). The loader (`strategies/strategy_loader.py`) resolves
+`"universe:<group>"` strings at load time, so a strategy that references a group
+automatically picks up any asset added to that group later — never hand-copy a
+group's asset list into a new definition's `"underlying"` array.
+
+- **Whole-group strategies** (e.g. "run this allocation over every bond"): set
+  `"underlying": "universe:bond"` directly — see any `*_full_universe_*` composed
+  file or `composed/momentum_top3_bond_universe_8vol.json` for the pattern.
+- **Sub-selection across multiple groups, order-independent** (e.g. "equities
+  plus commodities, but not bonds"): a plain JSON list can mix group refs and
+  individual asset refs — each `"universe:<group>"` entry expands in place, e.g.
+  `"underlying": ["universe:equity", "universe:commodity"]`.
+- **Sub-selection where order matters**: some strategy classes are
+  position-sensitive — `ProtectiveAssetAllocationStrategy` treats the **last**
+  asset in the resolved list as the single safe asset and everything else as
+  risky. For these, put the group refs first and the fixed/positional asset(s)
+  last, e.g. `"underlying": ["universe:equity", "universe:commodity", "assets/vuty"]`
+  (this is exactly how `allocations/protective_asset_allocation.json` is
+  written — do not point a position-sensitive class at `"universe:all"`
+  directly, since group ordering inside `universe.json` is not guaranteed to
+  put any particular asset last). Check the target strategy class's docstring
+  for this kind of positional assumption before wiring up its `underlying`.
+- **Bespoke sub-selection that doesn't match a named group** (e.g. a themed
+  "growth" or "dividend" basket cutting across the equity/bond/commodity
+  split): list the individual `"assets/<key>"` refs explicitly, as
+  `allocations/hrp_growth_theme.json` does. Do not invent a new group name
+  inside a strategy file — if a bespoke basket looks reusable across multiple
+  candidates, add it as a new named group in `universe.json` instead so future
+  strategies can reference it the same way.
+- Never write a strategy that filters `universe:all` in Python by symbol
+  string matching — if a candidate needs "equity minus X", either compose it
+  from the narrower groups explicitly or add a new group to `universe.json`.
+
 ---
 
 ## Team Setup (run once at start)
@@ -109,6 +145,11 @@ STEPS:
    - Parameter variants of existing allocation classes (different lookbacks, top_n, linkage methods)
    - Novel allocation algorithms: carry, volatility timing, factor-based, low-beta, quality-weighted
    - Trend + mean-reversion hybrids, regime-switching approaches
+   - Existing allocation algorithms re-scoped to a `universe.json` sub-group not yet
+     tried for that algorithm (e.g. an HRP or trend-following variant restricted to
+     `universe:europe_equity` or `universe:em_equity` instead of the full universe) —
+     check `strategy_definitions/universe.json` for the current group list and cross
+     it against what's already built before proposing one
 
 Every candidate MUST set `mechanism` to exactly one tag from the fixed vocabulary:
 trend, momentum-cs, mean-reversion, carry, vol-premium, diversification, regime,
@@ -400,6 +441,17 @@ When the user says "stop", "pause", or "enough":
 }
 ```
 Use asset keys matching filenames in `strategy_definitions/assets/`.
+
+**`underlying` can also be a universe group reference** (see "Combining assets
+/ sub-selecting the universe" above), instead of a hand-written asset list:
+```json
+"underlying": "universe:bond"
+```
+or a mix of group refs and individual assets, in a fixed list (order preserved,
+matters for position-sensitive classes like `ProtectiveAssetAllocationStrategy`):
+```json
+"underlying": ["universe:equity", "universe:commodity", "assets/vuty"]
+```
 
 **Composed (overlay applied to allocation)**:
 ```json

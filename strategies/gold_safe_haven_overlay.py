@@ -39,8 +39,15 @@ from strategies.core import AllocationStrategy, Strategy, StrategyContext
 
 logger = logging.getLogger(__name__)
 
-# Equity sleeve for stress signal computation
-EQUITY_SLEEVE = {'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND', 'AIGC'}
+# Equity sleeve for stress signal computation.
+# AIGC is deliberately excluded: it is WisdomTree Broad Commodities ETC, not
+# an equity/AI product (an earlier asset-definition label error implied
+# otherwise).
+EQUITY_SLEEVE = {
+    'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND',
+    'ASHR', 'SAEM', 'CACX', 'CSX5', 'IEMU', 'WCLD', 'WSML',
+    'AWESGS', 'EMMCHA', 'EXXW', 'EXX5', 'EXI2', 'EXSA',
+}
 
 # Gold safe-haven asset
 GOLD_ASSET = 'SGLN'

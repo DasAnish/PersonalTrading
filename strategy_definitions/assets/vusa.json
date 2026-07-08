@@ -7,5 +7,11 @@
     "symbol": "VUSA",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00B3XXRP09",
+    "asset_class": "equity",
+    "sub_class": "us_large_cap",
+    "ter_bps": 7
   }
 }

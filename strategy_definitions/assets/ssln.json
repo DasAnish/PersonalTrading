@@ -2,6 +2,13 @@
   "type": "asset",
   "class": "AssetStrategy",
   "name": "SSLN",
-  "description": "iShares MSCI World Small Cap UCITS ETF (GBP)",
-  "parameters": {"symbol": "SSLN", "currency": "GBP", "exchange": "SMART"}
+  "description": "iShares Physical Silver ETC (GBP, LSE)",
+  "parameters": {"symbol": "SSLN", "currency": "GBP", "exchange": "SMART"},
+  "metadata": {
+    "isin": "IE00B4NCWG09",
+    "asset_class": "commodity",
+    "sub_class": "precious_metal_silver",
+    "ter_bps": 20,
+    "correction_note": "Description previously read 'iShares MSCI World Small Cap UCITS ETF', which is wrong (that fund's real ticker is WSML). SSLN is the well-known iShares Physical Silver ETC; the symbol/currency/exchange parameters were already correct, only the description was stale."
+  }
 }

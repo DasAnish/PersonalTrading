@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Minimum Variance Full Universe + 30% Vol Target",
-  "description": "Minimum Variance optimisation across all 13 assets scaled to 30% annualised volatility. Seeks the globally lowest-volatility portfolio from the full investable universe, then applies higher vol scaling to boost return potential while retaining the diversification benefits of min-var construction.",
+  "description": "Minimum Variance optimisation across the full asset universe scaled to 30% annualised volatility. Seeks the globally lowest-volatility portfolio from the full investable universe, then applies higher vol scaling to boost return potential while retaining the diversification benefits of min-var construction.",
   "parameters": {
     "target_vol": 0.3,
     "lookback_days": 252
@@ -11,21 +11,7 @@
     "type": "allocation",
     "class": "MinimumVarianceStrategy",
     "parameters": {},
-    "underlying": [
-      "assets/vusa",
-      "assets/eqqq",
-      "assets/aigc",
-      "assets/iind",
-      "assets/imeu",
-      "assets/iwrd",
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa",
-      "assets/vuty"
-    ]
+    "underlying": "universe:all"
   },
   "tags": [
     "min-variance",

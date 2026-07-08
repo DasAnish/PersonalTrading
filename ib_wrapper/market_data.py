@@ -159,6 +159,11 @@ class MarketDataService:
                 try:
                     if not isinstance(df.index, pd.DatetimeIndex):
                         dates = pd.to_datetime([bar.date for bar in bars])
+                        # util.df(bars) already includes 'date' as a plain column;
+                        # drop it before reassigning the index to avoid leaving a
+                        # duplicate 'date' column, which breaks reset_index() later.
+                        if 'date' in df.columns:
+                            df = df.drop(columns=['date'])
                         df.index = dates
                         df.index.name = 'date'
                         df = df[~df.index.duplicated(keep='first')]

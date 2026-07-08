@@ -2,10 +2,17 @@
   "type": "asset",
   "class": "AssetStrategy",
   "name": "WCOA",
-  "description": "WisdomTree Coal ETC (GBP, LSE)",
+  "description": "WisdomTree Enhanced Commodity UCITS ETF USD Acc (GBP, LSE)",
   "parameters": {
     "symbol": "WCOA",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00BYMLZY74",
+    "asset_class": "commodity",
+    "sub_class": "broad_commodity_enhanced",
+    "ter_bps": 35,
+    "correction_note": "Description previously read 'WisdomTree Coal ETC'. No coal-specific product trades under ticker WCOA; it is WisdomTree's Enhanced Commodity UCITS ETF (broad commodity exposure). Symbol/currency/exchange parameters were already correct, only the description was stale."
   }
 }

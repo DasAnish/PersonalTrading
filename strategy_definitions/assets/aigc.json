@@ -2,10 +2,17 @@
   "type": "asset",
   "class": "AssetStrategy",
   "name": "AIGC",
-  "description": "WisdomTree Artificial Intelligence UCITS ETF (GBP, LSE)",
+  "description": "WisdomTree Broad Commodities ETC (GBP, LSE)",
   "parameters": {
     "symbol": "AIGC",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "GB00B15KY989",
+    "asset_class": "commodity",
+    "sub_class": "broad_commodity_etc",
+    "ter_bps": 49,
+    "correction_note": "Description previously read 'WisdomTree Artificial Intelligence UCITS ETF'. Ticker AIGC on LSE is actually WisdomTree Broad Commodities ETC. Symbol/currency/exchange parameters were already correct, only the description was stale."
   }
 }

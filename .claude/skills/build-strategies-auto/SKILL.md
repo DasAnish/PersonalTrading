@@ -13,7 +13,7 @@ You are running a continuous strategy research-and-build loop. You work on **one
 
 **Assets available**: Read dynamically from `strategy_definitions/assets/` — each `.json` file in that folder is an investable asset. Read this folder at the start of every loop iteration to discover the current asset universe. Do not hardcode asset lists.
 
-Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), IWRD (world equities), EQQQ (NASDAQ-100), COMM (diversified commodities), AIGC (AI equities), IIND (MSCI India), IMEU (MSCI Europe), WCOA (coal), VUTY (US Treasury bonds), BRNT (Brent crude oil), CRUD (WTI crude oil).
+Current universe (as of last update, 30 assets — always re-read `strategy_definitions/universe.json` for the live list): VUSA (S&P 500), SSLN (physical silver ETC), SGLN (physical gold ETC), IWRD (MSCI World), EQQQ (NASDAQ-100), COMM/COMML (diversified commodities), AIGC (broad commodities ETC), IIND (MSCI India), IMEU (MSCI Europe), WCOA (enhanced/broad commodities), VUTY (US Treasury bonds), BRNT (Brent crude oil), CRUD (WTI crude oil), plus 17 more spanning bonds (HYLD, AGGU, SEGA, TIGG), European/EM/thematic equity (ASHR, SAEM, CACX, CSX5, IEMU, WCLD, WSML, AWESGS, EMMCHA, EXXW, EXX5, EXI2, EXSA).
 
 **Existing strategy classes** (in `strategies/`):
 - `HRPStrategy` — Hierarchical Risk Parity (`hrp.py`)
@@ -42,6 +42,22 @@ Current assets (as of last update): VUSA (S&P 500), SSLN (silver), SGLN (gold), 
 - `OverlayStrategy`: transforms weights from an underlying strategy
 - JSON-only strategies: no Python needed, just a new file in `strategy_definitions/`
 - JSON definitions use `"underlying"` arrays referencing other definition paths (e.g. `"assets/vusa"`)
+
+**Combining assets / sub-selecting the universe**: `strategy_definitions/universe.json`
+groups assets by `equity`, `bond`, `commodity`, `europe_equity`, `em_equity`, and
+`all`. The loader resolves `"underlying": "universe:<group>"` at load time, so a
+strategy pointed at a group automatically picks up assets added to that group
+later — never hand-copy a group's asset list into a new definition.
+- Whole group: `"underlying": "universe:bond"`.
+- Multiple groups, order-independent: `"underlying": ["universe:equity", "universe:commodity"]`.
+- Order-sensitive (e.g. `ProtectiveAssetAllocationStrategy` treats the last
+  resolved asset as the single safe asset): put group refs first, fixed asset(s)
+  last — `"underlying": ["universe:equity", "universe:commodity", "assets/vuty"]`.
+  Never point a position-sensitive class straight at `"universe:all"`.
+- Bespoke basket not matching a named group (e.g. a "growth theme" cutting
+  across classes): list individual `"assets/<key>"` refs explicitly, as
+  `allocations/hrp_growth_theme.json` does — and if it looks reusable, add it
+  as a new named group in `universe.json` instead of repeating the list.
 
 ---
 
@@ -196,7 +212,14 @@ corrects for the growing number of strategies tried across the whole session. --
   "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
 }
 ```
-Use asset keys matching filenames in `strategy_definitions/assets/` (e.g. `"assets/eqqq"`, `"assets/vuty"`).
+Use asset keys matching filenames in `strategy_definitions/assets/` (e.g. `"assets/eqqq"`, `"assets/vuty"`), or a universe group reference in place of a hand-written list — see "Combining assets / sub-selecting the universe" above:
+```json
+"underlying": "universe:bond"
+```
+or a mix of group refs and fixed assets, order preserved:
+```json
+"underlying": ["universe:equity", "universe:commodity", "assets/vuty"]
+```
 
 **Composed** (`strategy_definitions/composed/`):
 ```json

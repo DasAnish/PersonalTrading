@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Mean Reversion Full Universe + 15% Vol Target",
-  "description": "Mean reversion (20-day contrarian) across all 13 assets scaled to 15% annualised volatility. Fades recent outperformers and overweights underperformers across equities, AI, commodities, precious metals, and bonds, with vol overlay to dampen leverage and drawdowns.",
+  "description": "Mean reversion (20-day contrarian) across the full asset universe scaled to 15% annualised volatility. Fades recent outperformers and overweights underperformers across equities, commodities, precious metals, and bonds, with vol overlay to dampen leverage and drawdowns.",
   "parameters": {
     "target_vol": 0.15,
     "lookback_days": 252
@@ -14,21 +14,7 @@
       "lookback_days": 20,
       "vol_lookback_days": 63
     },
-    "underlying": [
-      "assets/vusa",
-      "assets/eqqq",
-      "assets/aigc",
-      "assets/iind",
-      "assets/imeu",
-      "assets/iwrd",
-      "assets/ssln",
-      "assets/sgln",
-      "assets/comm",
-      "assets/brnt",
-      "assets/crud",
-      "assets/wcoa",
-      "assets/vuty"
-    ]
+    "underlying": "universe:all"
   },
   "tags": [
     "mean-reversion",

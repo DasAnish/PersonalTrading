@@ -2,7 +2,7 @@
   "type": "composed",
   "class": "VolatilityTargetStrategy",
   "name": "Mean Reversion Full Universe + Constraints 10%-30% + 15% Vol Target",
-  "description": "Mean reversion (20-day contrarian) across all 13 assets wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Fades recent outperformers and overweights underperformers across full universe while preventing extreme concentration and maintaining consistent risk control.",
+  "description": "Mean reversion (20-day contrarian) across the full asset universe wrapped in position constraints (10%-30% per asset) then scaled to 15% annualised volatility target. Fades recent outperformers and overweights underperformers across full universe while preventing extreme concentration and maintaining consistent risk control.",
   "parameters": {
     "target_vol": 0.15,
     "lookback_days": 252
@@ -21,21 +21,7 @@
         "lookback_days": 20,
         "vol_lookback_days": 63
       },
-      "underlying": [
-        "assets/vusa",
-        "assets/eqqq",
-        "assets/aigc",
-        "assets/iind",
-        "assets/imeu",
-        "assets/iwrd",
-        "assets/ssln",
-        "assets/sgln",
-        "assets/comm",
-        "assets/brnt",
-        "assets/crud",
-        "assets/wcoa",
-        "assets/vuty"
-      ]
+      "underlying": "universe:all"
     }
   },
   "tags": [

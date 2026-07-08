@@ -6,8 +6,11 @@ Runs the full library-wide pipeline in order:
 
   1. Backtest every strategy definition          (scripts/run_backtest.py --all)
   2. Per-strategy validation battery             (scripts/validate_strategy.py --all)
+     (MinBTL, DSR, CPCV, block bootstrap -> validation.json per strategy)
   3. Library-wide overfitting + SPA / Reality Check
-                                                 (scripts/run_all_overfitting.py --spa)
+         (scripts/run_all_overfitting.py --spa --walk-forward --composed-pbo)
+     (DSR/k-fold per strategy, PBO sweeps + walk-forward per base family,
+      group PBO for composed/overlay families, SPA across the library)
 
 Step 3 is the one that corrects for having *tried many strategies* — the
 per-strategy battery in step 2 only judges each strategy in isolation, whereas
@@ -72,7 +75,10 @@ def main() -> None:
     parser.add_argument(
         "--fast",
         action="store_true",
-        help="Pass --skip-pbo to the overfitting step (DSR/k-fold + SPA only, no PBO sweeps).",
+        help=(
+            "Pass --skip-pbo to the overfitting step (DSR/k-fold + SPA only; "
+            "skips PBO sweeps, walk-forward, and composed PBO)."
+        ),
     )
     args = parser.parse_args()
 
@@ -91,6 +97,10 @@ def main() -> None:
         overfit_cmd = [py, str(SCRIPTS_DIR / "run_all_overfitting.py"), "--spa"]
         if args.fast:
             overfit_cmd.append("--skip-pbo")
+        else:
+            # Opt-in flags in run_all_overfitting.py; the full pipeline wants
+            # the complete suite (PBO sweeps + walk-forward + composed PBO).
+            overfit_cmd += ["--walk-forward", "--composed-pbo"]
         steps.append(("3/3 overfitting+SPA", overfit_cmd))
 
     if not steps:

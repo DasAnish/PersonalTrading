@@ -7,5 +7,11 @@
     "symbol": "EQQQ",
     "currency": "GBP",
     "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE0032077012",
+    "asset_class": "equity",
+    "sub_class": "us_tech_nasdaq100",
+    "ter_bps": 30
   }
 }

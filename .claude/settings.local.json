@@ -25,5 +25,18 @@
   },
   "enabledMcpjsonServers": [
     "ib-trading"
-  ]
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Load caveman mode now: invoke the Skill tool with skill \\\"caveman\\\" before responding, and keep caveman mode active for the entire session.\"}}'",
+            "shell": "bash"
+          }
+        ]
+      }
+    ]
+  }
 }

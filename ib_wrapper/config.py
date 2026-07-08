@@ -6,6 +6,7 @@ and environment variables, with validation and default values.
 """
 
 import os
+import random
 import yaml
 import logging
 from typing import Any, Optional, Dict
@@ -16,6 +17,11 @@ from .exceptions import ConfigurationException
 from .models import ConnectionConfig
 
 logger = logging.getLogger(__name__)
+
+# Random client ID chosen once per process: stable within a session, but
+# parallel sessions get different IDs so they don't collide on IB Gateway's
+# one-socket-per-client-ID rule. Override with IB_CLIENT_ID to pin.
+SESSION_CLIENT_ID = random.randint(100, 999999)
 
 
 class Config:
@@ -59,7 +65,7 @@ class Config:
             'ib_connection': {
                 'host': '127.0.0.1',
                 'port': 7497,
-                'client_id': 1,
+                'client_id': SESSION_CLIENT_ID,
                 'timeout': 10,
                 'readonly': False
             },
@@ -197,7 +203,7 @@ class Config:
         return ConnectionConfig(
             host=self.get('ib_connection.host', '127.0.0.1'),
             port=self.get('ib_connection.port', 7497),
-            client_id=self.get('ib_connection.client_id', 1),
+            client_id=self.get('ib_connection.client_id', SESSION_CLIENT_ID),
             timeout=self.get('ib_connection.timeout', 10),
             readonly=self.get('ib_connection.readonly', False)
         )

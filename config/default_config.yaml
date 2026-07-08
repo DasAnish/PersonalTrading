@@ -6,7 +6,7 @@
 ib_connection:
   host: "127.0.0.1"
   port: 7497  # 7497 for TWS paper trading, 4001 for IB Gateway paper trading
-  client_id: 1
+  # client_id: random per process unless IB_CLIENT_ID env var is set
   timeout: 10
   readonly: false
 

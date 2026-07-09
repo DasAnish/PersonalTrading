@@ -25,7 +25,6 @@ from datetime import datetime
 import pandas as pd
 
 # IB Wrapper imports
-from ib_wrapper.client import IBClient
 from ib_wrapper.config import Config
 
 # Strategy imports
@@ -167,46 +166,44 @@ async def main(args):
     # Initialize cache
     cache = HistoricalDataCache(cache_dir="data/cache")
 
-    # Connect to IB
-    logger.info("Connecting to Interactive Brokers...")
+    # Fetch data — cache-first, connecting to IB lazily only on a cache miss.
+    logger.info("Loading historical data (IB connection opened only if needed)...")
 
     try:
         config = Config()
-        async with IBClient(config) as client:
-            logger.info("✓ Connected to IB")
 
-            # Fetch historical data
-            data_dict = await fetch_historical_data(client, cache, refresh=args.refresh)
+        # Fetch historical data (opens an IB socket only for missing symbols)
+        data_dict = await fetch_historical_data(config, cache, refresh=args.refresh)
 
-            if not data_dict:
-                logger.error("No data fetched. Exiting.")
-                return
+        if not data_dict:
+            logger.error("No data fetched. Exiting.")
+            return
 
-            # Align data
-            logger.info("\n" + "=" * 60)
-            logger.info("PREPROCESSING DATA")
-            logger.info("=" * 60)
+        # Align data
+        logger.info("\n" + "=" * 60)
+        logger.info("PREPROCESSING DATA")
+        logger.info("=" * 60)
 
-            prices = align_dataframes(data_dict)
+        prices = align_dataframes(data_dict)
 
-            if prices.empty:
-                logger.error("Failed to align data. Exiting.")
-                return
+        if prices.empty:
+            logger.error("Failed to align data. Exiting.")
+            return
 
-            # Validate data quality
-            if not validate_data_quality(prices, min_data_points=LOOKBACK_DAYS):
-                logger.error("Data quality validation failed. Exiting.")
-                return
+        # Validate data quality
+        if not validate_data_quality(prices, min_data_points=LOOKBACK_DAYS):
+            logger.error("Data quality validation failed. Exiting.")
+            return
 
-            # Determine actual backtest date range
-            # Need LOOKBACK_DAYS before first rebalance
-            backtest_start = prices.index[LOOKBACK_DAYS]
-            backtest_end = prices.index[-1]
+        # Determine actual backtest date range
+        # Need LOOKBACK_DAYS before first rebalance
+        backtest_start = prices.index[LOOKBACK_DAYS]
+        backtest_end = prices.index[-1]
 
-            logger.info(
-                f"\nBacktest period: {backtest_start.date()} to {backtest_end.date()}"
-            )
-            logger.info(f"Backtest days: {len(prices[backtest_start:])} days")
+        logger.info(
+            f"\nBacktest period: {backtest_start.date()} to {backtest_end.date()}"
+        )
+        logger.info(f"Backtest days: {len(prices[backtest_start:])} days")
 
     except Exception as e:
         logger.error(f"Failed to connect to IB or fetch data: {e}")

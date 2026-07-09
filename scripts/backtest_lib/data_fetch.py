@@ -21,6 +21,7 @@ from .config import (
     EXCHANGE,
     SEC_TYPE,
     START_DATE,
+    SYMBOL_SPECS,
     SYMBOLS,
 )
 
@@ -72,6 +73,12 @@ async def fetch_historical_data(
     try:
         for symbol in SYMBOLS:
             logger.info(f"\nFetching {symbol}...")
+            # Per-asset contract params: several assets quote in EUR/USD/CHF,
+            # and a GBP-currency request for them matches no contract.
+            spec = SYMBOL_SPECS.get(
+                symbol,
+                {"currency": CURRENCY, "exchange": EXCHANGE, "sec_type": SEC_TYPE},
+            )
 
             try:
                 if refresh:
@@ -83,9 +90,9 @@ async def fetch_historical_data(
                         start_date=START_DATE,
                         end_date=END_DATE,
                         bar_size=BAR_SIZE,
-                        sec_type=SEC_TYPE,
-                        exchange=EXCHANGE,
-                        currency=CURRENCY,
+                        sec_type=spec["sec_type"],
+                        exchange=spec["exchange"],
+                        currency=spec["currency"],
                     )
                     # Save to cache for future use
                     if not df.empty:
@@ -106,9 +113,9 @@ async def fetch_historical_data(
                                 end_date=END_DATE,
                                 market_data_service=c.market_data,
                                 bar_size=BAR_SIZE,
-                                sec_type=SEC_TYPE,
-                                exchange=EXCHANGE,
-                                currency=CURRENCY,
+                                sec_type=spec["sec_type"],
+                                exchange=spec["exchange"],
+                                currency=spec["currency"],
                             )
                         except Exception as ib_err:
                             # IB unreachable: fall back to newest cached file

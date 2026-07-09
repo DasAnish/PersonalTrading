@@ -17,6 +17,7 @@
 | Overfitting analysis (DSR, PBO, k-fold), scripts, output format | [docs/overfitting.md](docs/overfitting.md) |
 | CLI reference (all 4 modes + examples) | [docs/cli.md](docs/cli.md) |
 | Web dashboard usage & API | [docs/dashboard.md](docs/dashboard.md) |
+| Nightly pipeline, freshness gate, run archive | [docs/nightly.md](docs/nightly.md) |
 | Session log, next actions, known bugs | [docs/session_log.md](docs/session_log.md) |
 | Full file/directory reference | [docs/project-structure.md](docs/project-structure.md) |
 | Research backlog & idea schema | [research/README.md](research/README.md) |

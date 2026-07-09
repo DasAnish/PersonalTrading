@@ -17,6 +17,10 @@ Usage (Legacy - single strategy vs benchmark):
     python run_backtest.py --use-definitions --strategy trend_following
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import asyncio
 import json
 import logging

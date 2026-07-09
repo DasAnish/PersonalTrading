@@ -1,0 +1,18 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "EXSA",
+  "description": "iShares STOXX Europe 600 UCITS ETF (DE) (EUR, Xetra)",
+  "parameters": {
+    "symbol": "EXSA",
+    "currency": "EUR",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "DE0002635307",
+    "asset_class": "equity",
+    "sub_class": "europe_600",
+    "ter_bps": 20,
+    "correction_note": "German-domiciled/listed fund; no LSE listing exists. Not yet live-tested via IB — confirm exchange=SMART resolves correctly once IB Gateway access is restored."
+  }
+}

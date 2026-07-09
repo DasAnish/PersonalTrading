@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "BondDurationHedgeOverlayStrategy",
+  "name": "Bond Duration Crisis Hedge Overlay",
+  "description": "Stress-triggered overlay that dynamically tilts weight toward long-duration government bonds (VUTY/AGGU) when equity markets experience significant drawdown. Starts with equal-weight base and tilts toward the configured hedge asset when equity blend drawdown from 6-month high falls below trigger threshold. Based on the premise that long-duration bonds provide a safe-haven hedge during equity market stress due to negative correlation during crises. Tilt decays back to base weights over subsequent rebalances.",
+  "parameters": {
+    "drawdown_trigger": -0.15,
+    "duration_tilt_pp": 20,
+    "decay_rebalances": 2,
+    "hedge_asset": "vuty"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:hedging-overlay"
+  ]
+}

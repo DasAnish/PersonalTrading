@@ -1,0 +1,30 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Risk Parity + Constraints (10-30%) + 30% Vol Target",
+  "description": "Risk Parity with 10%-30% position constraints then scaled to 30% volatility target. Tests how position-size floors and caps interact with equal risk contribution and vol scaling simultaneously, across the full global asset universe.",
+  "parameters": {
+    "target_vol": 0.30,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "composed",
+    "class": "ConstraintStrategy",
+    "parameters": {
+      "min_weight": 0.1,
+      "max_weight": 0.3
+    },
+    "underlying": {
+      "type": "allocation",
+      "class": "RiskParityStrategy",
+      "parameters": {},
+      "underlying": "universe:all"
+    }
+  },
+  "tags": [
+    "risk-parity",
+    "constrained",
+    "vol-30",
+    "mech:diversification"
+  ]
+}

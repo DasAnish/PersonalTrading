@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "QualityWeightedStabilityStrategy",
+  "name": "Quality-Weighted Stability Tilt",
+  "description": "Weights assets proportional to a quality score (Calmar ratio or Sortino ratio) across the full asset universe, tilting toward assets that compound steadily with shallow drawdowns rather than merely low volatility. Rewards return-to-pain ratios, capturing risk-adjusted performance distinct from MinVar, RiskParity, or beta-based tilts.",
+  "parameters": {
+    "lookback_days": 252,
+    "quality_metric": "calmar"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

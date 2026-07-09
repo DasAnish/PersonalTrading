@@ -1,0 +1,28 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Trend Following - Commodity Universe + 15% Vol Target",
+  "description": "Applies systematic trend following (EWMA momentum, risk-parity weighted) to the commodity universe (crude oil, natural gas, precious metals, agricultural commodities), capturing commodity trend dynamics independently of equity and bond markets, then scales to 15% annualised volatility. Tests trend mechanics across commodity volatility and correlation regimes.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "TrendFollowingStrategy",
+    "parameters": {
+      "lookback_days": 504,
+      "half_life_days": 60,
+      "smooth_window": 5,
+      "signal_threshold": 0.1,
+      "min_volatility": 0.001
+    },
+    "underlying": "universe:commodity"
+  },
+  "tags": [
+    "trend",
+    "commodity",
+    "vol-15",
+    "mech:trend"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Cross-Asset Carry Tilt - Bond Universe + 8% Vol Target",
+  "description": "Applies carry-factor tilt across the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), overweighting the highest ex-ante-carry bonds, then scales to 8% annualised volatility target. Captures bond-specific carry opportunities (yield-to-maturity) within a fixed-income sleeve.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "CarryTiltStrategy",
+    "parameters": {
+      "top_n": 3
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "carry",
+    "bond-universe",
+    "vol-8",
+    "mech:carry"
+  ]
+}

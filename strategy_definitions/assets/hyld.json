@@ -1,0 +1,17 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "HYLD",
+  "description": "iShares Global High Yield Corp Bond UCITS ETF (USD, LSE)",
+  "parameters": {
+    "symbol": "HYLD",
+    "currency": "USD",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00B74DQ490",
+    "asset_class": "bond",
+    "sub_class": "high_yield_credit_global",
+    "ter_bps": 50
+  }
+}

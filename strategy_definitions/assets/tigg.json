@@ -1,0 +1,17 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "TIGG",
+  "description": "L&G India INR Government Bond UCITS ETF (USD Dist) (USD, LSE)",
+  "parameters": {
+    "symbol": "TIGG",
+    "currency": "USD",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00BL6K6H97",
+    "asset_class": "bond",
+    "sub_class": "em_govt_bond_local_ccy_india",
+    "ter_bps": 39
+  }
+}

@@ -1,0 +1,13 @@
+PersonalTrading
+Copyright 2026 Anish Das
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full license text.
+
+This product includes third-party software:
+
+  Chart.js v3.9.1
+  https://www.chartjs.org
+  Copyright (c) 2022 Chart.js Contributors
+  Licensed under the MIT License
+  Vendored at scripts/server/static/js/chart.min.js

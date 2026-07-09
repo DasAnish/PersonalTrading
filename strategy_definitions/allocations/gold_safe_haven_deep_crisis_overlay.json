@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "GoldSafeHavenOverlayStrategy",
+  "name": "Gold Safe-Haven Deep Crisis Overlay",
+  "description": "Stress-triggered overlay tuned for rare, deep drawdowns that dynamically tilts weight toward gold (SGLN) when equity markets experience severe drawdown. Starts with equal-weight base and tilts toward SGLN when equity blend drawdown from 6-month high falls below -20% trigger threshold. Based on Baur & Lucey (2010) finding that gold acts as a safe haven specifically during deep market stress. Tilt decays back to base weights over subsequent rebalances.",
+  "parameters": {
+    "drawdown_trigger": -0.20,
+    "gold_tilt_pp": 25,
+    "decay_rebalances": 3
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:hedging-overlay"
+  ]
+}

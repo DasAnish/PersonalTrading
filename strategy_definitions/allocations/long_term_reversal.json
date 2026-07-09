@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "LongTermReversalStrategy",
+  "name": "Long-Term Reversal",
+  "description": "Long-horizon contrarian strategy across the full asset universe: equities, commodities, precious metals, and bonds. Ranks assets by 36-60 month (3-5 year) total return and holds the bottom_n worst performers equal-weighted, exploiting mean reversion from valuation extremes. De Bondt & Thaler-style overreaction anomaly, distinct from short-term mean reversion.",
+  "parameters": {
+    "formation_window_months": 48,
+    "bottom_n": 4
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Momentum Top-3 Bond Universe + 8% Vol Target",
+  "description": "Selects the top 3 assets by 12-month trailing return from the fixed-income universe (US Treasuries, USD-hedged global aggregate, global high yield, EUR govt bonds, India INR govt bonds), weights by inverse volatility, then scales to 8% annualised volatility. Rotates across duration, credit and local-currency EM rate cycles.",
+  "parameters": {
+    "target_vol": 0.08,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 252
+    },
+    "underlying": "universe:bond"
+  },
+  "tags": [
+    "momentum",
+    "bond-universe",
+    "vol-8",
+    "mech:momentum-cs"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "AGGU",
+  "description": "iShares Core Global Aggregate Bond UCITS ETF USD Hedged (Acc) (USD, LSE)",
+  "parameters": {
+    "symbol": "AGGU",
+    "currency": "USD",
+    "exchange": "SMART"
+  },
+  "metadata": {
+    "isin": "IE00BZ043R46",
+    "asset_class": "bond",
+    "sub_class": "global_aggregate_hedged",
+    "ter_bps": 10
+  }
+}

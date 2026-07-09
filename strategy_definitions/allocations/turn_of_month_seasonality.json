@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "TurnOfMonthSeasonalityStrategy",
+  "name": "Turn-of-Month Seasonality",
+  "description": "Pure calendar rotation holding an equal-weight equity sleeve (broad global/regional equities) during the turn-of-month window (last 2 trading days of current month + first 3 trading days of next month) and rotating into a defensive sleeve (VUTY, SGLN, AGGU, SEGA) for the remainder of the month. Implements the Turn-of-the-Month Effect seasonal pattern observed in equity returns around month boundaries.",
+  "parameters": {
+    "days_before_month_end": 2,
+    "days_after_month_start": 3
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:seasonality"
+  ]
+}

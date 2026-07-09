@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Mean Reversion - EM Equity Universe + 15% Vol Target",
+  "description": "Applies short-term contrarian strategy (z-score based allocation, inverse volatility weighting) to the emerging-market equity universe (India, China A-shares, EM IMI ESG screened, UBS Core MSCI EM), capturing mean-reversion opportunities across EM regional dynamics, then scales to 15% annualised volatility. Tests mean-reversion mechanics across a structurally distinct EM volatility and correlation regime.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MeanReversionStrategy",
+    "parameters": {
+      "lookback_days": 20,
+      "vol_lookback_days": 63
+    },
+    "underlying": "universe:em_equity"
+  },
+  "tags": [
+    "mean-reversion",
+    "em-equity",
+    "vol-15",
+    "mech:mean-reversion"
+  ]
+}

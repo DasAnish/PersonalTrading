@@ -1,0 +1,27 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Low-Beta Defensive Tilt - Commodity Universe + 15% Vol Target",
+  "description": "Low-beta systematic-risk tilt (defensive orientation) applied to the commodity universe (crude oil, natural gas, precious metals, agricultural commodities), capturing regional low-beta commodity opportunities with volatility control scaled to 15% annualised volatility. Emphasizes tail-risk protection and consistent drawdown management within commodity markets.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "LowBetaTiltStrategy",
+    "parameters": {
+      "beta_lookback_days": 126,
+      "bottom_n": 3
+    },
+    "underlying": "universe:commodity"
+  },
+  "tags": [
+    "defensive",
+    "low-beta",
+    "commodity",
+    "vol-15",
+    "risk-managed",
+    "mech:vol-premium"
+  ]
+}

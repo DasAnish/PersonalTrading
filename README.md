@@ -215,4 +215,10 @@ pytest --cov=strategies --cov=backtesting --cov-report=html
 
 ---
 
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Includes a [NOTICE](NOTICE) file with required attribution notices (Apache §4(d)) — any redistribution, modified or not, must carry that file's contents forward.
+
+---
+
 **Disclaimer**: For research purposes only. Not financial advice.

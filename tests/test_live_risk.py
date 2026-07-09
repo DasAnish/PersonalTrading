@@ -21,8 +21,14 @@ def test_page_renders(client):
 
 
 def test_api_fallback_shape(client, monkeypatch):
-    """With no IB and no cache, the API returns a well-formed offline payload."""
+    """With no IB, no cache, and no saved blend: well-formed empty payload.
+
+    load_blend must be stubbed out — a preferred blend saved in the real
+    results/ dir otherwise (correctly) drives a hypothetical target-weights
+    payload with a non-zero HHI.
+    """
     monkeypatch.setattr(risk, "_load_positions", lambda: ([], False, None))
+    monkeypatch.setattr(risk, "load_blend", lambda: None)
     r = client.get("/api/live-risk")
     assert r.status_code == 200
     d = r.get_json()

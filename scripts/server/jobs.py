@@ -69,6 +69,56 @@ _slots = threading.Semaphore(MAX_CONCURRENT_JOBS)
 STEP_TIMEOUT_S = 45 * 60
 
 
+def _persist_job(job: dict) -> None:
+    """
+    Mirror the job dict to results/jobs/<id>/job.json so history survives a
+    server restart (job state used to be in-memory only). Best-effort: a
+    persistence failure must never take a job down with it.
+    """
+    try:
+        job_dir = JOBS_DIR / job["job_id"]
+        job_dir.mkdir(parents=True, exist_ok=True)
+        with open(job_dir / "job.json", "w", encoding="utf-8") as f:
+            json.dump(job, f, indent=2)
+    except Exception as e:
+        logger.warning(f"Could not persist job {job.get('job_id')}: {e}")
+
+
+def load_persisted_jobs() -> int:
+    """
+    Reload job history from results/jobs/*/job.json into memory (newest 200,
+    matching the in-memory bound). Jobs that were queued/running when the
+    previous process died can never finish — mark them ``interrupted``.
+    Called once from create_app(); returns the number of jobs loaded.
+    """
+    if not JOBS_DIR.is_dir():
+        return 0
+    loaded: list[dict] = []
+    for path in JOBS_DIR.glob("*/job.json"):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                job = json.load(f)
+        except Exception as e:
+            logger.warning(f"Skipping unreadable {path}: {e}")
+            continue
+        if not isinstance(job, dict) or "job_id" not in job:
+            continue
+        if job.get("state") in ("queued", "running"):
+            job["state"] = "interrupted"
+            job["current_step"] = None
+            job["error"] = {"reason": "server restarted while job was active"}
+            _persist_job(job)
+        loaded.append(job)
+
+    loaded.sort(key=lambda j: j.get("created_at") or "")
+    with _jobs_lock:
+        for job in loaded[-200:]:
+            _jobs.setdefault(job["job_id"], job)
+    if loaded:
+        logger.info(f"Reloaded {min(len(loaded), 200)} persisted jobs")
+    return min(len(loaded), 200)
+
+
 def _definition_exists(strategy_key: str) -> bool:
     """A key is runnable if any strategy_definitions subdir has its file."""
     for sub in ("allocations", "composed", "overlays", "portfolios"):
@@ -160,6 +210,7 @@ def _run_job(job_id: str) -> None:
     try:
         job["state"] = "running"
         job["started_at"] = datetime.now().isoformat()
+        _persist_job(job)
         log_dir = JOBS_DIR / job_id
         log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -200,6 +251,7 @@ def _run_job(job_id: str) -> None:
                 "seconds": (datetime.now() - step_started).total_seconds(),
                 "log": str(log_path.relative_to(RESULTS_DIR)),
             }
+            _persist_job(job)
 
             if exit_code != 0:
                 job["state"] = "failed"
@@ -214,6 +266,7 @@ def _run_job(job_id: str) -> None:
 
         job["current_step"] = None
         job["finished_at"] = datetime.now().isoformat()
+        _persist_job(job)
     finally:
         _slots.release()
 
@@ -269,6 +322,7 @@ def start_run(strategy_key: str):
         # Bound memory: keep the newest 200 jobs.
         while len(_jobs) > 200:
             _jobs.popitem(last=False)
+    _persist_job(job)
 
     threading.Thread(target=_run_job, args=(job_id,), daemon=True).start()
 

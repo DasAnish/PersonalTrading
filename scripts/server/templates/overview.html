@@ -205,6 +205,8 @@
         <div class="content">
             <nav class="site-nav"><a href="/" style="font-weight:800;color:#1f2937;">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation">Validation</a> · <a href="/info">Info</a></nav>
 
+            <div id="freshnessBanner" style="display:none;margin:10px 0;padding:10px 14px;border-radius:8px;font-size:0.9rem;line-height:1.4;"></div>
+
             <div class="summary-cards" id="summaryCards">
                 <div class="summary-card">
                     <h3>Strategies</h3>
@@ -499,8 +501,42 @@
             }
         }
 
+        async function loadFreshness() {
+            // Data-rot visibility: one stale symbol truncates every aligned
+            // backtest panel to its end date, invisibly. Surface it here.
+            const el = document.getElementById('freshnessBanner');
+            try {
+                const d = await fetchJSON('/api/data-freshness');
+                if (!d.available || !d.cache) return;
+                const c = d.cache;
+                const problems = [];
+                if (c.panel_end) problems.push('panel ends ' + c.panel_end +
+                    ' (' + c.panel_stale_days + 'd behind)');
+                if (c.stale.length) problems.push(c.stale.length + ' stale: ' + c.stale.join(', '));
+                if (c.missing.length) problems.push(c.missing.length + ' missing: ' + c.missing.join(', '));
+                if (c.corrupt.length) problems.push(c.corrupt.length + ' corrupt: ' + c.corrupt.join(', '));
+                const lastRun = d.last_run ?
+                    ' — last pipeline run ' + d.last_run.started_at.slice(0, 16).replace('T', ' ') +
+                    (d.last_run.ok ? ' (ok)' : ' (FAILED/blocked)') : '';
+                if (c.gate_failed) {
+                    el.style.background = '#fef2f2';
+                    el.style.border = '1px solid #fca5a5';
+                    el.style.color = '#991b1b';
+                    el.textContent = '⛔ Data freshness gate FAILED: ' + problems.join('; ') + lastRun;
+                    el.style.display = 'block';
+                } else if (c.stale.length || (c.panel_stale_days !== null && c.panel_stale_days > 3)) {
+                    el.style.background = '#fffbeb';
+                    el.style.border = '1px solid #fcd34d';
+                    el.style.color = '#92400e';
+                    el.textContent = '⚠ ' + problems.join('; ') + lastRun;
+                    el.style.display = 'block';
+                }
+            } catch (err) { /* banner is best-effort */ }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             init();
+            loadFreshness();
         });
     </script>
 </body>

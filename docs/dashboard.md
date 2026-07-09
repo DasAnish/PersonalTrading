@@ -42,8 +42,9 @@ python scripts/serve_results.py
 | `GET /api/compare/<key1>/<key2>` | Legacy two-strategy comparison endpoint |
 | `GET /info` | Glossary page defining every term used on the dashboard |
 | `POST /api/run/<key>` | Launch backtest → validate → overfitting for one definition as background subprocesses (fresh code each run). Optional body `{"steps": [...]}` to run a subset. Returns `202` + `job_id` |
-| `GET /api/run/status/<job_id>` | Job state (`queued`/`running`/`done`/`failed`), per-step exit codes + logs; when `done`, embeds metrics/validation/overfitting results |
-| `GET /api/run/jobs` | Recent jobs, newest first |
+| `GET /api/run/status/<job_id>` | Job state (`queued`/`running`/`done`/`failed`/`interrupted`), per-step exit codes + logs; when `done`, embeds metrics/validation/overfitting results |
+| `GET /api/run/jobs` | Recent jobs, newest first. Jobs persist to `results/jobs/<id>/job.json` and survive server restarts; in-flight jobs from a dead process show as `interrupted` |
+| `GET /api/data-freshness` | Cache panel end date, stale/missing/corrupt symbols, freshness-gate verdict + last pipeline run (from `results/cache_validation.json` / `run_manifest.json`). Drives the overview banner |
 
 Run-job example (what the build agents use):
 ```bash

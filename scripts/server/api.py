@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ def _cagr_from_history(portfolio_history: list) -> float | None:
 
 
 def _omega_from_history(portfolio_history: list) -> float | None:
-    """Compute omega ratio from portfolio history via analytics.metrics.calculate_omega_ratio."""
+    """Compute omega ratio via analytics.metrics.calculate_omega_ratio."""
     series = history_to_series(portfolio_history)
     if len(series) < 2:
         return None
@@ -235,7 +236,9 @@ def api_export(strategy_key: str):
         output.getvalue(),
         mimetype="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename={strategy_key}_{export_type}.csv"
+            "Content-Disposition": (
+                f"attachment; filename={strategy_key}_{export_type}.csv"
+            )
         },
     )
 
@@ -279,9 +282,7 @@ def api_stress_test(strategy_key: str):
             jsonify(
                 {
                     "error": "Stress test results not found.",
-                    "hint": (
-                        f"Run: python scripts/run_backtest.py --all --stress-test"
-                    ),
+                    "hint": ("Run: python scripts/run_backtest.py --all --stress-test"),
                 }
             ),
             404,
@@ -427,3 +428,50 @@ def api_compare(key1: str, key2: str):
 def api_validation_summary():
     """Library-wide validation battery + SPA/Reality-Check summary for the panel."""
     return jsonify(build_validation_summary())
+
+
+def _read_results_json(filename: str):
+    """Best-effort read of a top-level results/ JSON report, else None."""
+    path = RESULTS_DIR / filename
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+@bp.route("/api/data-freshness")
+def api_data_freshness():
+    """
+    Cache freshness + last pipeline run, for the dashboard banner.
+
+    Reads results/cache_validation.json and results/run_manifest.json
+    (both produced by scripts/run_nightly.py and its pieces). The point is
+    to make silent data rot visible: a stale panel end silently truncates
+    every backtest to that date (the AIGC failure mode).
+    """
+    validation = _read_results_json("cache_validation.json")
+    manifest = _read_results_json("run_manifest.json")
+
+    payload = {"available": validation is not None or manifest is not None}
+    if validation is not None:
+        payload["cache"] = {
+            "as_of": validation.get("as_of"),
+            "panel_end": validation.get("panel_end"),
+            "panel_stale_days": validation.get("panel_stale_days"),
+            "gate_failed": validation.get("gate_failed"),
+            "stale": validation.get("stale", []),
+            "missing": validation.get("missing", []),
+            "corrupt": validation.get("corrupt", []),
+        }
+    if manifest is not None:
+        payload["last_run"] = {
+            "run_id": manifest.get("run_id"),
+            "started_at": manifest.get("started_at"),
+            "ok": manifest.get("ok"),
+            "data_refreshed": manifest.get("data_refreshed"),
+            "total_strategies": manifest.get("total_strategies"),
+        }
+    return jsonify(payload)

@@ -59,6 +59,8 @@ config/local_config.yaml
 
 references/
 data/cache/
+data/cache_proxies/
+data/cache_extended/
 results/
 CLAUDE.local.md
 caveman-restore/

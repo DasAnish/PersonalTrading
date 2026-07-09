@@ -44,6 +44,16 @@ strategy's `metrics.json`, `info.json`, `validation.json`,
 gitignored — the archive is local history. Diff two runs by comparing their
 `strategies_index.json` metrics for entries with equal `config_hash`.
 
+## Related research tooling
+
+- `scripts/build_meta_portfolio.py` — decorrelated blend across
+  validation-PASS strategies (greedy Sharpe under `--max-corr`, inverse-vol
+  weights) → `results/meta_portfolio.json`. Feeds the manual rebalance.
+- `scripts/extend_history.py` — splice long-history proxies
+  (`strategy_definitions/proxy_map.json`) onto cached ETF series →
+  `data/cache_extended/`; refuses proxies whose overlap correlation
+  < `--min-corr`. Attacks the short-T constraint blocking SPA.
+
 ## Task Scheduler (optional)
 
 The script is safe unattended (never places orders; gateway-down tolerated):

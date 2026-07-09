@@ -270,6 +270,14 @@ def main() -> int:
                 except Exception as exc:
                     logger.warning(f"Could not read refresh report: {exc}")
 
+        # 2b. NAV snapshot — soft step, only worth trying if the gateway
+        # answered the refresh (calendar time can't be backfilled, so grab
+        # the reading whenever one is available).
+        if manifest["data_refreshed"]:
+            _run_step(
+                manifest, "snapshot_nav", [py, str(SCRIPTS_DIR / "snapshot_nav.py")]
+            )
+
         # 3. cache sanity + freshness gate
         code = _run_step(
             manifest,

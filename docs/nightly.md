@@ -27,6 +27,10 @@ Flags: `--fast` (skip PBO sweeps), `--skip-git`, `--skip-refresh`,
 - `scripts/validate_cache.py [--max-stale-days N]` — content checks (dupes,
   gaps, NaNs, non-positive closes, absurd daily moves) + freshness gate;
   writes `results/cache_validation.json`; exit 1 = gate failed.
+- `scripts/snapshot_nav.py [--strategy KEY]` — daily account NAV + positions
+  to `live_tracking/nav_history.csv` + `live_tracking/positions/<date>.json`
+  (idempotent per day; optional target-weights record for shortfall math).
+  Runs automatically inside the nightly when the gateway is up.
 - `scripts/rebuild_index.py [--dry-run]` — rebuild `strategies_index.json`
   from `results/strategies/*/` disk truth; adds per-strategy `config_hash`
   (sha256 of definition file) so run-over-run Sharpe diffs can separate

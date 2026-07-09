@@ -1,479 +1,143 @@
 ---
-description: Research, design, and build new trading strategies using a persistent 4-agent pipeline team (requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+description: Research and build new trading strategies — research-scan on the main thread, then 2 strategy-builder agents iterating configs/params via the dashboard REST API
 ---
 
-**IMPORTANT** DO NOT ASK the USER for any persmissions. Use simple commands do not pipe multiple commands together. The user is not sleeping and will be unavailable. ABSOLUTELY DO NOT PROMPT THE USER.
+**IMPORTANT — no prompts, no orders:** Do not ask the user for permissions; they may be away. Never place, submit, modify, or cancel any trade order. Research and reporting only.
 
-# Strategy Builder Pipeline
+# Strategy Builder (Consolidated)
 
-> **Requires** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment.
-> For a simpler sub-agent variant (no teams), use `.claude/skills/build-strategies/SKILL.md`.
-> For unattended inline execution, use `.claude/skills/build-strategies-auto/SKILL.md`.
->
-> Architecture reference: `docs/build-strategies-pipeline.md`
+Two-phase workflow, replacing the old 4-agent pipeline team:
 
----
-
-## Context
-
-**Assets available**: Read dynamically from `strategy_definitions/assets/` at each research iteration. Never hardcode asset lists.
-
-**Existing strategy classes**: read `strategies/__init__.py` for the current
-class roster and `docs/strategies.md` for descriptions. Do NOT rely on any list
-pasted into a prompt — the library changes every session.
-
-**Existing strategy definitions**: list the files in
-`strategy_definitions/{allocations,composed,portfolios,overlays}/` at the start
-of every research iteration and paste the *current* listing into the strategist
-prompt. A definition key already present there must never be proposed again.
-
-**Architecture rules**:
-- `AllocationStrategy`: calculates weights across a list of assets — implements `calculate_weights(context)`
-- `OverlayStrategy`: transforms weights from an underlying strategy
-- All new strategies need: a Python class in `strategies/` + a JSON definition in `strategy_definitions/`
-- JSON definitions use `"underlying"` arrays referencing other definition paths (e.g. `"assets/vusa"`)
-
-**Combining assets / sub-selecting the universe**: `strategy_definitions/universe.json`
-is the canonical, always-current asset registry, grouped by `equity`, `bond`,
-`commodity`, `europe_equity`, `em_equity`, and `all` (every asset, union of the
-three top-level classes). The loader (`strategies/strategy_loader.py`) resolves
-`"universe:<group>"` strings at load time, so a strategy that references a group
-automatically picks up any asset added to that group later — never hand-copy a
-group's asset list into a new definition's `"underlying"` array.
-
-- **Whole-group strategies** (e.g. "run this allocation over every bond"): set
-  `"underlying": "universe:bond"` directly — see any `*_full_universe_*` composed
-  file or `composed/momentum_top3_bond_universe_8vol.json` for the pattern.
-- **Sub-selection across multiple groups, order-independent** (e.g. "equities
-  plus commodities, but not bonds"): a plain JSON list can mix group refs and
-  individual asset refs — each `"universe:<group>"` entry expands in place, e.g.
-  `"underlying": ["universe:equity", "universe:commodity"]`.
-- **Sub-selection where order matters**: some strategy classes are
-  position-sensitive — `ProtectiveAssetAllocationStrategy` treats the **last**
-  asset in the resolved list as the single safe asset and everything else as
-  risky. For these, put the group refs first and the fixed/positional asset(s)
-  last, e.g. `"underlying": ["universe:equity", "universe:commodity", "assets/vuty"]`
-  (this is exactly how `allocations/protective_asset_allocation.json` is
-  written — do not point a position-sensitive class at `"universe:all"`
-  directly, since group ordering inside `universe.json` is not guaranteed to
-  put any particular asset last). Check the target strategy class's docstring
-  for this kind of positional assumption before wiring up its `underlying`.
-- **Bespoke sub-selection that doesn't match a named group** (e.g. a themed
-  "growth" or "dividend" basket cutting across the equity/bond/commodity
-  split): list the individual `"assets/<key>"` refs explicitly, as
-  `allocations/hrp_growth_theme.json` does. Do not invent a new group name
-  inside a strategy file — if a bespoke basket looks reusable across multiple
-  candidates, add it as a new named group in `universe.json` instead so future
-  strategies can reference it the same way.
-- Never write a strategy that filters `universe:all` in Python by symbol
-  string matching — if a candidate needs "equity minus X", either compose it
-  from the narrower groups explicitly or add a new group to `universe.json`.
+1. **Research (main thread, inline)** — run the `/research-scan` skill yourself.
+2. **Build (2 parallel `strategy-builder` agents)** — each agent implements
+   candidates and iterates configurations/parameters, using the dashboard REST
+   API for backtest + validation + overfitting.
 
 ---
 
-## Team Setup (run once at start)
+## Context (read fresh every session — never trust pasted lists)
 
-1. Create the team:
-   ```
-   TeamCreate(team_name="strategy-pipeline")
-   ```
-
-2. Spawn 4 persistent agents on the team using the Agent tool with `team_name="strategy-pipeline"` and **`mode: "bypassPermissions"`** on every spawn:
-
-   | Name | Model | Role |
-   |------|-------|------|
-   | `strategist` | sonnet | Research and propose new strategy candidates |
-   | `builder` | haiku | Implement strategies (Python class + JSON definition) |
-   | `backtester` | haiku | Run `python scripts/run_backtest.py` and return metrics |
-   | `analyst` | haiku | Run `python scripts/validate_strategy.py` (or `run_overfitting.py --param` for param sweeps) and return the verdict |
-
-   Each agent is long-lived for the session — do not re-spawn them on each loop iteration.
-   Always set `mode: "bypassPermissions"` on every Agent spawn and every SendMessage call so agents never pause to prompt the user.
-
-3. Initialise orchestrator state (held in your own context — not shared files):
-   ```
-   pending:           []   # researched candidates not yet built
-   built:             []   # built strategies awaiting backtest
-   analyzed:          []   # fully checked, awaiting report
-   skip_log:          []   # failed strategies with reasons
-   strategy_count:    0
-
-   strategist_busy:   false
-   builder_busy:      false   # max 1 — all builders share strategies/__init__.py
-   backtester_count:  0       # max 2 — each strategy has its own results dir
-   analyst_count:     0       # max 2 — each strategy has its own results dir
-   ```
+- **Assets**: `strategy_definitions/assets/` (one JSON per investable asset).
+- **Universe groups**: `strategy_definitions/universe.json` — groups `equity`,
+  `bond`, `commodity`, `europe_equity`, `em_equity`, `all`. Definitions
+  reference groups as `"underlying": "universe:<group>"` (resolved at load
+  time). Never hand-copy a group's assets into a definition.
+  - Order-sensitive classes (e.g. `ProtectiveAssetAllocationStrategy` treats
+    the **last** resolved asset as the safe asset): group refs first, fixed
+    asset last. Never point such a class at `universe:all`.
+  - Bespoke baskets: list `assets/<key>` refs explicitly, or add a new named
+    group to `universe.json` if reusable.
+- **Strategy classes**: `strategies/__init__.py` for the roster,
+  `docs/strategies.md` for descriptions.
+- **Existing definitions**: list
+  `strategy_definitions/{allocations,composed,portfolios,overlays}/` at the
+  start; an existing key must never be proposed again.
+- **Architecture**: `AllocationStrategy.calculate_weights(context)` computes
+  weights; `OverlayStrategy` transforms an underlying's weights. New strategy =
+  Python class in `strategies/` (if a new algorithm) + JSON definition in
+  `strategy_definitions/<subfolder>/`.
 
 ---
 
-## Pipeline Loop
+## Phase 1 — Research (main thread)
 
-Repeat the following loop indefinitely until the user stops you.
-
-Each turn, evaluate **all four dispatch conditions simultaneously**. Any condition that is met must be dispatched in the **same response** — do not wait for one dispatch to complete before checking the next. Issue all eligible dispatches as parallel tool calls within a single response turn.
-
-**All dispatches use `run_in_background: true` and `mode: "bypassPermissions"`** so agents never block or prompt the user. After dispatching all eligible agents in one turn, wait for the next incoming message before re-evaluating.
-
-### Dispatch: Strategist
-
-**Condition**: `!strategist_busy && pending.length < 4`
-
-Send (with `run_in_background: true`):
-
-```
-To: strategist
-
-Research 3 new strategy candidates not yet implemented in this codebase.
-
-STEPS:
-1. Read `research/backlog.md` FIRST. If any idea has `status: new`, read the full
-   idea file(s) in `research/ideas/<slug>.md` for the pre-registered hypothesis and
-   rule sketch, and prefer proposing candidates derived from those ideas over
-   inventing new ones.
-2. Read `results/mechanism_coverage.json` (if present) — it holds a `counts` map of
-   mechanism tag -> number of strategies already built with that mechanism (e.g.
-   mean-reversion 6, vol-premium 6, carry 0, seasonality 0 vs trend 32,
-   diversification 31, meta 41). When inventing a candidate NOT derived from a
-   backlog idea, prefer mechanisms with LOW counts over the already-saturated ones.
-3. Read all files in strategy_definitions/ (especially assets/ for the current asset
-   universe) and docs/strategies.md for architecture context.
-4. Fall back to the current recombination behavior below ONLY when
-   research/backlog.md has no `status: new` idea AND no underrepresented-mechanism
-   candidate is feasible:
-   - New overlay compositions (different vol targets, lookback combos, constraint combinations)
-   - Meta-portfolio combinations of existing strategies
-   - Parameter variants of existing allocation classes (different lookbacks, top_n, linkage methods)
-   - Novel allocation algorithms: carry, volatility timing, factor-based, low-beta, quality-weighted
-   - Trend + mean-reversion hybrids, regime-switching approaches
-   - Existing allocation algorithms re-scoped to a `universe.json` sub-group not yet
-     tried for that algorithm (e.g. an HRP or trend-following variant restricted to
-     `universe:europe_equity` or `universe:em_equity` instead of the full universe) —
-     check `strategy_definitions/universe.json` for the current group list and cross
-     it against what's already built before proposing one
-
-Every candidate MUST set `mechanism` to exactly one tag from the fixed vocabulary:
-trend, momentum-cs, mean-reversion, carry, vol-premium, diversification, regime,
-hedging-overlay, seasonality, meta (infer the closest fit from the strategy's design
-if it isn't derived from a backlog idea). A candidate derived from a backlog idea
-MUST also set `research_ref` to that idea's filename slug without `.md` (e.g.
-"dual-momentum" for research/ideas/dual-momentum.md).
-
-EXISTING STRATEGIES (do not suggest these):
-[paste the current contents of strategy_definitions/ subdirectory names]
-
-RETURN FORMAT — JSON array only, no prose:
-[
-  {
-    "name": "Human Readable Name",
-    "key": "file_slug",
-    "description": "one sentence",
-    "subfolder": "allocations|composed|portfolios",
-    "json_only": true,
-    "reuses_class": "ExistingClassName or null",
-    "new_python_class": "NewClassName or null",
-    "tunable_params": "param=v1,v2,v3 or null",
-    "complexity": "Low|Medium|High",
-    "priority": 1,
-    "mechanism": "trend|momentum-cs|mean-reversion|carry|vol-premium|diversification|regime|hedging-overlay|seasonality|meta",
-    "research_ref": "idea-slug or omit if not derived from a backlog idea"
-  }
-]
-
-Priority order: candidates derived from a `status: new` backlog idea first, then
-JSON-only (no new Python), then parameter variants, then new Python classes.
-Send your result back via SendMessage to "orchestrator".
-```
-
-Set `strategist_busy = true`. When the strategist's message arrives:
-- Parse the JSON array
-- Sort: candidates carrying `research_ref` first, then `json_only=true`, then by complexity ascending
-- Deduplicate: discard any candidate whose `key` already exists in `strategy_definitions/`
-- Push remaining to `pending[]` (each entry keeps its `research_ref`/`mechanism` fields if present)
-- For each pushed candidate carrying a `research_ref`: set that idea's frontmatter
-  `status` to `candidate` in `research/ideas/<research_ref>.md` and update the matching
-  `research/backlog.md` row (full lifecycle: new → candidate → built → validated/rejected)
-- Set `strategist_busy = false`
-
-### Dispatch: Builder
-
-**Condition**: `!builder_busy && pending.length > 0`
-
-Pop the first candidate from `pending[]`. Send (with `run_in_background: true`):
-
-```
-To: builder
-
-Implement the following strategy:
-<paste candidate JSON object>
-
-STEPS:
-If json_only == true:
-  Write the JSON definition directly to strategy_definitions/<subfolder>/<key>.json.
-  Use existing files in that subfolder as schema templates.
-
-If json_only == false (new Python class needed):
-  1. Read the most similar existing strategy file in strategies/ for patterns
-  2. Read strategies/core.py for the base class interface
-  3. Write the new Python class to strategies/<snake_case_name>.py
-  4. Add the import and export to strategies/__init__.py
-  5. Write the JSON definition to strategy_definitions/<subfolder>/<key>.json
-
-RETURN FORMAT (plain text, one line):
-Success: DONE: strategy_key=<key> | file=strategy_definitions/<path> | json_only=<true/false> | tunable_params=<value or null>
-Failure: FAILED: strategy_key=<key> | reason=<brief description>
-
-Send result via SendMessage to "orchestrator".
-```
-
-Set `builder_busy = true`. When builder's message arrives:
-- If `DONE`: parse fields, push `{key, subfolder, json_only, tunable_params}` to `built[]`,
-  carrying over `research_ref`/`mechanism` from the original candidate object popped from
-  `pending[]` (the builder does not need to echo these back)
-- If `FAILED`: push `{key, reason}` to `skip_log[]`
-- Set `builder_busy = false`
-
-### Dispatch: Backtester
-
-**Condition**: `backtester_count < 2 && built.length > 0`
-
-Pop the first entry from `built[]`. Send (with `run_in_background: true`):
-
-```
-To: backtester
-
-Run a backtest for: strategy_key=<key>
-
-STEPS:
-1. Run: python scripts/run_backtest.py --use-definitions --strategy <key>
-2. If it fails: read the error, attempt one fix, retry once
-3. Extract metrics from the output or from results/strategies/<key>/metrics.json
-
-RETURN FORMAT (plain text, one line):
-Success: OK: strategy_key=<key> | return=X.X% | sharpe=X.XX | maxdd=-X.X%
-Failure: FAIL: strategy_key=<key> | error=<brief description>
-
-Send result via SendMessage to "orchestrator".
-```
-
-Increment `backtester_count`. When backtester's message arrives:
-- If `OK`: store metrics against the key, determine overfitting mode (see below), dispatch analyst immediately
-- If `FAIL`: push `{key, reason}` to `skip_log[]`
-- Decrement `backtester_count`
-
-### Dispatch: Analyst
-
-**Condition**: `analyst_count < 2` — triggered immediately after a successful backtester result (and re-checked each loop turn)
-
-Determine overfitting mode from the `built[]` entry for this key. The validation
-battery (`scripts/validate_strategy.py`) is the **default** mode; the old
-param-sweep script (`scripts/run_overfitting.py --param`) is kept only as the
-exception for candidates that carry `tunable_params` — it answers a different
-question (PBO stability across a param grid) that the single-config battery
-doesn't cover:
-
-| Condition | Mode |
-|-----------|------|
-| `json_only && subfolder in ["composed", "portfolios"]` | `skip` |
-| `tunable_params` is not null | `params` (use the tunable_params value; old PBO/DSR sweep) |
-| otherwise | `battery` (validation battery; replaces the old `n1` mode) |
-
-Send (with `run_in_background: true`):
-
-```
-To: analyst
-
-Run an overfitting check for: strategy_key=<key>
-Mode: <skip|params|battery>
-Params (if mode=params): <tunable_params value>
-
-STEPS:
-If mode == "skip":
-  Return: SKIP: strategy_key=<key>
-
-If mode == "params":
-  Run: python scripts/run_overfitting.py --strategy <key> --param <params>
-  Parse DSR and PBO from the output. Apply verdicts:
-    PASS: DSR >= 0.95 and PBO <= 0.30
-    WARN: DSR in [0.80, 0.95) or PBO in (0.30, 0.50]
-    FAIL: DSR < 0.80 or PBO > 0.50
-  Return format: RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL
-
-If mode == "battery":
-  Run: python scripts/validate_strategy.py --strategy <key> --json
-  The last stdout line is single-line JSON:
-    {"strategy_key":..., "generated":..., "tests":[{name,verdict,values,note} x4], "overall":"PASS|WARN|FAIL"}
-  Tests are named dsr, minbtl, cpcv, bootstrap. Extract:
-    overall            <- top-level "overall"
-    minbtl_verdict     <- tests[name=minbtl].verdict
-    dsr value+verdict  <- tests[name=dsr].values.dsr and tests[name=dsr].verdict
-    cpcv_prob          <- tests[name=cpcv].values.prob_oos_sharpe_positive
-    boot_p5            <- tests[name=bootstrap].values.sharpe_pct5
-  Return format: RESULT: key=<key> overall=<PASS|WARN|FAIL> minbtl=<verdict> dsr=<value>/<verdict> cpcv_prob=<prob_oos_sharpe_positive> boot_p5=<sharpe_pct5>
-
-If the script errors (either mode): return ERROR with reason (do not skip reporting).
-
-RETURN FORMAT (plain text, one line — pick the one matching the mode you ran):
-RESULT: strategy_key=<key> | dsr=X.XXX | dsr_verdict=PASS|WARN|FAIL | pbo=X.XX% | pbo_verdict=PASS|WARN|FAIL   (mode=params)
-RESULT: key=<key> overall=PASS|WARN|FAIL minbtl=<verdict> dsr=<value>/<verdict> cpcv_prob=<prob> boot_p5=<pct5>  (mode=battery)
-SKIP: strategy_key=<key>
-ERROR: strategy_key=<key> | reason=<brief>
-
-Send result via SendMessage to "orchestrator".
-```
-
-Increment `analyst_count`. When analyst's message arrives:
-- Push `{key, metrics, overfitting, research_ref, mechanism}` to `analyzed[]`, carrying
-  `research_ref`/`mechanism` over from the `built[]` entry for this key (if present)
-- Decrement `analyst_count`
-
-### Report
-
-When `analyzed[]` has entries, pop each and report. Format depends on which analyst
-mode ran (see Dispatch: Analyst above) — use the `params` line for mode=params, the
-`battery` line for mode=battery:
-
-```
-✓ Built: [Strategy Name]
-  File: strategy_definitions/[path]/[name].json
-  Return: X% | Sharpe: X.XX | Max DD: -X%
-  Overfitting: DSR=X.XXX [PASS/WARN/FAIL] | PBO=X.XX% [PASS/WARN/FAIL]                          ← mode=params
-  Overfitting: [PASS/WARN/FAIL] overall | MinBTL=[verdict] DSR=X.XXX/[verdict] CPCV_p=X.XX Boot_p5=X.XXX  ← mode=battery
-
-Next: [what the pipeline is currently doing — e.g. "backtesting momentum_carry while researching next candidates..."]
-```
-
-**Research backlog status update**: if the popped `analyzed[]` entry carries a
-`research_ref`, update both `research/ideas/<research_ref>.md` (frontmatter `status`
-field) and the matching row in `research/backlog.md`:
-- Set `status: built` first (the backtest succeeded — this is always true by the
-  time an entry reaches `analyzed[]`).
-- Then, if an overfitting verdict was produced (mode=params or mode=battery):
-  `validated` when the overall verdict is PASS or WARN, `rejected` when it is FAIL.
-- If mode was `skip` (no verdict available), leave status at `built` — do not guess
-  a validated/rejected outcome for a single-config composed/portfolio strategy.
-
-Increment `strategy_count`.
-- If `strategy_count % 3 == 0`: suggest the user run `/backtest-all` and `/dashboard` to review all results.
-- If `strategy_count % 5 == 0`: also suggest the user run `python scripts/run_all_overfitting.py --spa` —
-  this is a library-wide multiple-testing check (White's Reality Check / Hansen's SPA
-  across every strategy vs. the equal-weight benchmark) that corrects for the growing
-  number of strategies tried across the whole session, which per-strategy DSR/MinBTL/CPCV
-  cannot do on their own.
-
-**For JSON-only composed/portfolio strategies** where mode was `skip`, the analyst never runs. Report after the backtest succeeds (do not wait for analyst):
-```
-✓ Built: [Strategy Name]
-  File: strategy_definitions/[path]/[name].json
-  Return: X% | Sharpe: X.XX | Max DD: -X%
-  Overfitting: N/A (composed/portfolio — single config)
-```
-
----
-
-## Stop / Cleanup
-
-When the user says "stop", "pause", or "enough":
-
-1. Finish any in-flight backtests — wait for all pending backtester messages if `backtester_count > 0`
-2. Do not wait for strategist or builder (they are background)
-3. Send shutdown signal to all agents:
+1. Invoke the `research-scan` skill (default scope, or the user's argument).
+   It writes idea files to `research/ideas/` and rows to `research/backlog.md`.
+2. Build the candidate list (target 6–10 candidates):
+   - Every `status: new` idea in `research/backlog.md` (read its idea file for
+     the pre-registered hypothesis) — these carry `research_ref`.
+   - Read `results/mechanism_coverage.json` and favour under-represented
+     mechanisms (e.g. carry/seasonality over trend/meta).
+   - **Old-strategy variants**: existing classes with untried parameters
+     (lookbacks, top_n, linkage, vol targets) or re-scoped to an untried
+     `universe:` group. Cross-check against existing definition keys.
+3. Each candidate is a JSON object:
+   ```json
+   {
+     "name": "...", "key": "file_slug", "subfolder": "allocations|composed|portfolios",
+     "description": "one sentence", "json_only": true,
+     "reuses_class": "ClassName or null", "new_python_class": "ClassName or null",
+     "tunable_params": "param=v1,v2,v3 or null",
+     "mechanism": "trend|momentum-cs|mean-reversion|carry|vol-premium|diversification|regime|hedging-overlay|seasonality|meta",
+     "research_ref": "idea-slug (omit if not from backlog)"
+   }
    ```
-   SendMessage("strategist",  "Shutdown: stop after current task.")
-   SendMessage("builder",     "Shutdown: stop after current task.")
-   SendMessage("backtester",  "Shutdown: stop after current task.")
-   SendMessage("analyst",     "Shutdown: stop after current task.")
-   ```
-4. **Run the library-wide validation/overfitting analysis.** Every strategy was
-   validated per-strategy during the session, but that does NOT correct for how
-   many strategies were tried. Run the whole-family check now (backtests already
-   exist from the session, so skip them; `--fast` skips the slow PBO sweeps):
-   ```
-   python scripts/run_full_analysis.py --skip-backtest --fast
-   ```
-   This runs `validate_strategy.py --all` + `run_all_overfitting.py --spa` and
-   writes `results/spa_analysis.json`. Read that file and fold its verdict into
-   the session summary (below): report the Reality Check p-value, the SPA
-   consistent p-value, and the best strategy. If the Reality Check p-value is
-   > 0.05, warn the user that no strategy this session provably beats the
-   equal-weight benchmark once multiple-testing is accounted for — the
-   individual PASS/WARN battery verdicts are optimistic on their own.
-5. Call `TeamDelete(team_name="strategy-pipeline")`
-6. Print session summary:
-   ```
-   Session complete. Built N strategies:
-   - strategy_key: Sharpe=X.XX, DSR=X.XXX [PASS/WARN/FAIL]
-   - ...
+4. Order: `research_ref` candidates first, then `json_only`, then new-class.
+   Split the list into two halves — one per builder. **All candidates needing
+   a new Python class go to builder 1 only** (both builders editing
+   `strategies/__init__.py` concurrently causes conflicts).
+5. For each dispatched candidate with a `research_ref`: set that idea's
+   frontmatter `status: candidate` and update its `research/backlog.md` row.
 
-   Skipped M:
-   - strategy_key: <reason>
-   - ...
+## Phase 2 — Build (2 agents)
 
-   Library-wide (multiple-testing corrected):
-   - SPA / Reality Check p = X.XXX  (best: <strategy_key>)
-   - <one-line interpretation>
-   Full panel: python scripts/serve_results.py  ->  /validation
-   ```
+Ensure the dashboard server is up first (`curl -s localhost:5000/api/strategies`
+— if down, start it detached: `python scripts/serve_results.py`).
 
----
+Spawn **two** agents (`subagent_type: "general-purpose"`, haiku model,
+`run_in_background: true`), named `builder-1` and `builder-2`, each with its
+half of the candidate list and this prompt template:
+
+```
+Respond terse like smart caveman: drop articles and filler, keep all technical
+substance exact, quote errors verbatim, no pleasantries. Code/JSON stay normal.
+
+You are strategy-builder-<N> for the PersonalTrading repo. NEVER place, submit,
+modify, or cancel any trade order. Research only. Do not ask the user anything.
+
+CANDIDATES (work through in order, one at a time):
+<candidate JSON list>
+
+FOR EACH candidate:
+1. Implement it.
+   - json_only: write strategy_definitions/<subfolder>/<key>.json, using an
+     existing file in that subfolder as the schema template. Reference universe
+     groups ("universe:<group>") instead of copying asset lists.
+   - new Python class (builder-1 only): read the most similar file in
+     strategies/ and strategies/core.py, write strategies/<snake>.py, add the
+     import+__all__ entry to strategies/__init__.py, then write the JSON
+     definition.
+2. Run the pipeline via the dashboard REST API (this picks up fresh code —
+   do NOT run the scripts directly):
+     curl -s -X POST localhost:5000/api/run/<key>
+   Response has job_id. Poll every ~30s:
+     curl -s localhost:5000/api/run/status/<job_id>
+   until state is "done" or "failed" (steps: backtest -> validate ->
+   overfitting; a full run takes minutes).
+3. On "failed": read the log tail in the status payload (full logs under
+   results/jobs/<job_id>/), fix your implementation, resubmit once. If it
+   fails again, record the reason and move on.
+4. On "done": record from results: metrics (total_return, sharpe_ratio,
+   max_drawdown), validation overall verdict, overfitting DSR/PBO verdicts.
+5. Iterate configurations: if the result is promising (Sharpe > 0.8 and
+   validation not FAIL) and tunable_params is set, create 1-2 parameter or
+   vol-target variants as new definitions (new keys, same rules as above) and
+   run them through the same REST pipeline. Do not exceed 3 variants per
+   candidate.
+6. If the candidate has research_ref: update research/ideas/<research_ref>.md
+   frontmatter status and the matching research/backlog.md row:
+   built -> validated (verdict PASS/WARN) or rejected (FAIL).
+
+RETURN when list exhausted: one line per strategy attempted:
+<key> | built|failed | sharpe=X.XX | maxdd=-X% | validation=PASS/WARN/FAIL | overfitting=PASS/WARN/FAIL/skip | note
+```
+
+## Orchestration (main thread)
+
+- While builders run, wait for their completion notifications; on each
+  builder's return, verify its report: spot-check that
+  `strategy_definitions/` files exist and `results/strategies/<key>/` is
+  populated for claimed builds.
+- If a builder dies or stalls, re-spawn it with its remaining candidates.
+- When both finish: run `python scripts/run_full_analysis.py --skip-backtest
+  --skip-validate` once for the library-wide SPA refresh, then summarise for
+  the user: built/failed table, verdicts, and any backlog status changes.
+- Commit per milestone (definitions + any new classes) with a descriptive
+  message.
 
 ## Rules
 
-- **Never place orders** — this is research only
-- **Never duplicate** an existing strategy definition — always check what exists before adding to `pending[]`
-- **One strategy at a time per stage** — the builder never holds two in-flight strategies simultaneously
-- If a strategy requires assets not present in `strategy_definitions/assets/`, discard it at the pending stage
-- Keep JSON definitions clean and consistent — use existing files in the same subfolder as schema templates
-- If the user says "stop", "pause", or "enough" — stop the loop and run the cleanup sequence above
-
----
-
-## JSON Schema Reference
-
-**Allocation strategy**:
-```json
-{
-  "type": "allocation",
-  "class": "StrategyClassName",
-  "name": "Human Readable Name",
-  "description": "What it does",
-  "parameters": { "param": "value" },
-  "underlying": ["assets/vusa", "assets/ssln", "assets/sgln", "assets/iwrd"]
-}
-```
-Use asset keys matching filenames in `strategy_definitions/assets/`.
-
-**`underlying` can also be a universe group reference** (see "Combining assets
-/ sub-selecting the universe" above), instead of a hand-written asset list:
-```json
-"underlying": "universe:bond"
-```
-or a mix of group refs and individual assets, in a fixed list (order preserved,
-matters for position-sensitive classes like `ProtectiveAssetAllocationStrategy`):
-```json
-"underlying": ["universe:equity", "universe:commodity", "assets/vuty"]
-```
-
-**Composed (overlay applied to allocation)**:
-```json
-{
-  "type": "composed",
-  "name": "Human Readable Name",
-  "description": "What it does",
-  "overlay": {
-    "class": "OverlayClassName",
-    "parameters": { "param": "value" }
-  },
-  "underlying": "allocations/base_strategy"
-}
-```
-
-**Portfolio (meta-allocation over multiple strategies)**:
-```json
-{
-  "type": "portfolio",
-  "class": "EqualWeightStrategy",
-  "name": "Meta Portfolio Name",
-  "description": "What it does",
-  "underlying": ["composed/strategy_a", "composed/strategy_b"]
-}
-```
+- Never duplicate an existing definition key.
+- Only assets present in `strategy_definitions/assets/`.
+- Builders must use the REST API for all backtest/validation/overfitting runs.
+- Stop immediately on "stop"/"pause"/"enough" and summarise.

@@ -40,6 +40,23 @@ python scripts/serve_results.py
 | `GET /api/strategy/<key>/stress_test` | Contents of `stress_test.json` (crisis-period metrics + leave-one-crisis-out scenario removal); 404 with a `hint` if not yet run (`--stress-test`) |
 | `GET /api/compare?keys=a,b,c` | Side-by-side comparison across up to 10 strategies |
 | `GET /api/compare/<key1>/<key2>` | Legacy two-strategy comparison endpoint |
+| `GET /info` | Glossary page defining every term used on the dashboard |
+| `POST /api/run/<key>` | Launch backtest → validate → overfitting for one definition as background subprocesses (fresh code each run). Optional body `{"steps": [...]}` to run a subset. Returns `202` + `job_id` |
+| `GET /api/run/status/<job_id>` | Job state (`queued`/`running`/`done`/`failed`), per-step exit codes + logs; when `done`, embeds metrics/validation/overfitting results |
+| `GET /api/run/jobs` | Recent jobs, newest first |
+
+Run-job example (what the build agents use):
+```bash
+curl -s -X POST localhost:5000/api/run/hrp_ward
+# {"job_id": "42435b3bcee3", "state": "queued", "status_url": "/api/run/status/42435b3bcee3", ...}
+
+curl -s localhost:5000/api/run/status/42435b3bcee3
+# {"state": "done", "step_results": {"backtest": {"exit_code": 0, ...}, ...},
+#  "results": {"metrics": {...}, "validation": {...}, "overfitting": {...}}}
+```
+Jobs run at most 2 at a time (`MAX_CONCURRENT_JOBS` in `scripts/server/jobs.py`);
+step logs live under `results/jobs/<job_id>/`. The runner only shells out to the
+research scripts — it can never place orders.
 
 Example:
 ```bash

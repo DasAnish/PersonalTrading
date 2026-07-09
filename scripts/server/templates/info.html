@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Info &amp; Glossary</title>
+    <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
+    <style>
+        .content header h1 { color: #1f2937; }
+        .content h2 { color: #1f2937; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #e5e7eb; }
+        .site-nav { margin: 8px 0 16px; font-size: 0.9em; }
+        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 16px; }
+        .site-nav a:hover { text-decoration: underline; }
+        .muted { color: #6b7280; }
+        dl.glossary { margin: 0; }
+        dl.glossary dt { font-weight: 700; color: #1f2937; margin-top: 14px; }
+        dl.glossary dt code { font-weight: 600; }
+        dl.glossary dd { margin: 4px 0 0 0; color: #374151; line-height: 1.55; }
+        dl.glossary dd .rule { color: #6b7280; font-size: 0.88em; display: block; margin-top: 2px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+        .badge.PASS { background: #dcfce7; color: #166534; }
+        .badge.WARN { background: #fef3c7; color: #92400e; }
+        .badge.FAIL { background: #fee2e2; color: #991b1b; }
+        code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+        .toc { background: #f8f9ff; border: 1px solid #e0e4f8; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+        .toc a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 14px; }
+        .toc a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+  <div class="container">
+  <div class="content">
+    <header>
+        <h1>Info &amp; Glossary</h1>
+    </header>
+    <nav class="site-nav"><a href="/">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation">Validation</a> · <a href="/info" style="font-weight:800;color:#1f2937;">Info</a></nav>
+
+    <p class="muted">Every term used on this dashboard, in one place. Research &amp; reporting only — nothing here places orders.</p>
+
+    <div class="toc">
+        <a href="#performance">Performance metrics</a>
+        <a href="#validation">Validation battery</a>
+        <a href="#overfitting">Overfitting &amp; snooping</a>
+        <a href="#strategies">Strategy taxonomy</a>
+        <a href="#pipeline">Pipeline &amp; data</a>
+    </div>
+
+    <h2 id="performance">Performance metrics</h2>
+    <dl class="glossary">
+        <dt>Total Return</dt>
+        <dd>End value ÷ start value − 1, over the whole backtest, after transaction costs.</dd>
+
+        <dt>CAGR (Compound Annual Growth Rate)</dt>
+        <dd>The constant yearly return that would produce the same total return over the same period. Lets strategies with different backtest lengths be compared.</dd>
+
+        <dt>Volatility</dt>
+        <dd>Annualised standard deviation of returns. Higher = bumpier ride. Computed from the portfolio's periodic returns and scaled to a year.</dd>
+
+        <dt>Sharpe Ratio</dt>
+        <dd>Average excess return per unit of volatility (annualised). The main risk-adjusted score.
+        <span class="rule">Rule of thumb: &lt; 0.5 weak · 0.5–1 decent · &gt; 1 good — but see Deflated Sharpe below for why a raw Sharpe from many trials overstates skill.</span></dd>
+
+        <dt>Max Drawdown</dt>
+        <dd>Largest peak-to-trough loss over the backtest, in %. The worst-case "how much would I have been down if I'd bought the top".</dd>
+
+        <dt>Omega Ratio</dt>
+        <dd>Probability-weighted gains ÷ probability-weighted losses around a 0% threshold. Unlike Sharpe it uses the whole return distribution, so fat tails and skew count. &gt; 1 means gains outweigh losses.</dd>
+
+        <dt>Returns to Turnover</dt>
+        <dd>Total return divided by total traded volume. Low values mean the strategy churns a lot for each unit of return — costs and slippage will hurt it in practice.</dd>
+
+        <dt>Transaction Costs</dt>
+        <dd>Backtests charge 7.5 basis points (0.075%) per trade. "Total Costs" is the cumulative £ spent on trading.</dd>
+
+        <dt>Rebalance Frequency</dt>
+        <dd>How often target weights are recomputed and traded — monthly here, matching the manual IB workflow.</dd>
+
+        <dt>Rolling metrics</dt>
+        <dd>Sharpe/volatility/drawdown recomputed in a moving window (on the strategy page) to show whether performance was steady or came from one lucky stretch.</dd>
+    </dl>
+
+    <h2 id="validation">Validation battery (per strategy)</h2>
+    <dl class="glossary">
+        <dt>Verdict <span class="badge PASS">PASS</span> <span class="badge WARN">WARN</span> <span class="badge FAIL">FAIL</span></dt>
+        <dd>Worst outcome across the battery below. FAIL means at least one test says the result is likely luck or overfit; WARN means borderline.</dd>
+
+        <dt>DSR (Deflated Sharpe Ratio)</dt>
+        <dd>Probability that the true Sharpe is &gt; 0 <em>after correcting for how many strategies were tried</em> (N trials), backtest length, skew, and fat tails. Trying 200 variants guarantees some high raw Sharpes by chance; DSR deflates for that.
+        <span class="rule">PASS ≥ 0.95 · WARN ≥ 0.90 · below = FAIL.</span></dd>
+
+        <dt>N trials</dt>
+        <dd>How many strategy variants were effectively tried when producing a result — the denominator of every multiple-testing correction. Estimated per family from the number of sibling definitions.</dd>
+
+        <dt>MinBTL (Minimum Backtest Length)</dt>
+        <dd>Given N trials, the shortest backtest that could distinguish skill from luck. If the actual history is shorter than MinBTL, even a great-looking result is statistically meaningless.</dd>
+
+        <dt>CPCV (Combinatorial Purged Cross-Validation)</dt>
+        <dd>Splits history into groups, trains/tests on many train–test combinations, and checks the strategy still works out-of-sample in most of them. "Purged" = overlapping observations near the split are dropped so information can't leak across.</dd>
+
+        <dt>Embargo / Purge</dt>
+        <dd>A buffer (in days) around each CPCV test window that is excluded from training, preventing leakage from serially-correlated returns.</dd>
+
+        <dt>Block Bootstrap</dt>
+        <dd>Resamples the return series in multi-month blocks (preserving autocorrelation) thousands of times to build a distribution of Sharpe ratios. If 0 sits well inside that distribution, the observed Sharpe isn't distinguishable from noise.</dd>
+
+        <dt>k-fold consistency</dt>
+        <dd>Fraction of time-folds in which the strategy beat its benchmark. 5/5 folds positive is robust; 2/5 suggests the average was carried by one period.</dd>
+    </dl>
+
+    <h2 id="overfitting">Overfitting &amp; data snooping (family-wide)</h2>
+    <dl class="glossary">
+        <dt>Overfitting</dt>
+        <dd>When a strategy's parameters are tuned (deliberately or not) to the past's noise instead of a persistent effect. It looks great in-sample and fails live.</dd>
+
+        <dt>PBO (Probability of Backtest Overfitting)</dt>
+        <dd>Across a family of parameter variants: the probability that the variant chosen as best in-sample underperforms the median out-of-sample.
+        <span class="rule">PASS &lt; 0.30 · WARN &lt; 0.50 · above = FAIL.</span></dd>
+
+        <dt>CSCV (Combinatorially Symmetric Cross-Validation)</dt>
+        <dd>The engine behind PBO: split history into S subsets, use every half/half combination as in-sample vs out-of-sample, and see how often the in-sample winner flops out-of-sample.</dd>
+
+        <dt>Parameter sweep / family</dt>
+        <dd>All variants of one strategy class across a parameter grid (e.g. momentum with top-1/2/3, 1/3/6-month lookbacks). PBO is only meaningful across such a family — sibling variants of the same idea.</dd>
+
+        <dt>Group PBO (composed families)</dt>
+        <dd>Vol-target variants of the same base strategy (e.g. <code>hrp_15vol</code> / <code>hrp_30vol</code>) are backtested separately, so their return matrix is reassembled from saved results and CSCV is run on the group (needs ≥ 4 usable siblings).</dd>
+
+        <dt>SPA (Superior Predictive Ability) / Reality Check</dt>
+        <dd>The library-wide go/no-go: tests whether the <em>best</em> strategy in the whole collection genuinely beats the equal-weight benchmark after accounting for having searched across all of them. A small p-value (&lt; 0.05) means the outperformance survives the snooping correction.</dd>
+
+        <dt>Walk-forward analysis</dt>
+        <dd>Re-fits/evaluates the strategy on a rolling train→test schedule, mimicking live deployment through time rather than one big in-sample fit.</dd>
+
+        <dt>Stress test / Scenario removal</dt>
+        <dd>Performance measured inside known crisis windows, and leave-one-crisis-out reruns: drop each crisis from the data and re-run to check the result doesn't depend on a single episode.</dd>
+    </dl>
+
+    <h2 id="strategies">Strategy taxonomy</h2>
+    <dl class="glossary">
+        <dt>Allocation strategy</dt>
+        <dd>Computes target weights across a list of assets (e.g. HRP, risk parity, momentum top-N). Defined in <code>strategy_definitions/allocations/</code>.</dd>
+
+        <dt>Overlay strategy</dt>
+        <dd>Transforms the weights of an underlying strategy — e.g. volatility targeting scales exposure up/down; a gold safe-haven overlay shifts weight to gold in stress. Defined in <code>overlays/</code>.</dd>
+
+        <dt>Composed strategy</dt>
+        <dd>An allocation wrapped in one or more overlays, as a single definition in <code>composed/</code>. Naming: <code>hrp_15vol</code> = HRP base + 15% vol-target overlay.</dd>
+
+        <dt>Portfolio / meta-portfolio</dt>
+        <dd>A fixed- or dynamic-weight blend of other strategies (<code>portfolios/</code>) — diversification across strategies rather than assets.</dd>
+
+        <dt>Vol targeting (<code>15vol</code> / <code>30vol</code> / <code>8vol</code>)</dt>
+        <dd>Overlay that scales positions so realised portfolio volatility tracks the target (15%, 30%, 8% annualised). Cuts exposure in turbulent markets, adds it in calm ones.</dd>
+
+        <dt>HRP (Hierarchical Risk Parity)</dt>
+        <dd>Clusters assets by correlation (ward/average linkage variants), then splits risk down the cluster tree. Robust alternative to mean-variance — no expected-return estimates needed.</dd>
+
+        <dt>Risk parity</dt>
+        <dd>Weights assets so each contributes equally to portfolio risk (inverse-volatility in its simplest form).</dd>
+
+        <dt>Minimum variance / Maximum diversification</dt>
+        <dd>Optimisers that minimise portfolio volatility, or maximise the diversification ratio (weighted average vol ÷ portfolio vol), respectively.</dd>
+
+        <dt>Momentum top-N</dt>
+        <dd>Ranks assets by trailing return over a lookback (1/3/6/12 months) and holds the top N. "Dual momentum" adds an absolute filter: hold cash/bonds when even the winners are falling.</dd>
+
+        <dt>Trend following</dt>
+        <dd>Long assets above their moving average / positive trailing return, out (or defensive) otherwise. <code>trend_signal_mvo</code>/<code>_rp</code> feed trend signals into MVO or risk-parity weighting.</dd>
+
+        <dt>Carry</dt>
+        <dd>Tilts toward assets with higher expected "holding yield" (e.g. futures curve shape, dividend/coupon proxies) — <code>cross_asset_carry</code> variants.</dd>
+
+        <dt>Mean reversion / Long-term reversal</dt>
+        <dd>Buys recent losers expecting a bounce — short-horizon (days–weeks) for mean reversion, multi-year for reversal.</dd>
+
+        <dt>Seasonality (Halloween, presidential cycle)</dt>
+        <dd>Calendar effects: "sell in May" (Halloween effect) and the US presidential-term-year pattern.</dd>
+
+        <dt>PAA (Protective Asset Allocation)</dt>
+        <dd>Momentum-based risk-on/risk-off: the fraction of assets in downtrends sets how much moves to the safe asset (the <em>last</em> asset in its definition list).</dd>
+
+        <dt>Universe groups (<code>universe:all</code>, <code>universe:bond</code>, …)</dt>
+        <dd>Named asset groups in <code>strategy_definitions/universe.json</code> (equity, bond, commodity, europe_equity, em_equity, all). Definitions reference groups instead of hand-copied asset lists, so new assets propagate automatically.</dd>
+    </dl>
+
+    <h2 id="pipeline">Pipeline &amp; data</h2>
+    <dl class="glossary">
+        <dt>Backtest</dt>
+        <dd><code>scripts/run_backtest.py</code>: monthly-rebalanced simulation on cached daily ETF prices (GBP, £10k start, 7.5 bps costs, 252-day lookback warm-up). Results land in <code>results/strategies/&lt;key&gt;/</code>.</dd>
+
+        <dt>Price cache</dt>
+        <dd>Parquet files under <code>data/cache/</code>, fetched from IB Gateway when available. Offline, the backtester falls back to the newest cached file per symbol (with a STALE warning); symbols with no cache are skipped.</dd>
+
+        <dt>Run jobs API</dt>
+        <dd><code>POST /api/run/&lt;strategy_key&gt;</code> launches backtest → validation → overfitting as background subprocesses (fresh code each run); poll <code>GET /api/run/status/&lt;job_id&gt;</code> for state and final metrics. Used by build agents; never places orders.</dd>
+
+        <dt>strategies_index.json</dt>
+        <dd>Master index of backtested strategies powering this dashboard. The strategy list is the union of the index and the on-disk result folders, so a partial run can't hide results.</dd>
+
+        <dt>Live Risk</dt>
+        <dd>Current IB positions (read-only) mapped against strategy weights — a monitoring view for the manual monthly rebalance. Orders are always entered by hand in IB Gateway.</dd>
+    </dl>
+
+    <p class="muted" style="font-size:0.8rem; margin-top:24px;">
+        Deeper detail: <code>docs/overfitting.md</code>, <code>docs/strategies.md</code>, <code>docs/project.md</code>.
+    </p>
+  </div>
+  </div>
+</body>
+</html>

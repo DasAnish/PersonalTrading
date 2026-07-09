@@ -89,6 +89,7 @@ class HistoricalDataCache:
         end_date: datetime,
         max_age_days: int = 7,
         allow_fuzzy: bool = True,
+        tolerance_days: int = 0,
     ) -> pd.DataFrame:
         """
         Load data from cache if available and recent enough.
@@ -102,6 +103,11 @@ class HistoricalDataCache:
                 for this symbol when an exact date-range match doesn't exist,
                 as long as its date range covers the requested end date. If
                 False, only an exact filename match is considered.
+            tolerance_days: Slack (days) allowed on both ends of the fuzzy
+                coverage check. The requested range rolls forward daily
+                (END_DATE = yesterday), so a file cached a couple of days ago
+                never covers it exactly; a small tolerance keeps those files
+                usable without an IB round-trip.
 
         Returns:
             DataFrame if cache hit, empty DataFrame if cache miss
@@ -128,7 +134,11 @@ class HistoricalDataCache:
                 if parsed is None:
                     continue
                 candidate_start, candidate_end = parsed
-                if candidate_start <= start_date and candidate_end >= end_date:
+                slack = timedelta(days=tolerance_days)
+                if (
+                    candidate_start <= start_date + slack
+                    and candidate_end >= end_date - slack
+                ):
                     fuzzy_match = candidate
                     break
 
@@ -161,6 +171,42 @@ class HistoricalDataCache:
         except Exception as e:
             logger.error(f"Failed to load cache {cache_path.name}: {e}")
             return pd.DataFrame()
+
+    def load_best_cached_data(self, symbol: str) -> pd.DataFrame:
+        """
+        Last-resort offline fallback: load the cached file with the latest
+        end date for ``symbol``, ignoring requested range and file age.
+
+        Intended for when IB is unreachable and stale data beats no data
+        (e.g. overnight analysis runs). Callers should surface the staleness
+        to the user — a lagging symbol truncates the aligned panel in
+        ``align_dataframes``.
+
+        Returns:
+            DataFrame from the newest-ending cache file, or empty DataFrame
+            if no parseable cache file exists for the symbol.
+        """
+        candidates = []
+        for path in self.cache_dir.glob(f"{symbol}_*.parquet"):
+            parsed = self._parse_cache_filename(path)
+            if parsed is not None:
+                candidates.append((parsed[1], path))
+        if not candidates:
+            return pd.DataFrame()
+
+        end, best = max(candidates, key=lambda c: c[0])
+        try:
+            df = pd.read_parquet(best)
+        except Exception as e:
+            logger.error(f"Failed to load cache {best.name}: {e}")
+            return pd.DataFrame()
+
+        lag = (datetime.now() - end).days
+        logger.warning(
+            f"STALE cache fallback for {symbol}: {best.name} "
+            f"(data ends {end.date()}, {lag} days behind today)"
+        )
+        return df
 
     def save_cached_data(
         self, symbol: str, data: pd.DataFrame, start_date: datetime, end_date: datetime

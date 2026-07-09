@@ -47,10 +47,25 @@ def group_composed_strategies(strategy_keys: List[str]) -> Dict[Tuple, List[str]
         if definition.get("type") != "composed":
             continue
         underlying = definition.get("underlying") or {}
+        # "underlying" may be an inline dict or a string ref to another
+        # definition (e.g. "allocations/hrp") — resolve refs so both forms
+        # group by the same (class, parameters) identity.
+        if isinstance(underlying, str):
+            try:
+                underlying = loader.load_definition(underlying)
+            except Exception:
+                continue
         group_key = (
             definition.get("class"),
             underlying.get("class"),
-            tuple(sorted((underlying.get("parameters") or {}).items())),
+            # repr() keeps the key hashable when a parameter value is a
+            # list (e.g. fixed weights) rather than a scalar.
+            tuple(
+                sorted(
+                    (k, repr(v))
+                    for k, v in (underlying.get("parameters") or {}).items()
+                )
+            ),
         )
         groups[group_key].append(key)
     return groups

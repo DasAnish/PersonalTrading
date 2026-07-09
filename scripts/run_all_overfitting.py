@@ -319,12 +319,10 @@ def run_pbo_sweeps(
     cache = HistoricalDataCache(cache_dir="data/cache")
     data_dict = {}
     for symbol in SYMBOLS:
-        df = cache.load_cached_data(
-            symbol,
-            pd.Timestamp("2015-01-01"),
-            pd.Timestamp.now(),
-            max_age_days=30,
-        )
+        # Offline analysis: whatever history the cache has is what we sweep.
+        # (The strict range-covering lookup missed everything once the cache
+        # start drifted past 2015-01-01 — see load_best_cached_data.)
+        df = cache.load_best_cached_data(symbol)
         if not df.empty:
             data_dict[symbol] = df
     if not data_dict:

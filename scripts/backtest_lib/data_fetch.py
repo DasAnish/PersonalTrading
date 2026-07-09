@@ -51,13 +51,21 @@ async def fetch_historical_data(
 
     data_dict = {}
     client = None  # opened lazily on first cache-miss / refresh
+    ib_unavailable = False  # set after a failed connect; don't retry per symbol
 
     async def _get_client():
-        nonlocal client
+        nonlocal client, ib_unavailable
+        if ib_unavailable:
+            raise ConnectionError("IB Gateway unavailable (earlier connect failed)")
         if client is None:
             logger.info("Cache miss — opening IB connection for live fetch...")
-            client = IBClient(config)
-            await client.connect()
+            candidate = IBClient(config)
+            try:
+                await candidate.connect()
+            except Exception:
+                ib_unavailable = True
+                raise
+            client = candidate
             logger.info("✓ Connected to IB")
         return client
 
@@ -84,19 +92,36 @@ async def fetch_historical_data(
                         cache.save_cached_data(symbol, df, START_DATE, END_DATE)
                 else:
                     # Cache-first: only touch IB if this symbol is missing.
-                    df = cache.load_cached_data(symbol, START_DATE, END_DATE)
+                    # The requested range rolls daily, so allow a few days of
+                    # slack before declaring a miss.
+                    df = cache.load_cached_data(
+                        symbol, START_DATE, END_DATE, tolerance_days=7
+                    )
                     if df.empty:
-                        c = await _get_client()
-                        df = await cache.get_or_fetch_data(
-                            symbol=symbol,
-                            start_date=START_DATE,
-                            end_date=END_DATE,
-                            market_data_service=c.market_data,
-                            bar_size=BAR_SIZE,
-                            sec_type=SEC_TYPE,
-                            exchange=EXCHANGE,
-                            currency=CURRENCY,
-                        )
+                        try:
+                            c = await _get_client()
+                            df = await cache.get_or_fetch_data(
+                                symbol=symbol,
+                                start_date=START_DATE,
+                                end_date=END_DATE,
+                                market_data_service=c.market_data,
+                                bar_size=BAR_SIZE,
+                                sec_type=SEC_TYPE,
+                                exchange=EXCHANGE,
+                                currency=CURRENCY,
+                            )
+                        except Exception as ib_err:
+                            # IB unreachable: fall back to newest cached file
+                            # regardless of range/age. Stale beats absent for
+                            # offline runs; load_best_cached_data logs how far
+                            # behind the data is.
+                            logger.warning(
+                                f"IB fetch failed for {symbol} ({ib_err}); "
+                                f"trying stale cache fallback..."
+                            )
+                            df = cache.load_best_cached_data(symbol)
+                            if df.empty:
+                                raise
 
                 if not df.empty:
                     data_dict[symbol] = df

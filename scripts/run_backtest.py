@@ -19,6 +19,7 @@ Usage (Legacy - single strategy vs benchmark):
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import asyncio
@@ -289,13 +290,20 @@ async def main(args):
                 except Exception as exc:
                     logger.warning(f"  ⚠ Stress test failed for {strategy_key}: {exc}")
 
-            save_strategy_results(
-                result_data,
-                strategy_key,
-                RESULTS_DIR,
-                stress_report=stress_report,
-                config=run_config,
-            )
+            try:
+                save_strategy_results(
+                    result_data,
+                    strategy_key,
+                    RESULTS_DIR,
+                    stress_report=stress_report,
+                    config=run_config,
+                )
+            except Exception as exc:
+                # One bad strategy must not abort the save loop — the index
+                # was reset above, so bailing here would leave it partial
+                # and hide every not-yet-saved strategy from the dashboard.
+                logger.error(f"  ✗ Failed to save results for {strategy_key}: {exc}")
+                continue
 
             if args.report:
                 try:

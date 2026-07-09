@@ -120,6 +120,12 @@ List Available Strategies:
     if getattr(args, "scenario_removal", False):
         args.stress_test = True
 
+    # The registry default "hrp" has no YAML definition (the definition keys
+    # are hrp_ward / hrp_average / ...), so remap it when definitions mode is
+    # active and the user didn't override --strategy.
+    if args.use_definitions and args.strategy == "hrp":
+        args.strategy = "hrp_ward"
+
     # Validation
     if not args.all:
         # Only validate these if not running all strategies

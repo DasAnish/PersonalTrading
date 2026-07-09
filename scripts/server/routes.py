@@ -31,3 +31,9 @@ def strategy_detail(strategy_key: str = None):
 def validation():
     """Serve the library-wide validation / overfitting (SPA) panel."""
     return render_template("validation.html")
+
+
+@bp.route("/info")
+def info():
+    """Serve the glossary page defining every term used on the dashboard."""
+    return render_template("info.html")

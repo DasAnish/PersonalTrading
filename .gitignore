@@ -60,3 +60,5 @@ config/local_config.yaml
 references/
 data/cache/
 results/
+CLAUDE.local.md
+caveman-restore/

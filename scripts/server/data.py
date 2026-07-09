@@ -97,17 +97,25 @@ def load_strategies_index() -> dict | None:
 
 
 def list_strategy_keys() -> list[str]:
-    """Return sorted list of available strategy keys."""
+    """
+    Return sorted list of available strategy keys.
+
+    Union of strategies_index.json keys and results/strategies/ directories:
+    a crashed --all run can leave the index partial (it is reset up front and
+    re-filled one strategy at a time), and the on-disk result dirs are the
+    ground truth for what has actually been backtested.
+    """
+    keys: set[str] = set()
+
     index = load_strategies_index()
     if index and "strategies" in index:
-        return sorted(index["strategies"].keys())
+        keys.update(index["strategies"].keys())
 
-    # Fallback: scan strategy folders
     strategies_dir = RESULTS_DIR / "strategies"
     if strategies_dir.exists():
-        return sorted(d.name for d in strategies_dir.iterdir() if d.is_dir())
+        keys.update(d.name for d in strategies_dir.iterdir() if d.is_dir())
 
-    return []
+    return sorted(keys)
 
 
 def load_strategy_data(strategy_key: str) -> dict | None:

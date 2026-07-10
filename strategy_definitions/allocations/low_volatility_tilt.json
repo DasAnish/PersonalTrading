@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "LowVolatilityTiltStrategy",
+  "name": "Low-Volatility Tilt",
+  "description": "Ranks assets by trailing total volatility and tilts toward lowest-vol half, zero-weights highest-vol half. Uses equal-weight weighting within held set. Implements Blitz & van Vliet (2007) — low-volatility assets earn higher risk-adjusted returns than high-volatility assets (opposite of CAPM), with global low-minus-high decile alpha ~12% annually. Drivers: leverage constraints, benchmark-relative tracking error aversion, behavioral biases. Note: on mixed-asset ETF universe, raw total-vol ranking mechanically favors structurally low-vol assets (VUTY >> broad equity); best applied within-sleeve (e.g., equity-only) for cleaner test.",
+  "parameters": {
+    "vol_lookback_days": 252,
+    "held_fraction": 0.5,
+    "weighting": "equal"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

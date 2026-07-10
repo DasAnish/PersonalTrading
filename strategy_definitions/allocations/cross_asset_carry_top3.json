@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "CarryTiltStrategy",
+  "name": "Cross-Asset Carry Tilt - Top-3",
+  "description": "Ranks the full asset universe by ex-ante carry (expected return from holding with flat prices) and equal-weights only the top 3 highest-carry assets, zeroing all others. Variant between concentrated top-2 and full-universe carry strategies. Bonds (VUTY) typically dominate carry rankings due to high yields; equities provide moderate carry via dividends; precious metals and commodities have negative or near-zero carry. Implements concentrated long-only carry factor.",
+  "parameters": {
+    "top_n": 3
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:carry"
+  ]
+}

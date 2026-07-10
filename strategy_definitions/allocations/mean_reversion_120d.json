@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MeanReversionStrategy",
+  "name": "Mean Reversion (120d)",
+  "description": "Long-term contrarian strategy across the full asset universe. Ranks assets by 120-day trailing return in ascending order, overweighting recent underperformers. Weights are scaled by inverse volatility. Exploits longer-horizon price reversal across equities, commodities, precious metals, and bonds. Variant of standard 60d mean reversion with extended lookback.",
+  "parameters": {
+    "lookback_days": 120,
+    "vol_lookback_days": 126
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

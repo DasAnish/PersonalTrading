@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "GoldAutumnSeasonalityStrategy",
+  "name": "Gold Autumn Effect",
+  "description": "Overwrites gold (SGLN) allocation during Sep-Nov, with remainder allocated equally across equity/bond base. Implements Baur (2013) — September and November show significant positive gold returns, driven by hedging demand ahead of equity Halloween effect, Indian wedding-season jewellery demand, and seasonal negative sentiment. Calendar-anchored demand flow, modest but persistent effect.",
+  "parameters": {
+    "w_high": 0.30,
+    "w_low": 0.05,
+    "months": "sep_nov"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:seasonality"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "GoldAutumnSeasonalityStrategy",
+  "name": "Gold Autumn Effect (w_high=0.40)",
+  "description": "Variant: overwrites gold (SGLN) allocation to 40% (vs base 30%) during Sep-Nov. Same base parameters: w_low=0.05, months=sep_nov. Tests if higher gold concentration in autumn months further boosts seasonal capture.",
+  "parameters": {
+    "w_high": 0.40,
+    "w_low": 0.05,
+    "months": "sep_nov"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:seasonality",
+    "variant"
+  ]
+}

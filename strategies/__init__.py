@@ -69,6 +69,10 @@ from .bond_duration_hedge_overlay import BondDurationHedgeOverlayStrategy
 from .low_beta_defensive_tilt import LowBetaTiltStrategy
 from .quality_weighted_stability import QualityWeightedStabilityStrategy
 from .presidential_election_cycle import PresidentialCycleSeasonalityStrategy
+from .carry_trend_filter import CarryTrendFilterStrategy
+from .gold_autumn_seasonality import GoldAutumnSeasonalityStrategy
+from .sma_trend_filter import SMATrendFilterStrategy
+from .low_volatility_tilt import LowVolatilityTiltStrategy
 
 # Overlay strategies
 from .overlays import (
@@ -76,6 +80,7 @@ from .overlays import (
     ConstraintStrategy,
     LeverageStrategy
 )
+from .turbulence_overlay import TurbulenceOverlayStrategy
 
 # ---------------------------------------------------------------------------
 # Legacy registry stubs — kept for backward compatibility with run_backtest.py
@@ -186,10 +191,15 @@ __all__ = [
     'LowBetaTiltStrategy',
     'QualityWeightedStabilityStrategy',
     'PresidentialCycleSeasonalityStrategy',
+    'CarryTrendFilterStrategy',
+    'GoldAutumnSeasonalityStrategy',
+    'SMATrendFilterStrategy',
+    'LowVolatilityTiltStrategy',
     # Overlay strategies
     'VolatilityTargetStrategy',
     'ConstraintStrategy',
     'LeverageStrategy',
+    'TurbulenceOverlayStrategy',
     # Market universe classes
     'UKETFsMarket',
     'USEquitiesMarket',

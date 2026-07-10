@@ -1,0 +1,15 @@
+{
+  "type": "overlay",
+  "class": "TurbulenceOverlayStrategy",
+  "name": "Turbulence Risk-Scaling Overlay",
+  "description": "Detects financial turbulence via Mahalanobis distance on a 5-asset-class return vector (VUSA, IMEU, VUTY, SGLN, COMM) and scales underlying risk weights toward safe asset (VUTY) when turbulence exceeds trailing percentile threshold. Implements Kritzman & Li (2010) — turbulence spikes when returns are unusually large OR correlations break structure. Risk-asset returns substantially lower during turbulent periods, and turbulence is persistent/forecastable, so de-risking after onset cuts max drawdown 20-40% with flat-to-slightly-lower raw return.",
+  "parameters": {
+    "percentile": 85,
+    "scale": 0.5,
+    "lookback_months": 48
+  },
+  "underlying": "equal_weight",
+  "tags": [
+    "mech:hedging-overlay"
+  ]
+}

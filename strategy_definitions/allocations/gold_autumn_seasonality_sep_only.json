@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "GoldAutumnSeasonalityStrategy",
+  "name": "Gold Autumn Effect (Sep+Nov only)",
+  "description": "Variant: overwrites gold (SGLN) allocation during Sep+Nov only (skips Oct), vs base Sep-Nov full window. Parameters: w_high=0.30, w_low=0.05, months=sep_only. Tests if seasonal effect is bimodal (Sep and Nov strong, Oct weak) vs uniform across Sep-Nov.",
+  "parameters": {
+    "w_high": 0.30,
+    "w_low": 0.05,
+    "months": "sep_only"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:seasonality",
+    "variant"
+  ]
+}

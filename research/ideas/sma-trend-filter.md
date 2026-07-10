@@ -2,8 +2,11 @@
 title: Simple Moving-Average Trend Filter (Faber Tactical Timing)
 source: "Faber, M.T. (2007), Journal of Wealth Management — 'A Quantitative Approach to Tactical Asset Allocation' (SSRN 962461)"
 mechanism: trend
-status: new
+status: rejected
 date_added: 2026-07-08
+date_built: 2026-07-10
+build_verdict: FAIL
+build_note: "Sharpe 0.58, return 1.82%, max drawdown -8.25%. Validation FAIL (DSR FAIL, CPCV FAIL, minBTL FAIL). KFold WARN. Binary SMA crossover underperforms; signal whipsaw and regime sensitivity likely culprits."
 ---
 
 ## Hypothesis (pre-registered)

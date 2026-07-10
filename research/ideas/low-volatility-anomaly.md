@@ -2,8 +2,11 @@
 title: Low-Volatility Anomaly (The Volatility Effect)
 source: "Blitz, D. & van Vliet, P. (2007), Journal of Portfolio Management 34(1) — 'The Volatility Effect: Lower Risk Without Lower Return' (SSRN 980865)"
 mechanism: vol-premium
-status: new
+status: validated
 date_added: 2026-07-08
+date_built: 2026-07-10
+build_verdict: WARN
+build_note: "Strong Sharpe 3.46, return 9.19%, max drawdown -3.01%. Validation WARN (all tests WARN, no FAIL). Signal is valid but sensitive to vol lookback window. KFold stability moderate. Candidate for parameter sweep."
 ---
 
 ## Hypothesis (pre-registered)

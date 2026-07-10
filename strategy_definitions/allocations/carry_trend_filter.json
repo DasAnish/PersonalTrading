@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "CarryTrendFilterStrategy",
+  "name": "Carry Conditioned on Trend",
+  "description": "Ranks assets by ex-ante carry (yield-to-maturity for bonds, dividend yield for equities, storage cost for metals), selects top_n by carry, then filters by asset-level trend (6-12m positive return). Assets failing trend filter route weight to VUTY (safe asset) or renormalize. Implements Baz, Granger, Harvey, Le Roux & Rattray (2015) — carry earns a premium but crashes in risk-off episodes; trend is a cheap proxy for crash state, so filtering carry by trend cuts left tail while retaining premium.",
+  "parameters": {
+    "top_n": 3,
+    "trend_lookback_days": 189
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:carry",
+    "mech:trend"
+  ]
+}

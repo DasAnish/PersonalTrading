@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "SMATrendFilterStrategy",
+  "name": "SMA Trend Filter (Faber)",
+  "description": "Binary 10-month (approx 200 trading day) simple moving average crossover: hold asset when price > SMA, zero weight when price <= SMA. Freed weight from 'out' assets redistributes pro-rata across 'in' assets. Implements Faber (2007) — SMA crossover delivers equity-like returns with materially lower volatility and max drawdown across S&P 500 and 20+ other asset classes. Key difference from repo's TrendFollowingStrategy: binary SMA crossover (no vol-normalization, no continuous momentum) vs. continuous EWMA momentum.",
+  "parameters": {
+    "lookback_days": 210
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:trend"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "LowVolatilityTiltStrategy",
+  "name": "Low-Volatility Tilt (40% held)",
+  "description": "Variant: holds lowest-volatility 40% of assets (vs base 50%). Same vol_lookback_days=252, weighting=equal. Tests if tighter concentration on the lowest-vol assets amplifies the low-vol premium capture.",
+  "parameters": {
+    "vol_lookback_days": 252,
+    "held_fraction": 0.4,
+    "weighting": "equal"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium",
+    "variant"
+  ]
+}

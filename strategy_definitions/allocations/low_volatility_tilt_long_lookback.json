@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "LowVolatilityTiltStrategy",
+  "name": "Low-Volatility Tilt (504d lookback)",
+  "description": "Variant: uses 504-day (2-year) volatility lookback vs base 252-day (1-year). Same held_fraction=0.5, weighting=equal. Tests if longer volatility history improves stability and reduces false signals from short-term vol spikes.",
+  "parameters": {
+    "vol_lookback_days": 504,
+    "held_fraction": 0.5,
+    "weighting": "equal"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium",
+    "variant"
+  ]
+}

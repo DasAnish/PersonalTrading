@@ -5,13 +5,14 @@
   "description": "iShares Core MSCI EMU UCITS ETF (Acc) (EUR, LSE)",
   "parameters": {
     "symbol": "IEMU",
-    "currency": "EUR",
-    "exchange": "SMART"
+    "currency": "USD",
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00B53QG562",
     "asset_class": "equity",
     "sub_class": "emu_equity",
-    "ter_bps": 12
+    "ter_bps": 12,
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

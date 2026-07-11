@@ -5,14 +5,15 @@
   "description": "WisdomTree Enhanced Commodity UCITS ETF USD Acc (GBP, LSE)",
   "parameters": {
     "symbol": "WCOA",
-    "currency": "GBP",
-    "exchange": "SMART"
+    "currency": "USD",
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00BYMLZY74",
     "asset_class": "commodity",
     "sub_class": "broad_commodity_enhanced",
     "ter_bps": 35,
-    "correction_note": "Description previously read 'WisdomTree Coal ETC'. No coal-specific product trades under ticker WCOA; it is WisdomTree's Enhanced Commodity UCITS ETF (broad commodity exposure). Symbol/currency/exchange parameters were already correct, only the description was stale."
+    "correction_note": "Description previously read 'WisdomTree Coal ETC'. No coal-specific product trades under ticker WCOA; it is WisdomTree's Enhanced Commodity UCITS ETF (broad commodity exposure). Symbol/currency/exchange parameters were already correct, only the description was stale.",
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

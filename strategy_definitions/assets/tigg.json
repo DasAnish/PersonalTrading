@@ -5,13 +5,14 @@
   "description": "L&G India INR Government Bond UCITS ETF (USD Dist) (USD, LSE)",
   "parameters": {
     "symbol": "TIGG",
-    "currency": "USD",
-    "exchange": "SMART"
+    "currency": "GBP",
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00BL6K6H97",
     "asset_class": "bond",
     "sub_class": "em_govt_bond_local_ccy_india",
-    "ter_bps": 39
+    "ter_bps": 39,
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

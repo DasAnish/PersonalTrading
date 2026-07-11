@@ -5,14 +5,15 @@
   "description": "WisdomTree Broad Commodities ETC (GBP, LSE)",
   "parameters": {
     "symbol": "AIGC",
-    "currency": "GBP",
-    "exchange": "SMART"
+    "currency": "USD",
+    "exchange": "LSE"
   },
   "metadata": {
     "isin": "GB00B15KY989",
     "asset_class": "commodity",
     "sub_class": "broad_commodity_etc",
     "ter_bps": 49,
-    "correction_note": "Description previously read 'WisdomTree Artificial Intelligence UCITS ETF'. Ticker AIGC on LSE is actually WisdomTree Broad Commodities ETC. Symbol/currency/exchange parameters were already correct, only the description was stale."
+    "correction_note": "Description previously read 'WisdomTree Artificial Intelligence UCITS ETF'. Ticker AIGC on LSE is actually WisdomTree Broad Commodities ETC. Symbol/currency/exchange parameters were already correct, only the description was stale.",
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

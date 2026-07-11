@@ -6,13 +6,14 @@
   "parameters": {
     "symbol": "ICOM",
     "currency": "USD",
-    "exchange": "SMART"
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00BDFL4P12",
     "asset_class": "commodity",
     "sub_class": "broad_commodity_swap",
     "ter_bps": 19,
-    "correction_note": "Same fund/ISIN as assets/comm (GBP-quoted line); this is the USD-quoted LSE line, ticker ICOM. Deliberately excluded from universe.json's commodity/all groups by default since it is a near-duplicate exposure of assets/comm (same underlying swap, different quote currency) — including both would double-weight one economic bet in Top-N/risk-parity selection. Reference directly as assets/comml for FX-specific comparisons."
+    "correction_note": "Same fund/ISIN as assets/comm (GBP-quoted line); this is the USD-quoted LSE line, ticker ICOM. Deliberately excluded from universe.json's commodity/all groups by default since it is a near-duplicate exposure of assets/comm (same underlying swap, different quote currency) \u00e2\u20ac\u201d including both would double-weight one economic bet in Top-N/risk-parity selection. Reference directly as assets/comml for FX-specific comparisons.",
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

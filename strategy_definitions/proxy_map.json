@@ -4,45 +4,200 @@
     "inception (scripts/extend_history.py). The binding constraint on the",
     "whole validation stack is T (SPA blocked at ~8y); proxies buy decades.",
     "confidence: 'high' = well-known same-index US listing; 'low' = best",
-    "guess, VERIFY before trusting. null proxy = no mapping yet — fill in.",
+    "guess, VERIFY before trusting. null proxy = no mapping yet \u00e2\u20ac\u201d fill in.",
     "extend_history.py refuses any proxy whose overlap-return correlation",
     "with the real ETF falls below --min-corr, so a wrong mapping fails",
     "loudly instead of silently polluting the extended cache.",
-    "NOTE: most proxies quote in USD while the ETFs quote in GBP/EUR/CHF —",
+    "NOTE: most proxies quote in USD while the ETFs quote in GBP/EUR/CHF \u00e2\u20ac\u201d",
     "pre-inception returns are the proxy's currency returns. Fine for",
     "regime / relative-performance research; NOT precise GBP returns."
   ],
   "proxies": {
-    "VUSA": {"symbol": "SPY", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "S&P 500, 1993+"},
-    "EQQQ": {"symbol": "QQQ", "exchange": "NASDAQ", "currency": "USD", "confidence": "high", "note": "Nasdaq-100, 1999+"},
-    "SGLN": {"symbol": "GLD", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "physical gold, 2004+"},
-    "SSLN": {"symbol": "SLV", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "physical silver, 2006+"},
-    "CRUD": {"symbol": "USO", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "WTI crude, 2006+ (roll drag differs)"},
-    "BRNT": {"symbol": "BNO", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "Brent crude, 2010+"},
-    "CSX5": {"symbol": "FEZ", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "EURO STOXX 50, 2002+"},
-    "IEMU": {"symbol": "EZU", "exchange": "BATS", "currency": "USD", "confidence": "high", "note": "MSCI EMU, 2000+"},
-    "IMEU": {"symbol": "IEV", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "S&P Europe 350, 2000+"},
-    "EXSA": {"symbol": "IEV", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "STOXX Europe 600 vs S&P Europe 350 — close cousins"},
-    "IWRD": {"symbol": "URTH", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "MSCI World, 2012+ (ACWI 2008+ alternative)"},
-    "WSML": {"symbol": "SCZ", "exchange": "NASDAQ", "currency": "USD", "confidence": "low", "note": "EAFE small vs World small — ex-US only, verify corr"},
-    "IIND": {"symbol": "EPI", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "India earnings-weighted, 2008+ (INDA 2012+)"},
-    "ASHR": {"symbol": "ASHR", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "same fund family US listing, CSI 300, 2013+"},
-    "AGGU": {"symbol": "AGG", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "US agg vs global agg USD-hedged, 2003+"},
-    "HYLD": {"symbol": "HYG", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "USD high yield, 2007+"},
-    "VUTY": {"symbol": "GOVT", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "US Treasuries broad, 2012+ (IEF 2002+ for 7-10y)"},
-    "SEGA": {"symbol": "IGOV", "exchange": "NASDAQ", "currency": "USD", "confidence": "low", "note": "intl treasuries vs euro govt — verify corr"},
-    "TIGG": {"symbol": "WIP", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "global inflation-linked ex-US, 2008+ — verify vs TIP"},
-    "AIGC": {"symbol": "DBC", "exchange": "ARCA", "currency": "USD", "confidence": "high", "note": "broad commodities, 2006+ (index/roll differ)"},
-    "COMM": {"symbol": "DBC", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "broad commodities — verify which index COMM tracks"},
-    "ICOM": {"symbol": "GSG", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "GSCI vs BCOM weighting differs — verify corr"},
-    "WCOA": {"symbol": "DBC", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "enhanced-roll broad commodities — verify corr"},
-    "WCLD": {"symbol": "SKYY", "exchange": "NASDAQ", "currency": "USD", "confidence": "low", "note": "cloud computing, 2011+ — different index"},
-    "EMMCHA": {"symbol": "EEM", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "MSCI EM, 2003+ — ETF is CHF-hedged, hedge drag differs"},
-    "SAEM": {"symbol": "EMB", "exchange": "NASDAQ", "currency": "USD", "confidence": "low", "note": "guess: USD EM sovereign bonds — VERIFY what SAEM is"},
-    "AWESGS": {"symbol": "ACWI", "exchange": "NASDAQ", "currency": "USD", "confidence": "low", "note": "guess: ACWI ESG screened vs plain ACWI — VERIFY"},
-    "CACX": {"symbol": "EWQ", "exchange": "ARCA", "currency": "USD", "confidence": "low", "note": "guess: CAC 40 vs MSCI France — VERIFY"},
+    "VUSA": {
+      "symbol": "SPY",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "S&P 500, 1993+"
+    },
+    "EQQQ": {
+      "symbol": "QQQ",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "Nasdaq-100, 1999+"
+    },
+    "SGLN": {
+      "symbol": "GLD",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "physical gold, 2004+"
+    },
+    "SSLN": {
+      "symbol": "SLV",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "physical silver, 2006+"
+    },
+    "CRUD": {
+      "symbol": "USO",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "WTI crude, 2006+ (roll drag differs)"
+    },
+    "BRNT": {
+      "symbol": "BNO",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "Brent crude, 2010+"
+    },
+    "IEMU": {
+      "symbol": "EZU",
+      "exchange": "BATS",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "MSCI EMU, 2000+"
+    },
+    "IMEU": {
+      "symbol": "IEV",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "S&P Europe 350, 2000+"
+    },
+    "EXSA": {
+      "symbol": "IEV",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "STOXX Europe 600 vs S&P Europe 350 \u00e2\u20ac\u201d close cousins"
+    },
+    "IWRD": {
+      "symbol": "URTH",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "MSCI World, 2012+ (ACWI 2008+ alternative)"
+    },
+    "WSML": {
+      "symbol": "SCZ",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "EAFE small vs World small \u00e2\u20ac\u201d ex-US only, verify corr"
+    },
+    "IIND": {
+      "symbol": "EPI",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "India earnings-weighted, 2008+ (INDA 2012+)"
+    },
+    "ASHR": {
+      "symbol": "ASHR",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "same fund family US listing, CSI 300, 2013+"
+    },
+    "AGGU": {
+      "symbol": "AGG",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "US agg vs global agg USD-hedged, 2003+"
+    },
+    "HYLD": {
+      "symbol": "HYG",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "USD high yield, 2007+"
+    },
+    "VUTY": {
+      "symbol": "GOVT",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "US Treasuries broad, 2012+ (IEF 2002+ for 7-10y)"
+    },
+    "SEGA": {
+      "symbol": "IGOV",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "intl treasuries vs euro govt \u00e2\u20ac\u201d verify corr"
+    },
+    "TIGG": null,
+    "AIGC": {
+      "symbol": "DBC",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "broad commodities, 2006+ (index/roll differ)"
+    },
+    "COMM": {
+      "symbol": "DBC",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "broad commodities \u00e2\u20ac\u201d verify which index COMM tracks"
+    },
+    "ICOM": {
+      "symbol": "GSG",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "GSCI vs BCOM weighting differs \u00e2\u20ac\u201d verify corr"
+    },
+    "WCOA": {
+      "symbol": "DBC",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "enhanced-roll broad commodities \u00e2\u20ac\u201d verify corr"
+    },
+    "WCLD": {
+      "symbol": "SKYY",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "cloud computing, 2011+ \u00e2\u20ac\u201d different index"
+    },
+    "SAEM": {
+      "symbol": "EEM",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "MSCI EM equity, 2003+ (fund is EM IMI ESG screened \u2014 broad EM beta matches)"
+    },
+    "AWESGS": {
+      "symbol": "ACWI",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "guess: ACWI ESG screened vs plain ACWI \u00e2\u20ac\u201d VERIFY"
+    },
+    "CACX": {
+      "symbol": "EWQ",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "low",
+      "note": "guess: CAC 40 vs MSCI France \u00e2\u20ac\u201d VERIFY"
+    },
     "EXI2": null,
     "EXX5": null,
-    "EXXW": null
+    "EXXW": null,
+    "CSSX5E": {
+      "symbol": "FEZ",
+      "exchange": "ARCA",
+      "currency": "USD",
+      "confidence": "high",
+      "note": "EURO STOXX 50, 2002+"
+    }
   }
 }

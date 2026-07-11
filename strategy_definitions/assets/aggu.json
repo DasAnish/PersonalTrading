@@ -6,12 +6,13 @@
   "parameters": {
     "symbol": "AGGU",
     "currency": "USD",
-    "exchange": "SMART"
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00BZ043R46",
     "asset_class": "bond",
     "sub_class": "global_aggregate_hedged",
-    "ter_bps": 10
+    "ter_bps": 10,
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

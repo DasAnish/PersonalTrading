@@ -2,16 +2,17 @@
   "type": "asset",
   "class": "AssetStrategy",
   "name": "SEGA",
-  "description": "iShares Core € Govt Bond UCITS ETF (Dist) (EUR, LSE)",
+  "description": "iShares Core \u00e2\u201a\u00ac Govt Bond UCITS ETF (Dist) (EUR, LSE)",
   "parameters": {
     "symbol": "SEGA",
-    "currency": "EUR",
-    "exchange": "SMART"
+    "currency": "GBP",
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00B4WXJJ64",
     "asset_class": "bond",
     "sub_class": "eur_govt_bond",
-    "ter_bps": 7
+    "ter_bps": 7,
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

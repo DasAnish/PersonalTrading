@@ -6,12 +6,13 @@
   "parameters": {
     "symbol": "WCLD",
     "currency": "USD",
-    "exchange": "SMART"
+    "exchange": "LSEETF"
   },
   "metadata": {
     "isin": "IE00BJGWQN72",
     "asset_class": "equity",
     "sub_class": "thematic_cloud_computing",
-    "ter_bps": 40
+    "ter_bps": 40,
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML)."
   }
 }

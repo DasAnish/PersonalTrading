@@ -332,6 +332,12 @@ def main() -> int:
         try:
             index = json.loads(index_path.read_text(encoding="utf-8"))
             manifest["total_strategies"] = index.get("total_strategies")
+            manifest["results_vintage"] = index.get("vintage")
+            if (index.get("vintage") or {}).get("mixed"):
+                logger.warning(
+                    "Rebuilt index reports MIXED result vintages — some "
+                    "strategies were not re-run against the current panel."
+                )
         except Exception as exc:
             logger.warning(f"Could not read rebuilt index: {exc}")
 

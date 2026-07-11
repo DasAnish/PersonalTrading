@@ -40,6 +40,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from analytics.overfitting import calculate_deflated_sharpe_ratio  # noqa: E402
 from backtesting.results_schema import (  # noqa: E402
     INDEX_FILE,
     VALIDATION_FILE,
@@ -54,10 +55,18 @@ PERIODS_PER_YEAR = 12  # portfolio_history is monthly (rebalance cadence)
 
 
 def load_candidates(
-    results_dir: Path, min_points: int, include_fail: bool
+    results_dir: Path,
+    min_points: int,
+    include_fail: bool,
+    vintage_tolerance_days: int = 7,
 ) -> tuple[pd.DataFrame, dict]:
     """
     Load monthly return streams for eligible strategies.
+
+    Candidates whose history ends more than ``vintage_tolerance_days``
+    before the newest candidate's end are dropped: mixing result vintages
+    (some strategies backtested against a truncated panel) makes their
+    Sharpes incomparable, which silently corrupts the selection.
 
     Returns (returns DataFrame — one column per strategy, NaN outside its
     own history — and a dict of per-strategy metadata).
@@ -104,11 +113,26 @@ def load_candidates(
             "validation": verdict,
         }
 
+    # Same-vintage filter: drop candidates ending well before the newest.
+    dropped["stale_vintage"] = 0
+    if returns:
+        max_end = max(r.index[-1] for r in returns.values())
+        cutoff = max_end - pd.Timedelta(days=vintage_tolerance_days)
+        for key in [k for k, r in returns.items() if r.index[-1] < cutoff]:
+            logger.warning(
+                f"drop {key}: history ends {returns[key].index[-1].date()} "
+                f"vs panel end {max_end.date()} — stale vintage"
+            )
+            del returns[key]
+            del meta[key]
+            dropped["stale_vintage"] += 1
+
     logger.info(
         f"{len(returns)} candidates "
         f"(dropped: {dropped['validation_fail']} FAIL, "
         f"{dropped['no_validation']} unvalidated, "
-        f"{dropped['short_history']} short history)"
+        f"{dropped['short_history']} short history, "
+        f"{dropped['stale_vintage']} stale vintage)"
     )
     if not returns:
         return pd.DataFrame(), meta
@@ -150,10 +174,15 @@ def greedy_select(
     return selected
 
 
+def blend_returns(panel: pd.DataFrame, weights: dict[str, float]) -> pd.Series:
+    """Weighted blend return series on the selected strategies' inner join."""
+    joined = panel[list(weights)].dropna()
+    return sum(joined[k] * w for k, w in weights.items())
+
+
 def blend_stats(panel: pd.DataFrame, weights: dict[str, float]) -> dict:
     """Stats for the weighted blend on the selected strategies' inner join."""
-    joined = panel[list(weights)].dropna()
-    blend = sum(joined[k] * w for k, w in weights.items())
+    blend = blend_returns(panel, weights)
     vol = float(blend.std() * np.sqrt(PERIODS_PER_YEAR))
     sharpe = float(blend.mean() * PERIODS_PER_YEAR / vol) if vol > 0 else 0.0
     cumulative = (1 + blend).cumprod()
@@ -165,8 +194,8 @@ def blend_stats(panel: pd.DataFrame, weights: dict[str, float]) -> dict:
         "max_drawdown": max_dd,
         "total_return": float(cumulative.iloc[-1] - 1),
         "n_points": len(blend),
-        "start": joined.index[0].date().isoformat(),
-        "end": joined.index[-1].date().isoformat(),
+        "start": blend.index[0].date().isoformat(),
+        "end": blend.index[-1].date().isoformat(),
     }
 
 
@@ -250,6 +279,34 @@ def main() -> int:
         "blend": blend_stats(panel, weights),
     }
 
+    # Honesty check: the blend sits at the end of a selection chain —
+    # validation PASS filter, then best-Sharpe greedy pick — so its raw
+    # Sharpe is selection-biased upward. Deflate against every strategy in
+    # the library (the validation filter is itself a trial), not just the
+    # PASS survivors.
+    try:
+        with open(results_dir / INDEX_FILE, "r") as f:
+            n_library = len(json.load(f).get("strategies", {}))
+        candidate_period_sharpes = np.array(
+            [meta[k]["sharpe"] / np.sqrt(PERIODS_PER_YEAR) for k in meta]
+        )
+        dsr = calculate_deflated_sharpe_ratio(
+            blend_returns(panel, weights),
+            n_trials=max(2, n_library),
+            periods_per_year=PERIODS_PER_YEAR,
+            sharpe_std=float(candidate_period_sharpes.std(ddof=1)),
+        )
+        report["blend_dsr"] = {
+            "dsr": round(dsr.dsr, 4),
+            "verdict": dsr.verdict,
+            "n_trials": dsr.n_trials,
+            "observed_sharpe": round(dsr.observed_sharpe, 4),
+            "sharpe_reference": round(dsr.sharpe_reference, 4),
+        }
+    except Exception as exc:
+        logger.warning(f"Blend DSR could not be computed: {exc}")
+        report["blend_dsr"] = None
+
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
@@ -268,6 +325,17 @@ def main() -> int:
         f"maxDD {blend['max_drawdown']:.1%} over {blend['n_points']} months "
         f"-> {out_path}"
     )
+    if report.get("blend_dsr"):
+        d = report["blend_dsr"]
+        logger.info(
+            f"Blend DSR: {d['dsr']:.3f} ({d['verdict']}) after deflating for "
+            f"{d['n_trials']} candidate trials (SR0 {d['sharpe_reference']:.2f})"
+        )
+        if d["verdict"] != "PASS":
+            logger.warning(
+                "Blend Sharpe does not survive multiple-testing deflation — "
+                "treat the in-sample number as an upper bound, not a result."
+            )
     return 0
 
 

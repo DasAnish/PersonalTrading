@@ -126,10 +126,14 @@ def splice(
         stats["error"] = f"overlap correlation {corr:.3f} < {min_corr} — bad proxy?"
         return None, stats
 
-    first_shared = overlap[0]
-    factor = float(etf.at[first_shared, "close"]) / float(
-        proxy.at[first_shared, "close"]
-    )
+    # Scale by the median ETF/proxy close ratio over the early overlap —
+    # a single-day ratio would let one bad print at the join distort every
+    # pre-history level.
+    join_window = overlap[: min(20, len(overlap))]
+    ratios = etf.loc[join_window, "close"].astype(float) / proxy.loc[
+        join_window, "close"
+    ].astype(float)
+    factor = float(ratios.median())
     pre = proxy.loc[proxy.index < etf.index[0]].copy()
     if pre.empty:
         stats["error"] = "proxy adds no history before the ETF's start"

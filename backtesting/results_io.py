@@ -1,59 +1,19 @@
 """
 Write-side of the on-disk backtest results contract.
 
-Moved from ``scripts/run_backtest.py`` (Phase 3 refactor):
-    ``clean_value``                (nested helper inside ``serialize_backtest_results``, :312)
-    ``serialize_backtest_results`` (:297)
-    ``save_strategy_results``      (:235) -- reconciled with the two other
-        ad-hoc save code paths that existed inline in ``run_backtest.py``:
-        the ``--all`` per-strategy loop (~774-858) and the legacy
-        single-vs-benchmark save (~1043-1062).
+``save_strategy_results`` is the single write path for
+``results/strategies/<key>/*.json``; filenames come from
+``backtesting.results_schema``, metrics come from
+``analytics.metrics.summarize_performance`` (annualization inferred from
+the series' actual spacing — never hard-coded 252).
 
-All three call sites now go through the single ``save_strategy_results``
-below. Filenames are never hard-coded here -- everything comes from
-``backtesting.results_schema``.
-
-Reconciliation of the three historical save paths
----------------------------------------------------
-The three pre-refactor writers agreed on *what* to write (the five
-``STRATEGY_FILES``) but disagreed on two things:
-
-1. **Index update: merge vs. rebuild.**
-   The function at :235 read the existing ``strategies_index.json`` (if
-   any) and merged in just the one strategy's entry. The ``--all`` inline
-   block instead built a brand-new ``strategy_index`` dict from scratch in
-   memory across its whole loop and wrote it out once at the end -- so a
-   stale entry for a strategy that no longer exists in the current
-   ``--all`` run would be dropped.
-
-   This module's ``save_strategy_results`` **always merges** (preserves
-   the :235 semantics) -- it is a single-strategy save primitive and has
-   no visibility into "every strategy in this run" to decide what to drop.
-   The caller that wants full-rebuild behaviour (``run_backtest.py``'s
-   ``--all`` mode) now gets it explicitly by deleting
-   ``strategies_index.json`` once *before* its per-strategy save loop
-   starts; each subsequent call then merges into a growing, run-scoped
-   index, which nets out to the same "current run only" content the old
-   inline rebuild produced. The legacy single/benchmark path does **not**
-   reset the index first, so it preserves entries from unrelated prior
-   runs -- matching the old :235 function's behaviour.
-
-2. **Config block: setdefault vs. always-write.**
-   The :235 function only wrote ``index_data["config"]`` if the key was
-   *absent* (``dict.setdefault``), so a stale config from a much older run
-   could survive indefinitely. The ``--all`` inline block always
-   overwrote ``config`` with the current run's values.
-
-   This module **always writes** the supplied ``config`` block when the
-   caller passes one (matching the ``--all`` block's fresher behaviour).
-   Passing ``config=None`` leaves any existing config block untouched,
-   which callers that don't have a config handy (e.g. tests) can rely on.
-
-Stress-test results are optional and orthogonal to both of the above: pass
-a JSON-serialisable ``stress_report`` dict (typically
-``StressTestReport.to_dict()``) and ``stress_test.json`` is written
-alongside the other per-strategy files; omit it (default ``None``) and no
-stress-test file is written or touched.
+Index semantics: ``save_strategy_results`` always **merges** its one entry
+into ``strategies_index.json``. A caller that wants a run-scoped index
+(``run_backtest.py --all``) deletes the index before its save loop; the
+authoritative rebuild-from-disk is ``scripts/rebuild_index.py``. A supplied
+``config`` block always overwrites the index's config; ``config=None``
+leaves it untouched. ``stress_report`` (optional) writes
+``stress_test.json`` alongside the other files.
 """
 
 from __future__ import annotations
@@ -65,6 +25,9 @@ from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
+import pandas as pd
+
+from analytics.metrics import summarize_performance
 
 from .engine import BacktestResults
 from .results_schema import INDEX_FILE, STRATEGY_FILES, STRESS_TEST_FILE, strategy_dir
@@ -134,31 +97,26 @@ def serialize_backtest_results(
             entry = {k: clean_value(v) for k, v in entry.items()}
             weights_history.append(entry)
 
-    # Calculate metrics
-    portfolio_values = results.portfolio_history["total_value"].values
-    returns = np.diff(portfolio_values) / portfolio_values[:-1]
-
-    total_return = (portfolio_values[-1] - portfolio_values[0]) / portfolio_values[0]
-    volatility = np.std(returns) * np.sqrt(252) if len(returns) > 0 else 0
-    sharpe_ratio = (np.mean(returns) * 252) / volatility if volatility > 0 else 0
-
-    cumulative = (1 + returns).cumprod()
-    running_max = np.maximum.accumulate(cumulative)
-    drawdown = (cumulative - running_max) / running_max
-    max_drawdown = np.min(drawdown) if len(drawdown) > 0 else 0
+    # Metrics via the canonical implementation (analytics.metrics): the
+    # portfolio history is a rebalance-period series, NOT daily — the
+    # annualization factor must be inferred from its actual spacing.
+    values = pd.Series(
+        results.portfolio_history["total_value"].astype(float),
+        index=pd.DatetimeIndex(results.portfolio_history.index),
+    )
+    metrics = {k: clean_value(v) for k, v in summarize_performance(values).items()}
+    metrics.update(
+        {
+            "final_value": clean_value(float(results.final_value)),
+            "total_transactions": len(results.transactions),
+            "rebalances": len(results.portfolio_history),
+        }
+    )
 
     return {
         "key": strategy_key,
         "info": strategy_info,
-        "metrics": {
-            "total_return": clean_value(float(total_return)),
-            "volatility": clean_value(float(volatility)),
-            "sharpe_ratio": clean_value(float(sharpe_ratio)),
-            "max_drawdown": clean_value(float(max_drawdown)),
-            "final_value": clean_value(float(results.final_value)),
-            "total_transactions": len(results.transactions),
-            "rebalances": len(results.portfolio_history),
-        },
+        "metrics": metrics,
         "portfolio_history": portfolio_history,
         "transactions": transactions,
         "weights_history": weights_history,

@@ -88,7 +88,20 @@ def rebuild(results_dir: Path) -> dict:
             "metrics": metrics,
             "info": info,
             "config_hash": definition_hash(key),
+            "data_end": metrics.get("data_end"),
         }
+
+    # Vintage summary: results from different data windows are not
+    # comparable (the mixed-vintage failure mode — half the library rebuilt
+    # against a truncated panel). Surface it here so the dashboard and the
+    # nightly manifest can warn instead of someone diffing lengths by hand.
+    end_dates = sorted({e["data_end"] for e in entries.values() if e["data_end"]})
+    vintage = {
+        "min_data_end": end_dates[0] if end_dates else None,
+        "max_data_end": end_dates[-1] if end_dates else None,
+        "mixed": len(end_dates) > 1,
+        "distinct_data_ends": len(end_dates),
+    }
 
     return {
         "strategies": entries,
@@ -97,6 +110,7 @@ def rebuild(results_dir: Path) -> dict:
         "total_strategies": len(entries),
         "rebuilt": True,
         "skipped": skipped,
+        "vintage": vintage,
     }
 
 
@@ -134,6 +148,14 @@ def main() -> int:
     missing_hash = [k for k, e in index["strategies"].items() if not e["config_hash"]]
     if missing_hash:
         logger.warning(f"No definition file found for: {missing_hash}")
+    if index["vintage"]["mixed"]:
+        logger.warning(
+            "MIXED VINTAGES: strategy data ends span "
+            f"{index['vintage']['min_data_end']} .. "
+            f"{index['vintage']['max_data_end']} "
+            f"({index['vintage']['distinct_data_ends']} distinct) — "
+            "cross-strategy comparisons are unreliable until a full re-run."
+        )
 
     if args.dry_run:
         logger.info(f"[dry-run] would index {index['total_strategies']} strategies")

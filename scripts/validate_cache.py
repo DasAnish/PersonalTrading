@@ -38,6 +38,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -51,7 +52,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_OUT = Path("results") / "cache_validation.json"
 
 MAX_ABS_DAILY_RETURN = 0.35  # warn above this — bad splice / unit change
-MAX_GAP_BUSINESS_DAYS = 10  # warn above this — hole in the series
+MAX_GAP_BUSDAYS = 10  # warn above this many missing WEEKDAYS in a row
 MAX_NAN_FRACTION = 0.02  # warn above this — patchy data
 
 
@@ -133,11 +134,14 @@ def check_symbol(cache_dir: Path, symbol: str, max_stale_days: int) -> dict:
             )
 
     if len(idx) > 1:
-        gaps = pd.Series(idx).diff().dt.days.fillna(0)
-        max_gap = int(gaps.max())
-        if max_gap > MAX_GAP_BUSINESS_DAYS:
-            gap_at = idx[int(gaps.idxmax())].date()
-            entry["warnings"].append(f"{max_gap}-day gap ending {gap_at}")
+        # Gap in business days, not calendar days — weekends and normal
+        # holiday clusters must not trip the threshold.
+        dates = idx.normalize().values.astype("datetime64[D]")
+        gaps = np.busday_count(dates[:-1], dates[1:]) - 1
+        max_gap = int(gaps.max()) if len(gaps) else 0
+        if max_gap > MAX_GAP_BUSDAYS:
+            gap_end = idx[int(gaps.argmax()) + 1].date()
+            entry["warnings"].append(f"{max_gap} missing weekdays ending {gap_end}")
 
     if entry["stale_days"] is not None and entry["stale_days"] > max_stale_days:
         entry["status"] = "stale"

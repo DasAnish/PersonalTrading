@@ -8,7 +8,11 @@ import numpy as np
 import pandas as pd
 from flask import Blueprint, Response, jsonify, request
 
-from analytics.metrics import calculate_cagr, calculate_omega_ratio
+from analytics.metrics import (
+    calculate_cagr,
+    calculate_omega_ratio,
+    infer_periods_per_year,
+)
 
 from .data import (
     RESULTS_DIR,
@@ -181,6 +185,11 @@ def api_rolling_metrics(strategy_key: str):
     if len(returns) < window:
         return jsonify({"error": f"Insufficient data for window={window}"}), 400
 
+    # Portfolio history is a rebalance-period series (usually monthly) —
+    # annualize by its actual spacing, never a hard-coded 252.
+    ppy = infer_periods_per_year(values.index)
+    ann = np.sqrt(ppy)
+
     results = []
     for i in range(window, len(returns) + 1):
         window_returns = returns.iloc[i - window : i]
@@ -189,15 +198,13 @@ def api_rolling_metrics(strategy_key: str):
         if metric == "sharpe":
             mean_r = window_returns.mean()
             std_r = window_returns.std()
-            val = (mean_r / std_r * np.sqrt(252)) if std_r > 0 else 0
+            val = (mean_r / std_r * ann) if std_r > 0 else 0
         elif metric == "volatility":
-            val = window_returns.std() * np.sqrt(252) * 100
+            val = window_returns.std() * ann * 100
         elif metric == "sortino":
             downside = window_returns[window_returns < 0]
             down_std = np.sqrt((downside**2).mean()) if len(downside) > 0 else 0
-            val = (
-                (window_returns.mean() / down_std * np.sqrt(252)) if down_std > 0 else 0
-            )
+            val = (window_returns.mean() / down_std * ann) if down_std > 0 else 0
         else:
             val = 0
 
@@ -474,4 +481,12 @@ def api_data_freshness():
             "data_refreshed": manifest.get("data_refreshed"),
             "total_strategies": manifest.get("total_strategies"),
         }
+
+    # Results vintage: mixed data-end dates across strategies mean the
+    # library was part-rebuilt against a different panel — rankings and
+    # comparisons are unreliable until a full re-run.
+    index = _read_results_json("strategies_index.json")
+    if index is not None and index.get("vintage"):
+        payload["results_vintage"] = index["vintage"]
+        payload["available"] = True
     return jsonify(payload)

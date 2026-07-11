@@ -507,9 +507,16 @@
             const el = document.getElementById('freshnessBanner');
             try {
                 const d = await fetchJSON('/api/data-freshness');
-                if (!d.available || !d.cache) return;
-                const c = d.cache;
+                if (!d.available) return;
+                const c = d.cache || {stale: [], missing: [], corrupt: [],
+                                      panel_end: null, panel_stale_days: null,
+                                      gate_failed: false};
                 const problems = [];
+                const v = d.results_vintage;
+                if (v && v.mixed) problems.push(
+                    'MIXED RESULT VINTAGES: strategy data ends span ' +
+                    v.min_data_end + ' .. ' + v.max_data_end +
+                    ' — rankings unreliable until a full re-run');
                 if (c.panel_end) problems.push('panel ends ' + c.panel_end +
                     ' (' + c.panel_stale_days + 'd behind)');
                 if (c.stale.length) problems.push(c.stale.length + ' stale: ' + c.stale.join(', '));
@@ -524,7 +531,7 @@
                     el.style.color = '#991b1b';
                     el.textContent = '⛔ Data freshness gate FAILED: ' + problems.join('; ') + lastRun;
                     el.style.display = 'block';
-                } else if (c.stale.length || (c.panel_stale_days !== null && c.panel_stale_days > 3)) {
+                } else if ((v && v.mixed) || c.stale.length || (c.panel_stale_days !== null && c.panel_stale_days > 3)) {
                     el.style.background = '#fffbeb';
                     el.style.border = '1px solid #fcd34d';
                     el.style.color = '#92400e';

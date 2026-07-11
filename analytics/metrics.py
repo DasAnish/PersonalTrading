@@ -226,7 +226,8 @@ def calculate_omega_ratio(
     """
     Calculate Omega Ratio.
 
-    Omega Ratio is the probability-weighted ratio of gains to losses above/below a threshold.
+    Omega Ratio is the probability-weighted ratio of gains to losses
+    above/below a threshold.
     Higher values indicate better risk-adjusted returns.
 
     Args:
@@ -494,3 +495,69 @@ def calculate_max_drawdown_duration(values: pd.Series) -> int:
         max_duration = max(max_duration, duration)
 
     return max_duration
+
+
+def infer_periods_per_year(index: pd.DatetimeIndex) -> int:
+    """
+    Infer the annualization factor from a series' actual date spacing.
+
+    Portfolio histories in this project are rebalance-period series (usually
+    monthly), while raw price series are daily. Hard-coding 252 on a monthly
+    series inflates Sharpe/volatility ~4.6x — every consumer should infer
+    from the data instead of assuming.
+
+    Returns one of 252 (daily), 52 (weekly), 12 (monthly), 4 (quarterly),
+    or 1 (annual), by median spacing in days.
+    """
+    if len(index) < 3:
+        return 252
+    spacing = float(pd.Series(index).diff().dt.days.median())
+    if spacing <= 4:
+        return 252
+    if spacing <= 10:
+        return 52
+    if spacing <= 45:
+        return 12
+    if spacing <= 135:
+        return 4
+    return 1
+
+
+def summarize_performance(values: pd.Series, risk_free_rate: float = 0.0) -> dict:
+    """
+    Canonical metrics block for a date-indexed portfolio-value series.
+
+    Single source of truth for the numbers written to ``metrics.json`` and
+    shown on the dashboard — annualization is inferred from the series'
+    own spacing (see ``infer_periods_per_year``), and the result records
+    which factor was used plus the data window it was computed over, so a
+    stale or mixed-vintage result is detectable from the file alone.
+    """
+    values = values.dropna()
+    if len(values) < 2 or not isinstance(values.index, pd.DatetimeIndex):
+        return {
+            "total_return": None,
+            "volatility": None,
+            "sharpe_ratio": None,
+            "max_drawdown": None,
+            "cagr": None,
+            "periods_per_year": None,
+            "data_start": None,
+            "data_end": None,
+        }
+    periods = infer_periods_per_year(values.index)
+    returns = values.pct_change().dropna()
+    return {
+        "total_return": float(values.iloc[-1] / values.iloc[0] - 1),
+        "volatility": float(calculate_volatility(returns, periods_per_year=periods)),
+        "sharpe_ratio": float(
+            calculate_sharpe_ratio(
+                returns, risk_free_rate=risk_free_rate, periods_per_year=periods
+            )
+        ),
+        "max_drawdown": float(calculate_max_drawdown(values)),
+        "cagr": float(calculate_cagr(values)),
+        "periods_per_year": periods,
+        "data_start": values.index[0].date().isoformat(),
+        "data_end": values.index[-1].date().isoformat(),
+    }

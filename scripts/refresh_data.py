@@ -89,7 +89,16 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                     entry["error"] = "empty dataframe returned"
                     logger.warning(f"✗ {symbol}: empty dataframe")
                 else:
-                    cache.save_cached_data(symbol, df, START_DATE, END_DATE)
+                    # Name the cache file by the data actually received —
+                    # a filename claiming the requested END_DATE when IB
+                    # returned less is exactly the staleness lie the
+                    # validator exists to catch.
+                    cache.save_cached_data(
+                        symbol,
+                        df,
+                        df.index[0].to_pydatetime(),
+                        df.index[-1].to_pydatetime(),
+                    )
                     entry.update(
                         status="ok",
                         rows=len(df),

@@ -34,7 +34,14 @@ Flags: `--fast` (skip PBO sweeps), `--skip-git`, `--skip-refresh`,
 - `scripts/rebuild_index.py [--dry-run]` — rebuild `strategies_index.json`
   from `results/strategies/*/` disk truth; adds per-strategy `config_hash`
   (sha256 of definition file) so run-over-run Sharpe diffs can separate
-  "data moved" from "config changed".
+  "data moved" from "config changed", plus a `vintage` block
+  (`min/max_data_end`, `mixed`) that flags part-rebuilt libraries — mixed
+  vintages surface in the manifest, the API, and the dashboard banner.
+- `scripts/recompute_metrics.py [--dry-run]` — regenerate every
+  `metrics.json` from saved portfolio histories via the canonical
+  `analytics.metrics.summarize_performance` (annualization inferred from
+  series spacing — the 2026-07-10 audit found monthly series annualized
+  with sqrt(252), inflating Sharpe ~4.6x). No backtests, no IB needed.
 
 ## Run archive / regression diffing
 

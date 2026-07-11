@@ -413,53 +413,11 @@ async def main(args):
         logger.info("SAVING RESULTS")
         logger.info("=" * 60)
 
-        # Save portfolio histories (use fixed prefixes for dashboard compatibility)
-        primary_history_path = RESULTS_DIR / "hrp_portfolio_history.csv"
-        primary_results.portfolio_history.to_csv(primary_history_path)
-        logger.info(
-            f"✓ {strategy_display} portfolio history saved to: {primary_history_path}"
-        )
-
-        benchmark_history_path = RESULTS_DIR / "ew_portfolio_history.csv"
-        benchmark_results.portfolio_history.to_csv(benchmark_history_path)
-        logger.info(
-            f"✓ {benchmark_display} portfolio history saved to: {benchmark_history_path}"
-        )
-
-        # Save transactions
-        primary_tx_df = pd.DataFrame(
-            [
-                {
-                    "timestamp": t.timestamp,
-                    "symbol": t.symbol,
-                    "quantity": t.quantity,
-                    "price": t.price,
-                    "cost": t.total_cost,
-                }
-                for t in primary_results.transactions
-            ]
-        )
-        primary_tx_path = RESULTS_DIR / "hrp_transactions.csv"
-        primary_tx_df.to_csv(primary_tx_path, index=False)
-        logger.info(f"✓ {strategy_display} transactions saved to: {primary_tx_path}")
-
-        benchmark_tx_df = pd.DataFrame(
-            [
-                {
-                    "timestamp": t.timestamp,
-                    "symbol": t.symbol,
-                    "quantity": t.quantity,
-                    "price": t.price,
-                    "cost": t.total_cost,
-                }
-                for t in benchmark_results.transactions
-            ]
-        )
-        benchmark_tx_path = RESULTS_DIR / "ew_transactions.csv"
-        benchmark_tx_df.to_csv(benchmark_tx_path, index=False)
-        logger.info(f"✓ {benchmark_display} transactions saved to: {benchmark_tx_path}")
-
-        # Save performance metrics
+        # NOTE: this path used to also dump root-level CSVs with fixed
+        # hrp_/ew_ filenames regardless of the strategies actually compared.
+        # The dashboard reads results/strategies/<key>/ (written below via
+        # save_strategy_results), so those misleadingly-named duplicates
+        # are gone. The comparison table still lands next to them:
         perf_table_path = RESULTS_DIR / "performance_comparison.csv"
         perf_table.to_csv(perf_table_path)
         logger.info(f"✓ Performance table saved to: {perf_table_path}")

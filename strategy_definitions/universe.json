@@ -45,7 +45,8 @@
   "em_equity": [
     "assets/iind",
     "assets/ashr",
-    "assets/saem"
+    "assets/saem",
+    "assets/emmcha"
   ],
   "all": [
     "assets/vusa",
@@ -73,6 +74,7 @@
     "assets/wcld",
     "assets/wsml",
     "assets/awesgs",
+    "assets/emmcha",
     "assets/exxw",
     "assets/exx5",
     "assets/exi2",

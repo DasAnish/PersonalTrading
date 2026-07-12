@@ -25,6 +25,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import importlib
+import logging
 
 from strategies.core import (
     AllocationStrategy,
@@ -33,6 +34,8 @@ from strategies.core import (
     Strategy as ExecutableStrategy,
 )
 from strategies.definition_schema import validate_definition
+
+logger = logging.getLogger(__name__)
 
 
 class StrategyLoader:
@@ -245,7 +248,22 @@ class StrategyLoader:
             underlying_list = []
             for ref in underlying_refs:
                 if isinstance(ref, str):
-                    underlying_def = self.load_definition(ref)
+                    try:
+                        underlying_def = self.load_definition(ref)
+                    except FileNotFoundError:
+                        # Resilient universe: a group may reference an asset that
+                        # has been parked (moved to assets_disabled/) or removed.
+                        # Skip that leaf with a warning instead of failing the
+                        # whole build. Missing *strategy* refs still raise loudly.
+                        if ref.startswith("assets/"):
+                            logger.warning(
+                                "Skipping unavailable asset '%s' referenced by a "
+                                "universe group (parked in assets_disabled/ or "
+                                "missing definition).",
+                                ref,
+                            )
+                            continue
+                        raise
                     underlying_list.append(
                         self._build_strategy_from_def(underlying_def)
                     )

@@ -320,14 +320,22 @@ async def main(args):
         logger.info("\n" + "=" * 60)
         logger.info("BACKTEST SUMMARY")
         logger.info("=" * 60)
+
+        def _fmt(metrics, key, spec):
+            # Degenerate strategies (e.g. too little history to rebalance) can
+            # yield None metrics; a display line must never abort the whole
+            # --all run. Show N/A instead of raising on format(None, spec).
+            value = metrics.get(key)
+            return format(value, spec) if value is not None else "N/A"
+
         for strategy_key, result_data in sorted(all_strategy_results.items()):
             metrics = result_data["metrics"]
             logger.info(f"\n{strategy_key}:")
-            logger.info(f"  Final Value: £{metrics['final_value']:,.2f}")
-            logger.info(f"  Total Return: {metrics['total_return']:.2%}")
-            logger.info(f"  Volatility: {metrics['volatility']:.2%}")
-            logger.info(f"  Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
-            logger.info(f"  Max Drawdown: {metrics['max_drawdown']:.2%}")
+            logger.info(f"  Final Value: £{_fmt(metrics, 'final_value', ',.2f')}")
+            logger.info(f"  Total Return: {_fmt(metrics, 'total_return', '.2%')}")
+            logger.info(f"  Volatility: {_fmt(metrics, 'volatility', '.2%')}")
+            logger.info(f"  Sharpe Ratio: {_fmt(metrics, 'sharpe_ratio', '.2f')}")
+            logger.info(f"  Max Drawdown: {_fmt(metrics, 'max_drawdown', '.2%')}")
 
     else:
         # Legacy mode: Run single strategy vs benchmark

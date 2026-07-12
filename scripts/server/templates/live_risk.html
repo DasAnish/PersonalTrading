@@ -34,6 +34,10 @@
         <div id="banner"></div>
         <p class="muted" id="asOf"></p>
 
+        <div id="scopeSelector" style="margin:12px 0; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <span class="muted" style="font-size:0.85rem;">View:</span>
+        </div>
+
         <h2 style="margin-top:28px;">Current Holdings <span class="muted" style="font-size:0.85rem;">(what you hold now — risk &amp; drift)</span></h2>
         <div class="risk-grid" id="cards"></div>
 
@@ -69,6 +73,36 @@
             <button onclick="loadRisk()">Load</button>
         </div>
         <div id="drift"></div>
+
+        <h2 style="margin-top:28px;">Allocation Ledger <span class="muted" style="font-size:0.85rem;">(virtual per-strategy slices — sizes float with performance)</span></h2>
+        <div id="reconBanner"></div>
+        <div id="slicesTable"></div>
+
+        <h3 style="margin:16px 0 0;font-size:1rem;">Mark as traded</h3>
+        <p class="muted" style="font-size:0.85rem;margin:4px 0;">Execute these orders manually in IB first — this only records what you did. Never places orders.</p>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <select id="mtStrategy" style="font-size:0.9rem;padding:4px;"><option value="">— strategy —</option></select>
+            <label class="muted">Add funding (£)</label>
+            <input id="mtBudget" type="number" step="500" min="0" value="0" style="width:100px;padding:4px;">
+            <button onclick="loadSlicePlan()">Suggest plan</button>
+            <input id="mtDate" type="date" style="padding:4px;">
+        </div>
+        <div id="mtPlan"></div>
+        <div id="mtMsg" class="muted" style="font-size:0.85rem;"></div>
+
+        <h3 style="margin:16px 0 0;font-size:1rem;">Slice performance</h3>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+            <select id="sliceNavKey" style="font-size:0.9rem;padding:4px;" onchange="loadSliceNav()"><option value="">— strategy —</option></select>
+        </div>
+        <div id="sliceNav"></div>
+
+        <h2 style="margin-top:28px;">Trackers <span class="muted" style="font-size:0.85rem;">(watchlist — paper performance since you added them)</span></h2>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+            <select id="trackerStrategy" style="font-size:0.9rem;padding:4px;"><option value="">— strategy —</option></select>
+            <button onclick="addTracker()">+ Track</button>
+            <span id="trackerMsg" class="muted" style="font-size:0.85rem;"></span>
+        </div>
+        <div id="trackersTable"></div>
     </main>
   </div>
   </div>
@@ -78,10 +112,31 @@
     <script>
         function pct(x) { return x == null ? 'n/a' : (x * 100).toFixed(2) + '%'; }
 
+        // Tiny dependency-free sparkline (normalized series -> inline SVG).
+        function sparkline(series, w = 320, h = 48) {
+            if (!series || series.length < 2) return '<span class="muted">not enough data</span>';
+            const vals = series.map(p => p.value);
+            const min = Math.min(...vals), max = Math.max(...vals);
+            const span = (max - min) || 1;
+            const pts = series.map((p, i) => {
+                const x = (i / (series.length - 1)) * (w - 4) + 2;
+                const y = h - 2 - ((p.value - min) / span) * (h - 4);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            const up = vals[vals.length - 1] >= vals[0];
+            return `<svg width="${w}" height="${h}" style="max-width:100%;">
+                <polyline fill="none" stroke="${up ? '#059669' : '#dc2626'}" stroke-width="1.5" points="${pts}"/></svg>`;
+        }
+
+        let currentScope = 'all';
+
         async function loadRisk() {
+            const params = new URLSearchParams();
+            if (currentScope && currentScope !== 'all') params.set('scope', currentScope);
             const key = document.getElementById('strategyInput').value.trim();
-            const url = '/api/live-risk' + (key ? ('?strategy=' + encodeURIComponent(key)) : '');
-            const data = await fetchJSON(url);
+            if (key) params.set('strategy', key);
+            const qs = params.toString();
+            const data = await fetchJSON('/api/live-risk' + (qs ? '?' + qs : ''));
             if (!data) return;
 
             document.getElementById('banner').innerHTML = data.banner
@@ -242,7 +297,163 @@
             loadRisk();    // drift now reflects the saved blend
         }
 
-        loadBlend().then(loadTarget);
+        // ---- Allocation ledger ----
+        let sliceKeys = [];
+
+        function fillSelect(id, keys, placeholder) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const cur = el.value;
+            el.innerHTML = `<option value="">${placeholder || '— strategy —'}</option>` +
+                keys.map(k => `<option value="${k}">${k}</option>`).join('');
+            if (keys.includes(cur)) el.value = cur;
+        }
+
+        function renderScopeSelector() {
+            const opts = [['all', 'Whole portfolio'], ['personal', 'Personal']]
+                .concat(sliceKeys.map(k => ['strategy:' + k, k]));
+            document.getElementById('scopeSelector').innerHTML =
+                '<span class="muted" style="font-size:0.85rem;">View:</span> ' +
+                opts.map(([v, label]) => `<button onclick="setScope('${v}')" style="margin:2px;${v === currentScope ? 'font-weight:700;background:#e0e7ff;' : ''}">${label}</button>`).join('');
+        }
+
+        function setScope(s) { currentScope = s; renderScopeSelector(); loadRisk(); }
+
+        async function loadLedger() {
+            const data = await fetchJSON('/api/ledger');
+            if (!data) return;
+            const strats = data.strategies || {};
+            sliceKeys = Object.keys(strats).sort();
+
+            const recon = data.reconciliation || [];
+            document.getElementById('reconBanner').innerHTML = recon.length
+                ? `<div class="banner" style="background:#fee2e2;border-color:#dc2626;color:#991b1b;">Ledger claims more than IB holds: ${recon.map(r => `${r.symbol} (ledger ${r.ledger_shares} &gt; IB ${r.ib_shares})`).join('; ')} — record missing trades or correct fills.</div>`
+                : '';
+
+            const rows = sliceKeys.map(k => {
+                const s = strats[k];
+                return `<tr><td>${k}</td><td>£${s.slice_value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td>£${s.cash.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td>${Object.keys(s.holdings).length}</td></tr>`;
+            }).join('');
+            const personal = data.personal || { holdings: {}, value: 0 };
+            const unalloc = data.unallocated_cash;
+            document.getElementById('slicesTable').innerHTML = `
+                <table><thead><tr><th>Strategy slice</th><th>Value</th><th>Cash</th><th>Holdings</th></tr></thead>
+                <tbody>${rows}
+                <tr class="muted"><td>Personal (residual)</td><td>£${(personal.value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td>—</td><td>${Object.keys(personal.holdings || {}).length}</td></tr>
+                </tbody></table>
+                <p class="muted" style="font-size:0.85rem;">Unallocated cash: ${unalloc == null ? 'n/a (run nightly NAV snapshot)' : '£' + unalloc.toLocaleString(undefined, { maximumFractionDigits: 2 })} · ${data.events_count} ledger events${data.ib_online ? '' : ' · IB offline (cached/close prices)'}</p>`;
+
+            renderScopeSelector();
+            fillSelect('sliceNavKey', sliceKeys);
+        }
+
+        async function loadSlicePlan() {
+            const key = document.getElementById('mtStrategy').value;
+            const msg = document.getElementById('mtMsg');
+            if (!key) { msg.textContent = 'Pick a strategy.'; return; }
+            const budget = parseFloat(document.getElementById('mtBudget').value) || 0;
+            const data = await fetchJSON(`/api/ledger/slice-plan/${encodeURIComponent(key)}?budget=${budget}`);
+            if (!data) return;
+            const entries = (data.entries || []).filter(e => Math.abs(e.est_shares || 0) > 1e-6);
+            if (!entries.length) { document.getElementById('mtPlan').innerHTML = '<p class="muted">No trades suggested (slice already at target).</p>'; return; }
+            document.getElementById('mtPlan').innerHTML = `
+                <table><thead><tr><th>Symbol</th><th>Suggested Δ</th><th>Price</th><th>Actual shares Δ</th><th>Actual price</th><th>Commission</th></tr></thead>
+                <tbody>${entries.map(e => `<tr>
+                    <td>${e.symbol}</td>
+                    <td>${e.est_shares != null ? e.est_shares.toFixed(2) : '—'}</td>
+                    <td>${e.current_price != null ? e.current_price.toFixed(2) : '—'}</td>
+                    <td><input data-sym="${e.symbol}" class="mtShares" type="number" step="0.01" value="${e.est_shares != null ? e.est_shares.toFixed(2) : ''}" style="width:90px;padding:3px;"></td>
+                    <td><input data-sym="${e.symbol}" class="mtPrice" type="number" step="0.01" value="${e.current_price != null ? e.current_price.toFixed(2) : ''}" style="width:90px;padding:3px;"></td>
+                    <td><input data-sym="${e.symbol}" class="mtComm" type="number" step="0.5" value="0" style="width:70px;padding:3px;"></td>
+                </tr>`).join('')}</tbody></table>
+                <div style="margin:8px 0;"><button onclick="submitMarkTraded()">Record as traded</button>
+                <span class="muted" style="font-size:0.8rem;">Edit to your actual fills first.</span></div>`;
+            msg.textContent = '';
+        }
+
+        async function submitMarkTraded() {
+            const key = document.getElementById('mtStrategy').value;
+            const msg = document.getElementById('mtMsg');
+            const shares = document.querySelectorAll('#mtPlan .mtShares');
+            const fills = [];
+            shares.forEach(inp => {
+                const sym = inp.dataset.sym;
+                const sh = parseFloat(inp.value);
+                const price = parseFloat(document.querySelector(`#mtPlan .mtPrice[data-sym="${sym}"]`).value);
+                const comm = parseFloat(document.querySelector(`#mtPlan .mtComm[data-sym="${sym}"]`).value) || 0;
+                if (sh && price > 0) fills.push({ symbol: sym, shares_delta: sh, price: price, commission: comm });
+            });
+            const budget = parseFloat(document.getElementById('mtBudget').value) || 0;
+            if (!fills.length && !budget) { msg.textContent = 'Enter at least one fill or a funding amount.'; return; }
+            const res = await fetch('/api/ledger/mark-traded', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ strategy: key, trade_date: document.getElementById('mtDate').value, external_cash_delta: budget, fills })
+            });
+            const data = await res.json();
+            if (!res.ok) { msg.textContent = data.error || 'Failed.'; return; }
+            msg.textContent = 'Recorded. Slice value now £' + data.slice.slice_value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            document.getElementById('mtPlan').innerHTML = '';
+            loadLedger();
+        }
+
+        async function loadSliceNav() {
+            const key = document.getElementById('sliceNavKey').value;
+            const el = document.getElementById('sliceNav');
+            if (!key) { el.innerHTML = ''; return; }
+            const data = await fetchJSON(`/api/ledger/slice/${encodeURIComponent(key)}/nav`);
+            if (!data || !data.series || !data.series.length) { el.innerHTML = '<p class="muted">No NAV history yet — record trades to build it.</p>'; return; }
+            const first = data.series[0].value, last = data.series[data.series.length - 1].value;
+            el.innerHTML = `${sparkline(data.series, 360, 56)}<p class="muted" style="font-size:0.85rem;">Since ${data.first_event}: £${first.toLocaleString(undefined, { maximumFractionDigits: 0 })} → £${last.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>`;
+        }
+
+        // ---- Trackers ----
+        async function loadTrackers() {
+            const data = await fetchJSON('/api/trackers');
+            if (!data) return;
+            const el = document.getElementById('trackersTable');
+            if (!data.length) { el.innerHTML = '<p class="muted">No trackers yet — add a strategy to watch.</p>'; return; }
+            el.innerHTML = `
+                <table><thead><tr><th>Strategy</th><th>Added</th><th>Since-added</th><th>Return</th><th>Sharpe</th><th>Max DD</th><th></th></tr></thead>
+                <tbody>${data.map(t => {
+                    const sa = t.since_added || {};
+                    return `<tr>
+                        <td>${t.strategy}</td>
+                        <td>${t.added_on}</td>
+                        <td>${sparkline(sa.series, 120, 32)}</td>
+                        <td>${pct(sa.total_return)}</td>
+                        <td>${sa.sharpe != null ? sa.sharpe.toFixed(2) : 'n/a'}</td>
+                        <td>${pct(sa.max_drawdown)}</td>
+                        <td><button onclick="removeTracker('${t.strategy}')">✕</button></td>
+                    </tr>`;
+                }).join('')}</tbody></table>`;
+        }
+
+        async function addTracker() {
+            const key = document.getElementById('trackerStrategy').value;
+            const msg = document.getElementById('trackerMsg');
+            if (!key) { msg.textContent = 'Pick a strategy.'; return; }
+            const res = await fetch('/api/trackers', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ strategy: key })
+            });
+            const data = await res.json();
+            msg.textContent = res.ok ? 'Tracking.' : (data.error || 'Failed.');
+            if (res.ok) loadTrackers();
+        }
+
+        async function removeTracker(key) {
+            await fetch(`/api/trackers/${encodeURIComponent(key)}`, { method: 'DELETE' });
+            loadTrackers();
+        }
+
+        loadBlend().then(() => {
+            loadTarget();
+            fillSelect('mtStrategy', availableStrategies);
+            fillSelect('trackerStrategy', availableStrategies);
+        });
+        document.getElementById('mtDate').value = new Date().toISOString().slice(0, 10);
+        loadLedger();
+        loadTrackers();
         loadRisk();
     </script>
 </body>

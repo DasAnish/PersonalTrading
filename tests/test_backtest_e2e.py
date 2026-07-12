@@ -72,11 +72,32 @@ _BUILDABLE_STEMS = [
 ]
 
 
+# Assets deliberately parked in assets_disabled/ because IB has no fetchable
+# contract (see each file's disabled_note). Strategies that reference them via
+# universe groups cannot build the asset leaf; skip rather than fail.
+_DISABLED_STEMS = {
+    f.stem
+    for f in (
+        Path(__file__).parent.parent / "strategy_definitions" / "assets_disabled"
+    ).glob("*.json")
+}
+
+
 @pytest.mark.parametrize("strategy_key", _BUILDABLE_STEMS)
 def test_loader_builds_all_json_definitions(strategy_key):
     """Every allocation/composed/asset JSON definition must build without error."""
     loader = StrategyLoader()
-    strategy = loader.build_strategy(strategy_key)
+    try:
+        strategy = loader.build_strategy(strategy_key)
+    except FileNotFoundError as exc:
+        # e.g. "Strategy definition not found: assets/emmcha"
+        missing = str(exc).rsplit("/", 1)[-1].strip()
+        if missing in _DISABLED_STEMS:
+            pytest.skip(
+                f"'{strategy_key}' references disabled/unfetchable asset "
+                f"'{missing}' (see assets_disabled/{missing}.json)"
+            )
+        raise
     assert strategy is not None
 
 

@@ -43,6 +43,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from analytics.composed_pbo import run_composed_pbo_groups
+from analytics.metrics import infer_periods_per_year  # noqa: E402
 from analytics.overfitting import (
     OverfittingAnalysis,
     calculate_deflated_sharpe_ratio,
@@ -222,7 +223,7 @@ def run_dsr_kfold_batch(
     strategy_keys: List[str],
     n_folds: int,
     n_trials_map: Dict[str, int],
-    embargo_periods: int = 0,
+    embargo_days: int = 0,
 ) -> List[dict]:
     """Run DSR + k-fold (+ MinBTL) for every strategy. Returns summary rows."""
     summary_rows = []
@@ -236,14 +237,18 @@ def run_dsr_kfold_batch(
         returns = total_values.pct_change().dropna()
         n_trials = n_trials_map.get(key, 2)
 
+        # Infer periods_per_year and embargo_periods from the loaded data
+        ppy = infer_periods_per_year(total_values.index)
+        embargo_periods_key = round(embargo_days * ppy / 365.25) if embargo_days else 0
+
         analysis = run_overfitting_analysis(
             strategy_key=key,
             strategy_returns=returns,
             return_matrix=None,
             param_grid={},
-            periods_per_year=12,
+            periods_per_year=ppy,
             n_folds=n_folds,
-            embargo_periods=embargo_periods,
+            embargo_periods=embargo_periods_key,
         )
 
         # Override n_trials to the honest family/class-based estimate for
@@ -254,7 +259,7 @@ def run_dsr_kfold_batch(
             analysis.dsr = calculate_deflated_sharpe_ratio(
                 returns=returns,
                 n_trials=n_trials,
-                periods_per_year=12,
+                periods_per_year=ppy,
             )
             analysis.n_param_combinations = n_trials
         if analysis.minbtl is not None:
@@ -305,7 +310,7 @@ def run_dsr_kfold_batch(
 
 def run_pbo_sweeps(
     n_folds: int,
-    embargo_periods: int = 0,
+    embargo_days: int = 0,
     walk_forward: bool = False,
 ) -> List[dict]:
     """
@@ -364,16 +369,23 @@ def run_pbo_sweeps(
 
         return_matrix = sweep.get_return_matrix()
         best_key = next(iter(sweep.return_series_))
-        best_returns = sweep.return_series_[best_key].pct_change().dropna()
+        best_values = sweep.return_series_[best_key]
+        best_returns = best_values.pct_change().dropna()
+
+        # Infer periods_per_year and embargo_periods from the sweep data
+        ppy = infer_periods_per_year(best_values.index)
+        embargo_periods_sweep = (
+            round(embargo_days * ppy / 365.25) if embargo_days else 0
+        )
 
         analysis = run_overfitting_analysis(
             strategy_key=f"{family}__pbo_sweep",
             strategy_returns=best_returns,
             return_matrix=return_matrix,
             param_grid=param_grid,
-            periods_per_year=12,
+            periods_per_year=ppy,
             n_folds=n_folds,
-            embargo_periods=embargo_periods,
+            embargo_periods=embargo_periods_sweep,
         )
 
         wf_val = "N/A"
@@ -542,7 +554,7 @@ def main() -> None:
         default=0,
         help=(
             "Purge/embargo window for k-fold stability, in calendar days "
-            "(converted to periods via periods_per_year=12; default: 0 = "
+            "(converted to periods via inferred periods_per_year; default: 0 = "
             "classic k-fold)."
         ),
     )
@@ -613,13 +625,9 @@ def main() -> None:
         print(f"No strategies found in {RESULTS_DIR}. Run a backtest first.")
         sys.exit(1)
 
-    # embargo-days -> periods, using the monthly (periods_per_year=12)
-    # rebalance cadence run_dsr_kfold_batch / run_pbo_sweeps operate on.
-    embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
-
     print(f"\nBATCH OVERFITTING ANALYSIS")
     print(f"Strategies : {len(strategy_keys)}")
-    print(f"K-Folds    : {args.n_folds}  (embargo_periods={embargo_periods})")
+    print(f"K-Folds    : {args.n_folds}  (embargo_days={args.embargo_days})")
     print(f"PBO Sweeps : {'disabled' if args.skip_pbo else 'enabled'}")
     print(f"Walk-Fwd   : {'enabled' if args.walk_forward else 'disabled'}")
     print(f"Composed PBO: {'enabled' if args.composed_pbo else 'disabled'}")
@@ -630,7 +638,7 @@ def main() -> None:
     # --- DSR + k-fold for all strategies ---
     print(f"Running DSR + k-fold for {len(strategy_keys)} strategies ...")
     summary_rows = run_dsr_kfold_batch(
-        strategy_keys, args.n_folds, n_trials_map, embargo_periods=embargo_periods
+        strategy_keys, args.n_folds, n_trials_map, embargo_days=args.embargo_days
     )
 
     print_summary_table(summary_rows)
@@ -644,7 +652,7 @@ def main() -> None:
         print(f"\nRunning PBO sweeps for {len(PBO_PARAM_GRIDS)} strategy families ...")
         pbo_rows = run_pbo_sweeps(
             args.n_folds,
-            embargo_periods=embargo_periods,
+            embargo_days=args.embargo_days,
             walk_forward=args.walk_forward,
         )
         if pbo_rows:

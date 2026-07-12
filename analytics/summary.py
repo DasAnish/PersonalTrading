@@ -27,6 +27,7 @@ from .metrics import (
     calculate_cvar,
     calculate_omega_ratio,
     calculate_returns_to_turnover_ratio,
+    infer_periods_per_year,
 )
 
 
@@ -109,6 +110,7 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
         - returns_to_turnover: Returns to Turnover Ratio
         - total_transactions: Number of transactions executed
         - total_transaction_costs: Total costs paid
+        - periods_per_year: Annualization factor inferred from series spacing
 
     Example:
         >>> metrics = generate_metrics_summary(results)
@@ -124,6 +126,9 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
     # Calculate returns
     returns = calculate_returns(values)
 
+    # Infer annualization factor from series spacing
+    ppy = infer_periods_per_year(pd.DatetimeIndex(values.index))
+
     # Calculate total return as decimal (not percentage)
     total_return_decimal = values.iloc[-1] / values.iloc[0] - 1
 
@@ -131,15 +136,16 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
     metrics = {
         "total_return": total_return_decimal * 100,  # Percentage
         "cagr": calculate_cagr(values) * 100,  # Percentage
-        "sharpe_ratio": calculate_sharpe_ratio(returns),
-        "sortino_ratio": calculate_sortino_ratio(returns),
+        "sharpe_ratio": calculate_sharpe_ratio(returns, periods_per_year=ppy),
+        "sortino_ratio": calculate_sortino_ratio(returns, periods_per_year=ppy),
         "calmar_ratio": calculate_calmar_ratio(values),
         "max_drawdown": calculate_max_drawdown(values) * 100,  # Percentage
         "max_drawdown_duration_days": calculate_max_drawdown_duration(values),
-        "volatility": calculate_volatility(returns) * 100,  # Percentage
+        "volatility": calculate_volatility(returns, periods_per_year=ppy)
+        * 100,  # Percentage
         "var_95": calculate_var(returns, 0.95) * 100,  # Percentage
         "cvar_95": calculate_cvar(returns, 0.95) * 100,  # Percentage
-        "omega_ratio": calculate_omega_ratio(returns),
+        "omega_ratio": calculate_omega_ratio(returns, periods_per_year=ppy),
         "returns_to_turnover": calculate_returns_to_turnover_ratio(
             total_return_decimal, transactions
         ),
@@ -147,6 +153,7 @@ def generate_metrics_summary(backtest_results: BacktestResults) -> Dict[str, flo
         "total_transaction_costs": sum(t.total_cost for t in transactions),
         "final_value": values.iloc[-1],
         "initial_value": values.iloc[0],
+        "periods_per_year": ppy,
     }
 
     # Store in backtest results

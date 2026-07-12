@@ -37,6 +37,7 @@ import pandas as pd
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from analytics.metrics import infer_periods_per_year  # noqa: E402
 from analytics.overfitting import (
     run_overfitting_analysis,
     overfitting_analysis_to_dict,
@@ -294,11 +295,12 @@ def run_cpcv_analysis(strategy_key: str, n_groups: int, embargo_days: int) -> No
 
     total_values = load_portfolio_history(strategy_key)
     returns = total_values.pct_change().dropna()
+    ppy = infer_periods_per_year(total_values.index)
     result = CPCVEngine(
         n_groups=n_groups,
         n_test_groups=2,
         embargo_days=embargo_days,
-        periods_per_year=12,
+        periods_per_year=ppy,
     ).run(returns)
 
     out_dir = schema_strategy_dir(RESULTS_DIR.parent, strategy_key)
@@ -337,8 +339,9 @@ def run_bootstrap_analysis(
         )
     total_values = load_portfolio_history(strategy_key)
     returns = total_values.pct_change().dropna()
+    ppy = infer_periods_per_year(total_values.index)
     result = BlockBootstrap(
-        n_iter=n_iter, block_months=block_months, periods_per_year=12, seed=0
+        n_iter=n_iter, block_months=block_months, periods_per_year=ppy, seed=0
     ).run_fast(returns)
 
     out_dir = schema_strategy_dir(RESULTS_DIR.parent, strategy_key)
@@ -451,7 +454,7 @@ Examples:
         default=0,
         help=(
             "Purge/embargo window for k-fold stability, in calendar days "
-            "(converted to periods via periods_per_year=12; default: 0 = "
+            "(converted to periods via inferred periods_per_year; default: 0 = "
             "classic k-fold)."
         ),
     )
@@ -496,7 +499,6 @@ Examples:
     )
 
     args = parser.parse_args()
-    embargo_periods = round(args.embargo_days * 12 / 365.25) if args.embargo_days else 0
 
     if args.method == "cpcv":
         run_cpcv_analysis(args.strategy, args.cpcv_folds, args.embargo_days)
@@ -598,12 +600,18 @@ Examples:
         best_returns = best_values.pct_change().dropna()
         strategy_key = args.strategy
 
+        # Infer periods_per_year and embargo_periods from the returns
+        ppy = infer_periods_per_year(best_values.index)
+        embargo_periods = (
+            round(args.embargo_days * ppy / 365.25) if args.embargo_days else 0
+        )
+
         analysis = run_overfitting_analysis(
             strategy_key=strategy_key,
             strategy_returns=best_returns,
             return_matrix=return_matrix,
             param_grid=param_grid,
-            periods_per_year=12,
+            periods_per_year=ppy,
             s_subsets=args.s_subsets,
             dsr_threshold_pass=args.dsr_threshold_pass,
             dsr_threshold_warn=args.dsr_threshold_warn,
@@ -622,12 +630,18 @@ Examples:
         total_values = load_portfolio_history(strategy_key)
         best_returns = total_values.pct_change().dropna()
 
+        # Infer periods_per_year and embargo_periods from the loaded data
+        ppy = infer_periods_per_year(total_values.index)
+        embargo_periods = (
+            round(args.embargo_days * ppy / 365.25) if args.embargo_days else 0
+        )
+
         analysis = run_overfitting_analysis(
             strategy_key=strategy_key,
             strategy_returns=best_returns,
             return_matrix=None,  # PBO skipped in Mode 2
             param_grid={},
-            periods_per_year=12,
+            periods_per_year=ppy,
             s_subsets=args.s_subsets,
             dsr_threshold_pass=args.dsr_threshold_pass,
             dsr_threshold_warn=args.dsr_threshold_warn,
@@ -643,7 +657,7 @@ Examples:
             analysis.dsr = calculate_deflated_sharpe_ratio(
                 returns=best_returns,
                 n_trials=args.n_trials,
-                periods_per_year=12,
+                periods_per_year=ppy,
                 threshold_pass=args.dsr_threshold_pass,
                 threshold_warn=args.dsr_threshold_warn,
             )

@@ -40,6 +40,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from analytics.metrics import infer_periods_per_year  # noqa: E402
 from analytics.overfitting import calculate_deflated_sharpe_ratio  # noqa: E402
 from backtesting.results_schema import (  # noqa: E402
     INDEX_FILE,
@@ -51,13 +52,13 @@ from backtesting.results_schema import (  # noqa: E402
 logger = logging.getLogger(__name__)
 
 DEFAULT_OUT = Path("results") / "meta_portfolio.json"
-PERIODS_PER_YEAR = 12  # portfolio_history is monthly (rebalance cadence)
 
 
 def load_candidates(
     results_dir: Path,
     min_points: int,
     include_fail: bool,
+    periods_per_year: int,
     vintage_tolerance_days: int = 7,
 ) -> tuple[pd.DataFrame, dict]:
     """
@@ -101,8 +102,8 @@ def load_candidates(
             dropped["short_history"] += 1
             continue
         r = values.sort_index().pct_change().dropna()
-        vol = float(r.std() * np.sqrt(PERIODS_PER_YEAR))
-        sharpe = float(r.mean() * PERIODS_PER_YEAR / vol) if vol > 0 else 0.0
+        vol = float(r.std() * np.sqrt(periods_per_year))
+        sharpe = float(r.mean() * periods_per_year / vol) if vol > 0 else 0.0
         returns[key] = r
         meta[key] = {
             "sharpe": sharpe,
@@ -180,11 +181,13 @@ def blend_returns(panel: pd.DataFrame, weights: dict[str, float]) -> pd.Series:
     return sum(joined[k] * w for k, w in weights.items())
 
 
-def blend_stats(panel: pd.DataFrame, weights: dict[str, float]) -> dict:
+def blend_stats(
+    panel: pd.DataFrame, weights: dict[str, float], periods_per_year: int
+) -> dict:
     """Stats for the weighted blend on the selected strategies' inner join."""
     blend = blend_returns(panel, weights)
-    vol = float(blend.std() * np.sqrt(PERIODS_PER_YEAR))
-    sharpe = float(blend.mean() * PERIODS_PER_YEAR / vol) if vol > 0 else 0.0
+    vol = float(blend.std() * np.sqrt(periods_per_year))
+    sharpe = float(blend.mean() * periods_per_year / vol) if vol > 0 else 0.0
     cumulative = (1 + blend).cumprod()
     running_max = cumulative.cummax()
     max_dd = float(((cumulative - running_max) / running_max).min())
@@ -234,7 +237,25 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     results_dir = Path(args.results_dir)
 
-    panel, meta = load_candidates(results_dir, args.min_points, args.include_fail)
+    # Load candidates without periods_per_year first to get the panel structure
+    panel_initial, meta_initial = load_candidates(
+        results_dir, args.min_points, args.include_fail, periods_per_year=12
+    )
+    if panel_initial.empty:
+        logger.error(
+            "No eligible strategies — run the pipeline first, or relax "
+            "filters (--include-fail / --min-points)."
+        )
+        return 1
+
+    # Infer periods_per_year from the aligned panel data
+    aligned_panel = panel_initial.dropna(how="all", axis=1)
+    ppy = infer_periods_per_year(aligned_panel.index)
+
+    # Reload candidates with the correct periods_per_year
+    panel, meta = load_candidates(
+        results_dir, args.min_points, args.include_fail, periods_per_year=ppy
+    )
     if panel.empty:
         logger.error(
             "No eligible strategies — run the pipeline first, or relax "
@@ -264,6 +285,7 @@ def main() -> int:
             "include_fail": args.include_fail,
         },
         "n_candidates": len(meta),
+        "periods_per_year": ppy,
         "selected": [
             {
                 "strategy": k,
@@ -276,7 +298,7 @@ def main() -> int:
             k: {j: (None if pd.isna(c) else round(float(c), 3)) for j, c in row.items()}
             for k, row in corr_selected.iterrows()
         },
-        "blend": blend_stats(panel, weights),
+        "blend": blend_stats(panel, weights, ppy),
     }
 
     # Honesty check: the blend sits at the end of a selection chain —
@@ -288,12 +310,12 @@ def main() -> int:
         with open(results_dir / INDEX_FILE, "r") as f:
             n_library = len(json.load(f).get("strategies", {}))
         candidate_period_sharpes = np.array(
-            [meta[k]["sharpe"] / np.sqrt(PERIODS_PER_YEAR) for k in meta]
+            [meta[k]["sharpe"] / np.sqrt(ppy) for k in meta]
         )
         dsr = calculate_deflated_sharpe_ratio(
             blend_returns(panel, weights),
             n_trials=max(2, n_library),
-            periods_per_year=PERIODS_PER_YEAR,
+            periods_per_year=ppy,
             sharpe_std=float(candidate_period_sharpes.std(ddof=1)),
         )
         report["blend_dsr"] = {

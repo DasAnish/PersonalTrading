@@ -46,9 +46,9 @@ def _empty_ledger() -> dict:
     return {"schema_version": LEDGER_SCHEMA_VERSION, "events": []}
 
 
-def load_ledger(path: Path = LEDGER_PATH) -> dict:
+def load_ledger(path: Path = None) -> dict:
     """Load the ledger, returning an empty skeleton if the file is absent."""
-    path = Path(path)
+    path = Path(path) if path is not None else LEDGER_PATH
     if not path.exists():
         return _empty_ledger()
     with open(path, "r", encoding="utf-8") as f:
@@ -91,8 +91,9 @@ def _validate_event(event: dict) -> None:
         raise ValueError("event must have non-empty fills or external_cash_delta != 0")
 
 
-def append_event(event: dict, path: Path = LEDGER_PATH) -> dict:
+def append_event(event: dict, path: Path = None) -> dict:
     """Validate ``event``, stamp id/recorded_at, append, and atomically write."""
+    path = Path(path) if path is not None else LEDGER_PATH
     _validate_event(event)
     stored = dict(event)
     stored.setdefault("external_cash_delta", 0.0)
@@ -101,7 +102,6 @@ def append_event(event: dict, path: Path = LEDGER_PATH) -> dict:
     stored["id"] = uuid.uuid4().hex[:12]
     stored["recorded_at"] = datetime.now().isoformat(timespec="seconds")
 
-    path = Path(path)
     ledger = load_ledger(path)
     ledger["events"].append(stored)
 

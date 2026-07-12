@@ -172,11 +172,57 @@ def _target_weights(strategy_key: Optional[str]) -> dict:
     return latest_target_weights(strategy_key, RESULTS_DIR)
 
 
+def _scope_positions(scope: str, ib_positions: list) -> list:
+    """Rebuild the positions list for a scoped live-risk view.
+
+    scope ``strategy:<key>`` -> that strategy's ledger holdings; ``personal``
+    -> the residual IB shares not claimed by any strategy. Priced live when the
+    symbol is in the IB snapshot, else from the cached base close.
+    """
+    from analytics.ledger import (
+        holdings_by_strategy,
+        load_ledger,
+        personal_holdings,
+    )
+    from data.cache import close_price_base
+
+    live_prices = {p["symbol"]: p["price"] for p in ib_positions}
+    ib_shares = {p["symbol"]: p["shares"] for p in ib_positions}
+    ledger = load_ledger()
+    if scope == "personal":
+        holdings = personal_holdings(ib_shares, ledger)
+    elif scope.startswith("strategy:"):
+        holdings = holdings_by_strategy(ledger).get(scope.split(":", 1)[1], {})
+    else:
+        return ib_positions
+
+    out = []
+    for sym, sh in holdings.items():
+        if abs(sh) < 1e-9:
+            continue
+        price = live_prices.get(sym) or close_price_base(sym) or 0.0
+        out.append(
+            {
+                "symbol": sym,
+                "shares": sh,
+                "price": float(price),
+                "value": sh * float(price),
+            }
+        )
+    return out
+
+
 @risk_bp.route("/api/live-risk")
 def api_live_risk():
     """Compute the live-risk payload (always well-formed; never raises to 500)."""
     strategy_key = request.args.get("strategy")
+    scope = request.args.get("scope", "all") or "all"
     positions, ib_online, as_of = _load_positions()
+    # Scoped view: a strategy slice or the personal residual, from the ledger.
+    if scope.startswith("strategy:") and not strategy_key:
+        strategy_key = scope.split(":", 1)[1]
+    if scope != "all":
+        positions = _scope_positions(scope, positions)
 
     total_value = sum(p["value"] for p in positions) or 0.0
     weights = {}
@@ -239,6 +285,7 @@ def api_live_risk():
     payload = {
         "ib_online": ib_online,
         "source": source,
+        "scope": scope,
         "target_source": target_source,
         "hypothetical": hypothetical,
         "as_of": as_of,

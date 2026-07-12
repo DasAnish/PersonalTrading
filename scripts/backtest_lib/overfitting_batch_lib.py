@@ -410,6 +410,29 @@ def run_spa_analysis(strategy_keys, results_dir) -> None:
         benchmark = matrix[bench_col]
         strat_matrix = matrix.drop(columns=[bench_col])
 
+    n_obs = strat_matrix.shape[0]
+    if n_obs < 12:
+        # SPA needs >= 12 aligned observations; a short common window is a data
+        # condition, not a pipeline error. Skip (warn) instead of aborting the
+        # whole nightly — mirrors the freshness-gate / mixed-vintage warn contract.
+        print(
+            f"  SPA skipped: need >= 12 aligned observations, got T={n_obs} "
+            f"(N={strat_matrix.shape[1]}). Common strategy history too short."
+        )
+        out_path = Path(results_dir) / "spa_analysis.json"
+        with open(out_path, "w") as f:
+            _json.dump(
+                {
+                    "skipped": True,
+                    "reason": f"insufficient aligned observations: T={n_obs} < 12",
+                    "n_obs": int(n_obs),
+                    "n_strategies": int(strat_matrix.shape[1]),
+                },
+                f,
+                indent=2,
+            )
+        return
+
     result = compute_spa(strat_matrix, benchmark, expected_block=3, n_iter=1000, seed=0)
 
     spa_dict = result.to_dict()

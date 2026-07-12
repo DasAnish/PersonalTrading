@@ -15,7 +15,9 @@ import yaml
 from pathlib import Path
 from typing import List
 
-from strategies.definition_schema import validate_definition
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from strategies.definition_schema import validate_definition  # noqa: E402
 
 
 def validate_all_definitions() -> List[tuple[str, bool, str]]:

@@ -1,0 +1,19 @@
+{
+  "type": "asset",
+  "class": "AssetStrategy",
+  "name": "CSX5",
+  "description": "iShares Core EURO STOXX 50 UCITS ETF (Acc) (EUR, LSE)",
+  "parameters": {
+    "symbol": "CSSX5E",
+    "currency": "EUR",
+    "exchange": "EBS"
+  },
+  "metadata": {
+    "isin": "IE00B53L3W79",
+    "asset_class": "equity",
+    "sub_class": "eurozone_large_cap",
+    "ter_bps": 10,
+    "contract_fix_note": "2026-07-11: contract params corrected from IB reqContractDetails probe (bare SMART could not resolve the UCITS line, or resolved to the wrong US-listed fund for WCLD/WSML).",
+    "disabled_note": "2026-07-12: parked \u2014 IB cannot fetch CSSX5E with exchange=EBS/currency=EUR (refresh_data 2026-07-12 failed it). Silently pruned from all backtests (no cached data). Eurozone large-cap exposure still covered by imeu/iemu/cacx/exsa. Re-enable by moving back to assets/ once a fetchable listing is confirmed (e.g. Xetra/IBIS SXRT/EUNK or an LSE line); update parameters.symbol/exchange/currency accordingly."
+  }
+}

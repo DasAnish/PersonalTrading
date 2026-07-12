@@ -43,6 +43,10 @@ class LongTermReversalStrategy(AllocationStrategy):
     annual rebalancing, set rebalance_frequency='annual' when running the backtest.
     """
 
+    # Floor for the adaptive formation window: below this the signal is no
+    # longer "long-term" and we refuse rather than silently degrade.
+    MIN_FORMATION_MONTHS = 24
+
     def __init__(
         self,
         underlying: List[Strategy],
@@ -71,19 +75,26 @@ class LongTermReversalStrategy(AllocationStrategy):
                 f"Long-Term Reversal requires at least 2 assets, received {len(prices.columns)}."
             )
 
-        # Convert months to trading days (~21 trading days per month)
-        lookback_days = self.formation_window_months * 21
-
-        min_required = max(30, lookback_days)
-        if len(prices) < min_required:
-            raise ValueError(
-                f"Insufficient data for long-term reversal: {len(prices)} < {min_required}"
-            )
-
         prices = prices.ffill(limit=3).dropna()
 
-        # Calculate long-term trailing returns over formation window
-        lookback_prices = prices.iloc[-lookback_days:]
+        # Convert months to trading days (~21 trading days per month).
+        lookback_days = self.formation_window_months * 21
+
+        # Adapt to available history. The full asset universe's common window is
+        # capped by its youngest ETF (e.g. an "all"-universe intersection may
+        # only span ~4-5y), which can fall just short of a 48-month formation
+        # and starve every rebalance. Use the longest window that fits, but keep
+        # the signal genuinely long-horizon by requiring a floor (~24 months).
+        min_required = LongTermReversalStrategy.MIN_FORMATION_MONTHS * 21
+        if len(prices) < min_required:
+            raise ValueError(
+                f"Insufficient data for long-term reversal: "
+                f"{len(prices)} < {min_required} (min {self.MIN_FORMATION_MONTHS}m)"
+            )
+        effective_lookback = min(lookback_days, len(prices))
+
+        # Calculate long-term trailing returns over the effective formation window
+        lookback_prices = prices.iloc[-effective_lookback:]
         trailing_returns = lookback_prices.iloc[-1] / lookback_prices.iloc[0] - 1
 
         # Rank and select bottom N (worst performers first)

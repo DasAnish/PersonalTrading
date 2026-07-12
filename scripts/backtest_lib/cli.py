@@ -102,6 +102,17 @@ List Available Strategies:
         "Equivalent to running scripts/generate_report.py afterwards.",
     )
 
+    # Parallelism for the --all batch backtest. Each strategy writes its own
+    # results/strategies/<key>/ files and only reads the shared cache, so the
+    # backtests parallelise across processes. 0 = auto (cpu_count-1), 1 = serial.
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=0,
+        help="Worker processes for the --all batch backtest "
+        "(0 = auto/cpu_count-1, 1 = serial). Cross-strategy steps are unaffected.",
+    )
+
     # Strategy-specific parameters (dynamically generated for registry mode)
     # Only add these if not using YAML definitions
     for strategy_key, config in STRATEGY_REGISTRY.items():

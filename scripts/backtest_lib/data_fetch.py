@@ -105,38 +105,21 @@ async def fetch_historical_data(
                             what_to_show=EXPECTED_WHAT_TO_SHOW,
                         )
                 else:
-                    # Cache-first: only touch IB if this symbol is missing.
-                    # The requested range rolls daily, so allow a few days of
-                    # slack before declaring a miss.
-                    df = cache.load_cached_data(
-                        symbol, START_DATE, END_DATE, tolerance_days=7
-                    )
+                    # Cache-only: load the newest matching cached vintage
+                    # deterministically and NEVER fetch from IB mid-backtest.
+                    # A now()-based requested range + fuzzy tolerance + lazy
+                    # refetch on a "miss" made backtests non-reproducible (it
+                    # minted fresh, differently-dated vintages run-to-run).
+                    # Refreshing data is the explicit job of scripts/refresh_data.py
+                    # / the nightly; here a missing symbol is simply skipped
+                    # (pruned downstream) so results are reproducible from a
+                    # frozen cache. Use --refresh for a deliberate live fetch.
+                    df = cache.load_best_cached_data(symbol)
                     if df.empty:
-                        try:
-                            c = await _get_client()
-                            df = await cache.get_or_fetch_data(
-                                symbol=symbol,
-                                start_date=START_DATE,
-                                end_date=END_DATE,
-                                market_data_service=c.market_data,
-                                what_to_show=EXPECTED_WHAT_TO_SHOW,
-                                bar_size=BAR_SIZE,
-                                sec_type=spec["sec_type"],
-                                exchange=spec["exchange"],
-                                currency=spec["currency"],
-                            )
-                        except Exception as ib_err:
-                            # IB unreachable: fall back to newest cached file
-                            # regardless of range/age. Stale beats absent for
-                            # offline runs; load_best_cached_data logs how far
-                            # behind the data is.
-                            logger.warning(
-                                f"IB fetch failed for {symbol} ({ib_err}); "
-                                f"trying stale cache fallback..."
-                            )
-                            df = cache.load_best_cached_data(symbol)
-                            if df.empty:
-                                raise
+                        logger.warning(
+                            f"  {symbol}: no cached data — skipping "
+                            f"(run scripts/refresh_data.py to fetch)"
+                        )
 
                 if not df.empty:
                     data_dict[symbol] = df

@@ -38,6 +38,15 @@ import sys
 import time
 from pathlib import Path
 
+# Windows consoles default to cp1252, which cannot encode the status glyphs and
+# currency symbols this pipeline prints; force UTF-8 so a cosmetic summary line
+# can never abort the whole run (analysis exit 1 -> index not rebuilt).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 SCRIPTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPTS_DIR.parent
 DASHBOARD_URL = "http://localhost:5000"
@@ -201,8 +210,8 @@ def main() -> None:
     print("PIPELINE SUMMARY")
     print("=" * 70)
     for name, ok in results:
-        status = "✓" if ok else "✗"
-        print(f"  {status} {name.ljust(16)} {'OK' if ok else 'FAILED'}")
+        status = "[OK]" if ok else "[FAILED]"
+        print(f"  {status} {name.ljust(16)}")
     print(f"\nTotal time: {time.time() - overall_start:.1f}s")
     print("Output:")
     print("  Per-strategy battery : results/strategies/<key>/validation.json")

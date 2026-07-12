@@ -25,7 +25,7 @@ async def test_get_positions(mock_ib):
             averageCost=145.0,
             unrealizedPNL=500.0,
             realizedPNL=0.0,
-            account="DU123456"
+            account="DU123456",
         )
     ]
     mock_ib.positions.return_value = mock_positions
@@ -40,6 +40,7 @@ async def test_get_positions(mock_ib):
     assert positions[0].position == 100
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_get_account_summary(mock_ib):
     """Test getting account summary."""
@@ -60,6 +61,7 @@ async def test_get_account_summary(mock_ib):
     assert summary["NetLiquidation"] == 100000.0
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_get_account_values(mock_ib):
     """Test getting account values."""

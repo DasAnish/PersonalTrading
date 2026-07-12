@@ -147,31 +147,39 @@ Output: `results/strategies/<strategy_key>/validation.json` (one per strategy)
 
 ## Full-Scale Run
 
-One command for the whole loop: spins off the dashboard first, then runs
-data load → backtests → mechanism coverage → validation battery as
-subprocess calls to the CLIs above. The dashboard reads `results/` from disk
-on every request, so refreshing the browser shows each step's output live.
+Complete analysis pipeline: backtests → validate → overfitting/SPA, plus
+optional dashboard, data refresh, coverage tagging, and static reports.
+Each step runs as a subprocess call to the CLIs above. Dashboard reads
+`results/` from disk on each request, so refreshing the browser shows
+each step's output live.
 
 ```bash
-# Backtest all + coverage + battery, dashboard at http://localhost:5000
-python scripts/full_run.py
+# Backtest all + validate + SPA (minimal pipeline)
+python scripts/run_full_analysis.py
 
-# Force fresh IB data, add library-wide SPA check and static reports
-python scripts/full_run.py --refresh --spa --reports
+# With dashboard, fresh data, coverage, and reports
+python scripts/run_full_analysis.py --dashboard --refresh --coverage --reports
 
-# Headless (no dashboard)
-python scripts/full_run.py --no-dashboard
+# Skip PBO sweeps (DSR + SPA only)
+python scripts/run_full_analysis.py --fast
+
+# Reuse existing backtest results
+python scripts/run_full_analysis.py --skip-backtest
 ```
 
 Options:
+- `--dashboard` — Start Flask dashboard server in background (http://localhost:5000)
 - `--refresh` — Force fresh price data from IB Gateway (default: parquet cache)
-- `--spa` — Also run `run_all_overfitting.py --spa` after the battery
-- `--reports` — Also regenerate static md/html reports for every strategy
-- `--no-dashboard` — Don't spin off the dashboard server
+- `--coverage` — Run mechanism coverage analysis (non-fatal, optional)
+- `--reports` — Generate static md/html reports for all strategies (non-fatal, optional)
+- `--skip-backtest` — Reuse existing results/ instead of re-running backtests
+- `--skip-validate` — Skip the per-strategy validation battery
+- `--skip-overfitting` — Skip library-wide overfitting + SPA
+- `--fast` — Pass --skip-pbo to overfitting step (DSR/k-fold + SPA only)
 
-The dashboard keeps running after the script finishes. A failed backtest step
-aborts the run; later steps (coverage/battery/SPA/reports) log failures but
-don't abort each other.
+Fatal steps (backtest, validate) abort the run on failure. Non-fatal steps
+(coverage, reports) log failures but don't abort subsequent steps. Dashboard
+keeps running after script finishes.
 
 ---
 

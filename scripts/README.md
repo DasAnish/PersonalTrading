@@ -11,7 +11,6 @@ Command-line entry points. See [../docs/cli.md](../docs/cli.md) for full flags.
 
 ## Pipeline & data
 - `run_nightly.py` — nightly pipeline: freshness gate → refresh → backtest → analysis → archive
-- `full_run.py` — full end-to-end run
 - `refresh_data.py` / `validate_cache.py` — pull fresh IB data / verify the parquet cache
 - `extend_history.py` — splice proxy history onto short series
 - `rebuild_index.py` — rebuild `results/strategies_index.json`

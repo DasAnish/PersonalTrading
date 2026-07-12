@@ -5,7 +5,7 @@ Command-line entry points. See [../docs/cli.md](../docs/cli.md) for full flags.
 ## Backtesting & analysis
 - `run_backtest.py` — main backtest entry (4 modes: single, all, YAML definitions, composed)
 - `run_full_analysis.py` — **canonical** validation + overfitting run for a strategy
-- `run_overfitting.py` / `run_all_overfitting.py` — DSR / PBO / k-fold / SPA
+- `run_all_overfitting.py` — DSR / PBO / k-fold / SPA (batch or single strategy)
 - `run_optimization.py` — parameter sweep & walk-forward
 - `recompute_metrics.py` — recompute metrics on existing results (e.g. after a metrics fix)
 

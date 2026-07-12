@@ -3,7 +3,7 @@ Static, human-readable per-strategy backtest reports.
 
 Reads whatever has already been written to
 ``results/strategies/<strategy_key>/`` (via ``backtesting.results_io``,
-``scripts/run_overfitting.py``) and renders it into a single Markdown
+``scripts/run_all_overfitting.py``) and renders it into a single Markdown
 document — metrics table, stress-test crisis/scenario-removal tables, and
 overfitting (DSR / PBO / k-fold) verdict cards.
 
@@ -282,7 +282,7 @@ def _build_overfitting_section(target_dir: Path) -> str:
         return (
             "## Overfitting Analysis\n\n"
             "_Overfitting analysis not run for this strategy. Generate it with:_\n"
-            "```\npython scripts/run_overfitting.py --strategy <key> --n-trials <N>\n```"
+            "```\npython scripts/run_all_overfitting.py --strategy <key> --n-trials <N>\n```"
         )
 
     try:

@@ -180,8 +180,7 @@ Entry-point scripts invoked from the command line.
 |------|-------------|
 | `run_backtest.py` | Main backtest runner — four modes: `--all`, `--strategy`, `--compare`, `--optimize` |
 | `run_optimization.py` | Parameter sweep and walk-forward runner |
-| `run_overfitting.py` | Overfitting analysis CLI — runs DSR, PBO, k-fold for a single strategy |
-| `run_all_overfitting.py` | Batch overfitting analysis across all 80+ strategy definitions |
+| `run_all_overfitting.py` | Overfitting analysis: DSR/PBO/k-fold (batch all or single strategy Mode 1 sweep/Mode 2 DSR-only) |
 | `add_strategy_tags.py` | Tag management tool for strategy metadata |
 | `run_hrp_backtest.py` | Legacy single-strategy HRP backtest script |
 | `test_hrp_backtest.py` | Legacy manual test for HRP output |

@@ -21,7 +21,7 @@ Orchestrator (main Claude)
   ├──[strategist]  Sonnet  research/backlog.md + mechanism_coverage.json → fills pending[]
   ├──[builder]     Haiku   Implements strategies → fills built[]
   ├──[backtester]  Haiku   Runs run_backtest.py → triggers analyst
-  └──[analyst]     Haiku   Runs validate_strategy.py (battery) or run_overfitting.py --param
+  └──[analyst]     Haiku   Runs validate_strategy.py (battery) or run_all_overfitting.py --param
                            (param sweep) → fills analyzed[]
 ```
 
@@ -134,7 +134,7 @@ After a successful backtest, the orchestrator decides what to send the analyst:
 | Strategy Type | Mode |
 |---------------|------|
 | `composed` or `portfolio` (JSON-only) | `skip` — N=1 trivially passes DSR |
-| `allocation` with tunable params | `params` — `run_overfitting.py --param <variants>` (PBO/DSR across the param grid) |
+| `allocation` with tunable params | `params` — `run_all_overfitting.py --param <variants>` (PBO/DSR across the param grid) |
 | `allocation` without tunable params | `battery` (default) — `validate_strategy.py --json` (MinBTL → DSR → CPCV → block bootstrap) |
 
 `battery` replaces the old `n1` mode (a bare `--n-trials 1` DSR run); `params` is
@@ -178,8 +178,7 @@ Must be set before running `/build-strategies`.
 | `.claude/skills/build-strategies-auto/SKILL.md` | Unattended inline variant (no agents) |
 | `scripts/run_backtest.py` | Backtester script |
 | `scripts/validate_strategy.py` | Analyst script — default validation battery mode |
-| `scripts/run_overfitting.py` | Analyst script — `params` mode (param sweep) |
-| `scripts/run_all_overfitting.py` | Library-wide SPA / Reality Check (every 5th strategy) |
+| `scripts/run_all_overfitting.py` | Analyst script — batch or single strategy (Mode 1 param sweep / Mode 2 DSR-only) + SPA |
 | `research/backlog.md` / `research/ideas/` | Pre-registered idea backlog the strategist draws from |
 | `results/mechanism_coverage.json` | Mechanism-tag counts the strategist uses to pick underrepresented mechanisms |
 | `strategy_definitions/` | JSON strategy definitions |

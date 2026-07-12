@@ -5,7 +5,7 @@ This module provides data caching and preprocessing functions to prepare
 historical market data for backtesting.
 """
 
-from .cache import HistoricalDataCache, EXPECTED_WHAT_TO_SHOW
+from .cache import HistoricalDataCache, EXPECTED_WHAT_TO_SHOW, latest_cache_file
 from .market_data_service import MarketDataService, get_market_data
 from .preprocessing import (
     align_dataframes,
@@ -18,6 +18,7 @@ from .preprocessing import (
 __all__ = [
     "HistoricalDataCache",
     "EXPECTED_WHAT_TO_SHOW",
+    "latest_cache_file",
     "MarketDataService",
     "get_market_data",
     "align_dataframes",

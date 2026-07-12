@@ -393,6 +393,43 @@ class HistoricalDataCache:
         logger.info(f"Removed {removed} cache files")
 
 
+def latest_cache_file(
+    symbol: str, cache_dir: str = "data/cache"
+) -> tuple[Path, pd.DataFrame] | None:
+    """Load the newest cache file for a symbol with matching what_to_show stamp.
+
+    Returns:
+        Tuple of (Path, DataFrame) for the newest matching cache file, or None
+        if no valid cache file exists for the symbol.
+
+    Used by incremental refresh to access the prior cached data for overlap
+    verification before deciding to do a partial 1-year update.
+    """
+    directory = Path(cache_dir)
+    candidates = []
+    for path in directory.glob(f"{symbol}_*.parquet"):
+        parsed = HistoricalDataCache._parse_cache_filename(path)
+        if parsed is not None:
+            # Check what_to_show stamp; skip unmarked/mismatched
+            cached_what_to_show = cache_file_what_to_show(path)
+            if cached_what_to_show is None:
+                continue
+            if cached_what_to_show != EXPECTED_WHAT_TO_SHOW:
+                continue
+            candidates.append((parsed[1], path))
+
+    if not candidates:
+        return None
+
+    end, best = max(candidates, key=lambda c: c[0])
+    try:
+        df = pd.read_parquet(best)
+        return (best, df)
+    except Exception as e:
+        logger.error(f"Failed to load cache {best.name}: {e}")
+        return None
+
+
 def latest_cached_close(symbol: str, cache_dir: str = "data/cache"):
     """Latest cached close price for a symbol, or None if unavailable.
 

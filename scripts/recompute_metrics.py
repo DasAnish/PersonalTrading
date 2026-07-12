@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from analytics.metrics import summarize_performance  # noqa: E402
 from backtesting.results_schema import (  # noqa: E402
+    METRICS_SCHEMA_VERSION,
     STRATEGY_FILES,
     load_portfolio_values,
 )
@@ -68,6 +69,7 @@ def recompute(results_dir: Path, dry_run: bool) -> dict:
             continue
 
         new = summarize_performance(values)
+        new["metrics_version"] = METRICS_SCHEMA_VERSION
         for field in PRESERVED_FIELDS:
             if field in old:
                 new[field] = old[field]

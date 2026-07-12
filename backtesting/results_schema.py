@@ -29,6 +29,9 @@ from typing import Union
 
 import pandas as pd
 
+# Metrics schema version: 1 = pre-stamp (implicit), 2 = ADJUSTED_LAST era + stamped
+METRICS_SCHEMA_VERSION = 2
+
 # Logical name -> filename, for the always-present per-strategy result files.
 STRATEGY_FILES: dict = {
     "portfolio_history": "portfolio_history.json",

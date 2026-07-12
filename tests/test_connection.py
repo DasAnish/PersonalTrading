@@ -8,6 +8,7 @@ from ib_wrapper.connection import IBConnectionManager
 from ib_wrapper.exceptions import ConnectionException
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_connect_success(connection_config, mock_ib):
     """Test successful connection."""
@@ -59,6 +60,7 @@ async def test_is_connected(connection_config, mock_ib):
     assert manager.is_connected() is False
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_context_manager(connection_config, mock_ib):
     """Test async context manager."""

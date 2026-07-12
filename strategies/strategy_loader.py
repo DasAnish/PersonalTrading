@@ -32,6 +32,7 @@ from strategies.core import (
     OverlayStrategy,
     Strategy as ExecutableStrategy,
 )
+from strategies.definition_schema import validate_definition
 
 
 class StrategyLoader:
@@ -158,6 +159,7 @@ class StrategyLoader:
 
         Raises:
             FileNotFoundError: If strategy definition file not found
+            ValueError: If definition fails schema validation
         """
         if strategy_key in self._cache:
             return self._cache[strategy_key]
@@ -167,6 +169,8 @@ class StrategyLoader:
             raise FileNotFoundError(f"Strategy definition not found: {strategy_key}")
 
         definition = self._load_file(file_path)
+        # Validate definition against schema
+        validate_definition(definition, str(file_path))
         self._cache[strategy_key] = definition
         return definition
 
@@ -235,7 +239,9 @@ class StrategyLoader:
 
         if strategy_type in ("allocation", "portfolio"):
             strategy_class = self._get_class(class_name)
-            underlying_refs = self._resolve_underlying_refs(definition.get("underlying", []))
+            underlying_refs = self._resolve_underlying_refs(
+                definition.get("underlying", [])
+            )
             underlying_list = []
             for ref in underlying_refs:
                 if isinstance(ref, str):

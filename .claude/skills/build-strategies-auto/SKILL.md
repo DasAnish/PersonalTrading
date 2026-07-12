@@ -128,14 +128,14 @@ python scripts/run_backtest.py --strategy <slug_name>
 
 Run **immediately after a successful validate**. Skip if the strategy type is composed/portfolio (JSON-only compositions with N=1 trivially pass).
 
-For allocation strategies with tunable parameters, use the old param-sweep script
-(unchanged — it answers a different question, PBO stability across a param grid,
+For allocation strategies with tunable parameters, use the param-sweep mode
+(answers a different question, PBO stability across a param grid,
 that the single-config battery below doesn't cover):
 ```bash
 # Examples:
-python scripts/run_overfitting.py --strategy hrp --param linkage_method=single,complete,ward
-python scripts/run_overfitting.py --strategy momentum --param top_n=1,2,3
-python scripts/run_overfitting.py --strategy trend_following --param lookback_days=126,252,504
+python scripts/run_all_overfitting.py --strategy hrp --param linkage_method=single,complete,ward
+python scripts/run_all_overfitting.py --strategy momentum --param top_n=1,2,3
+python scripts/run_all_overfitting.py --strategy trend_following --param lookback_days=126,252,504
 ```
 Note the DSR and PBO verdict for the report.
 

@@ -85,24 +85,21 @@ Requires ≥ `k * 3` return periods (at least 3 data points per fold).
 
 ## Scripts
 
-### Single strategy (DSR + k-fold + optional PBO sweep)
+### Single strategy (Mode 1 & 2)
 ```bash
 # Mode 1: parameter sweep → DSR + PBO + k-fold
-python scripts/run_overfitting.py \
+python scripts/run_all_overfitting.py \
     --strategy hrp \
     --param linkage_method=single,complete,ward
 
 # Mode 2: DSR + k-fold from existing backtest results
-python scripts/run_overfitting.py --strategy hrp_ward --n-trials 4
+python scripts/run_all_overfitting.py --strategy hrp_ward --n-trials 4
 ```
 
 ### Batch: all 82+ strategies
 ```bash
 # Fast: DSR + k-fold only (~30 seconds)
 python scripts/run_all_overfitting.py --skip-pbo
-
-# Single strategy
-python scripts/run_all_overfitting.py --strategy hrp_ward --skip-pbo
 
 # Full: includes PBO sweeps for base strategy families (~10 minutes)
 python scripts/run_all_overfitting.py
@@ -172,7 +169,7 @@ and end-to-end `run_overfitting_analysis()` flows.
 | Any single strategy, quick check | DSR + k-fold |
 | Strategy with parameter grid (linkage, lookback, top-N) | DSR + PBO + k-fold |
 | All strategies at once | `run_all_overfitting.py --skip-pbo` |
-| Deep investigation of a strategy family | `run_overfitting.py --strategy hrp --param linkage_method=...` |
+| Deep investigation of a strategy family | `run_all_overfitting.py --strategy hrp --param linkage_method=...` |
 
 ---
 
@@ -192,10 +189,10 @@ Beyond DSR, PBO (CSCV) and k-fold, the analysis now includes:
 ### New CLI flags
 
 ```bash
-# Per-strategy (run_overfitting.py)
-python scripts/run_overfitting.py --strategy hrp_single --method cpcv --cpcv-folds 6 --embargo-days 10
-python scripts/run_overfitting.py --strategy hrp_single --method bootstrap --bootstrap-fast
-python scripts/run_overfitting.py --strategy hrp_single --n-trials 20 --scenario-removal
+# Single strategy (run_all_overfitting.py)
+python scripts/run_all_overfitting.py --strategy hrp_single --method cpcv --cpcv-folds 6 --embargo-days 10
+python scripts/run_all_overfitting.py --strategy hrp_single --method bootstrap --bootstrap-fast
+python scripts/run_all_overfitting.py --strategy hrp_single --n-trials 20 --scenario-removal
 
 # Batch (run_all_overfitting.py)
 python scripts/run_all_overfitting.py --walk-forward --composed-pbo --spa
@@ -215,7 +212,7 @@ computed, so readers/dashboard tolerate absence): `minbtl`, `walkforward`,
 Sharpe and Calmar deltas and a `scenario_removal_mode` of `excise` (re-slice the
 value series) or `rerun` (drop each crisis window from prices and re-run the
 backtest). Flags: `--scenario-removal` on `run_backtest.py` (rerun) and
-`run_overfitting.py` (excise).
+`run_all_overfitting.py` (excise).
 
 ---
 

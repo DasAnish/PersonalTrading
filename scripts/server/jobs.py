@@ -177,7 +177,7 @@ def _step_command(step: str, strategy_key: str) -> list[str]:
         # Mode 2 (saved portfolio_history) requires an explicit --n-trials.
         return [
             sys.executable,
-            "scripts/run_overfitting.py",
+            "scripts/run_all_overfitting.py",
             "--strategy",
             strategy_key,
             "--n-trials",

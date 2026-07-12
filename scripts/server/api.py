@@ -265,7 +265,7 @@ def api_overfitting(strategy_key: str):
                 {
                     "error": "Overfitting analysis not found.",
                     "hint": (
-                        f"Run: python scripts/run_overfitting.py "
+                        f"Run: python scripts/run_all_overfitting.py "
                         f"--strategy {strategy_key} --n-trials <N>"
                     ),
                 }

@@ -35,6 +35,29 @@ from data import HistoricalDataCache  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
+
+def _read_newest_raw(cache_dir: Path, symbol: str) -> pd.DataFrame:
+    """Read the newest ``{symbol}_*.parquet`` directly, bypassing the cache's
+    what_to_show stamp gate.
+
+    The old TRADES cache is unstamped (or TRADES-stamped), so the normal loader
+    treats it as a cache miss. For migration comparison we want the raw frame
+    regardless of stamp. Returns an empty DataFrame if nothing matches.
+    """
+    matches = list(cache_dir.glob(f"{symbol}_*.parquet"))
+    if not matches:
+        return pd.DataFrame()
+    # newest by end-date encoded as the last filename segment
+    newest = max(matches, key=lambda f: f.stem.split("_")[-1])
+    df = pd.read_parquet(newest)
+    if not isinstance(df.index, pd.DatetimeIndex):
+        for col in ("date", "Date", "datetime"):
+            if col in df.columns:
+                df = df.set_index(pd.DatetimeIndex(df[col]))
+                break
+    return df
+
+
 TOLERANCE_CLOSE_PCT = 0.005  # 0.5% tolerance on last close
 MIN_YIELD_PA = -0.01  # -1%/yr (allow negative for losing positions)
 MAX_YIELD_PA = 0.06  # 6%/yr (reasonable for distributing ETFs)
@@ -55,7 +78,6 @@ def compare_caches(old_dir: str, new_dir: str) -> list[dict]:
     Returns:
         List of dicts (one per symbol) with metrics and flag if problematic
     """
-    old_cache = HistoricalDataCache(old_dir)
     new_cache = HistoricalDataCache(new_dir)
 
     old_path = Path(old_dir)
@@ -84,8 +106,9 @@ def compare_caches(old_dir: str, new_dir: str) -> list[dict]:
     for symbol in sorted(symbols):
         entry = {"symbol": symbol, "status": "failed"}
         try:
-            # Load best file from each cache
-            old_df = old_cache.load_best_cached_data(symbol)
+            # Old cache is TRADES-stamped/unstamped -> read raw (the stamp gate
+            # would otherwise reject it as a miss). New cache is ADJUSTED_LAST.
+            old_df = _read_newest_raw(old_path, symbol)
             new_df = new_cache.load_best_cached_data(symbol)
 
             if old_df.empty or new_df.empty:

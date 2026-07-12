@@ -246,7 +246,9 @@ class TestPBO:
         rng = np.random.default_rng(77)
         idx = pd.date_range("2019-01-31", periods=64, freq="ME")
         # Independent random configs — selection is essentially random
-        data = {f"c{i}": pd.Series(rng.normal(0.005, 0.04, 64), index=idx) for i in range(6)}
+        data = {
+            f"c{i}": pd.Series(rng.normal(0.005, 0.04, 64), index=idx) for i in range(6)
+        }
         matrix = pd.DataFrame(data)
         result = calculate_pbo(matrix, s_subsets=8)
         # For uncorrelated random configs, PBO should be clearly above 0
@@ -457,7 +459,15 @@ class TestSerialization:
             param_grid={},
         )
         d = overfitting_analysis_to_dict(analysis)
-        for key in ("strategy_key", "analysis_date", "n_param_combinations", "dsr", "pbo", "errors", "config"):
+        for key in (
+            "strategy_key",
+            "analysis_date",
+            "n_param_combinations",
+            "dsr",
+            "pbo",
+            "errors",
+            "config",
+        ):
             assert key in d
 
     def test_to_dict_dsr_subkeys(self):
@@ -471,9 +481,18 @@ class TestSerialization:
         )
         d = overfitting_analysis_to_dict(analysis)
         assert d["dsr"] is not None
-        dsr_keys = {"dsr", "observed_sharpe", "sharpe_reference", "n_trials",
-                    "t_periods", "skewness", "excess_kurtosis", "verdict",
-                    "threshold_pass", "threshold_warn"}
+        dsr_keys = {
+            "dsr",
+            "observed_sharpe",
+            "sharpe_reference",
+            "n_trials",
+            "t_periods",
+            "skewness",
+            "excess_kurtosis",
+            "verdict",
+            "threshold_pass",
+            "threshold_warn",
+        }
         assert dsr_keys.issubset(set(d["dsr"].keys()))
 
     def test_to_dict_pbo_subkeys(self):
@@ -489,9 +508,17 @@ class TestSerialization:
         )
         d = overfitting_analysis_to_dict(analysis)
         assert d["pbo"] is not None
-        pbo_keys = {"pbo", "prob_oos_loss", "n_combinations", "s_subsets",
-                    "n_configs", "logit_scores", "verdict",
-                    "threshold_pass", "threshold_warn"}
+        pbo_keys = {
+            "pbo",
+            "prob_oos_loss",
+            "n_combinations",
+            "s_subsets",
+            "n_configs",
+            "logit_scores",
+            "verdict",
+            "threshold_pass",
+            "threshold_warn",
+        }
         assert pbo_keys.issubset(set(d["pbo"].keys()))
 
     def test_to_dict_pbo_none_when_skipped(self):
@@ -631,9 +658,15 @@ class TestKFoldStability:
         )
         d = overfitting_analysis_to_dict(analysis)
         expected_keys = {
-            "n_folds", "fold_sharpes", "mean_sharpe", "std_sharpe",
-            "fraction_positive", "worst_fold_sharpe", "verdict",
-            "threshold_pass", "threshold_warn",
+            "n_folds",
+            "fold_sharpes",
+            "mean_sharpe",
+            "std_sharpe",
+            "fraction_positive",
+            "worst_fold_sharpe",
+            "verdict",
+            "threshold_pass",
+            "threshold_warn",
         }
         assert expected_keys.issubset(set(d["kfold"].keys()))
 

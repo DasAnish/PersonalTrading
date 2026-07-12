@@ -74,8 +74,7 @@ class EqualWeightStrategy(AllocationStrategy):
 
         # Create weights series with strategy names as index
         weights = pd.Series(
-            [equal_weight] * n_strategies,
-            index=[s.name for s in self.underlying]
+            [equal_weight] * n_strategies, index=[s.name for s in self.underlying]
         )
 
         return weights

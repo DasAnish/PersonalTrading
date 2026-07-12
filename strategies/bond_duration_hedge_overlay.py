@@ -39,9 +39,24 @@ logger = logging.getLogger(__name__)
 
 # Equity sleeve for stress signal computation.
 EQUITY_SLEEVE = {
-    'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND',
-    'ASHR', 'SAEM', 'CACX', 'CSX5', 'IEMU', 'WCLD', 'WSML',
-    'AWESGS', 'EMMCHA', 'EXXW', 'EXX5', 'EXI2', 'EXSA',
+    "VUSA",
+    "EQQQ",
+    "IWRD",
+    "IMEU",
+    "IIND",
+    "ASHR",
+    "SAEM",
+    "CACX",
+    "CSX5",
+    "IEMU",
+    "WCLD",
+    "WSML",
+    "AWESGS",
+    "EMMCHA",
+    "EXXW",
+    "EXX5",
+    "EXI2",
+    "EXSA",
 }
 
 # Trailing window for drawdown calculation (6 months = ~126 trading days)
@@ -75,7 +90,7 @@ class BondDurationHedgeOverlayStrategy(AllocationStrategy):
         drawdown_trigger: float = -0.10,
         duration_tilt_pp: float = 15.0,
         decay_rebalances: int = 1,
-        hedge_asset: str = 'vuty',
+        hedge_asset: str = "vuty",
         name: str = None,
     ):
         """
@@ -144,7 +159,9 @@ class BondDurationHedgeOverlayStrategy(AllocationStrategy):
             context.prices, available_equities
         )
 
-        logger.debug(f"BondDurationHedge: stress_signal (drawdown) = {stress_signal:.4f}")
+        logger.debug(
+            f"BondDurationHedge: stress_signal (drawdown) = {stress_signal:.4f}"
+        )
 
         # Trigger tilt if stress signal meets threshold
         if stress_signal <= self.drawdown_trigger:
@@ -154,9 +171,7 @@ class BondDurationHedgeOverlayStrategy(AllocationStrategy):
             )
 
             # Build new weights: scale down equities, add to hedge asset
-            equity_names = {
-                symbol_to_name.get(sym, sym) for sym in available_equities
-            }
+            equity_names = {symbol_to_name.get(sym, sym) for sym in available_equities}
             hedge_name = symbol_to_name.get(self.hedge_asset, self.hedge_asset)
 
             # Pull duration_tilt_pp from equity sleeve pro-rata
@@ -182,7 +197,9 @@ class BondDurationHedgeOverlayStrategy(AllocationStrategy):
             # Fallback to equal-weight
             weights = pd.Series(equal_weight, index=strategy_names)
 
-        logger.debug(f"BondDurationHedge weights: {dict(weights[weights > 0].round(4))}")
+        logger.debug(
+            f"BondDurationHedge weights: {dict(weights[weights > 0].round(4))}"
+        )
 
         return weights
 

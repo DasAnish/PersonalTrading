@@ -120,7 +120,7 @@ class TrendSignalRPStrategy(AllocationStrategy):
     # ------------------------------------------------------------------
 
     def _compute_signals(self, prices: pd.DataFrame) -> pd.Series:
-        recent = prices.iloc[-self.lookback_days:]
+        recent = prices.iloc[-self.lookback_days :]
         returns = recent.pct_change().dropna()
 
         decay = 0.5 ** (1.0 / self.half_life_days)
@@ -133,7 +133,7 @@ class TrendSignalRPStrategy(AllocationStrategy):
         return pd.Series(mu / vols, index=prices.columns)
 
     def _compute_covariance(self, prices: pd.DataFrame) -> pd.DataFrame:
-        recent = prices.iloc[-self.lookback_days:]
+        recent = prices.iloc[-self.lookback_days :]
         returns = recent.pct_change().dropna()
         return returns.cov() * 252
 
@@ -144,6 +144,7 @@ class TrendSignalRPStrategy(AllocationStrategy):
         Solve risk-budgeting: min sum_i (w_i*(Cov*w)_i / portfolio_var - budget_i)^2
         s.t. sum(w)=1, w >= 0
         """
+
         def objective(w):
             port_var = w @ cov @ w
             if port_var < 1e-12:
@@ -152,12 +153,12 @@ class TrendSignalRPStrategy(AllocationStrategy):
             rc_frac = rc / port_var
             return np.sum((rc_frac - budgets) ** 2)
 
-        constraints = {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
+        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
         bounds = [(0.0, 1.0)] * n
         w0 = np.ones(n) / n
 
         best_w = w0.copy()
-        best_val = float('inf')
+        best_val = float("inf")
 
         # Multiple restarts for robustness
         for seed in [42, 7, 13]:
@@ -167,10 +168,10 @@ class TrendSignalRPStrategy(AllocationStrategy):
                 result = minimize(
                     objective,
                     w_init,
-                    method='SLSQP',
+                    method="SLSQP",
                     bounds=bounds,
                     constraints=constraints,
-                    options={'maxiter': 1000, 'ftol': 1e-14}
+                    options={"maxiter": 1000, "ftol": 1e-14},
                 )
                 if result.success and result.fun < best_val:
                     best_val = result.fun

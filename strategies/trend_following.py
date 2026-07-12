@@ -65,7 +65,8 @@ class TrendFollowingStrategy(AllocationStrategy):
         """Initialize Trend Following Strategy."""
         super().__init__(
             underlying=underlying,
-            name=name or f"Trend Following (lookback={lookback_days}d, hl={half_life_days}d)",
+            name=name
+            or f"Trend Following (lookback={lookback_days}d, hl={half_life_days}d)",
         )
         self.lookback_days = lookback_days
         self.half_life_days = half_life_days
@@ -88,7 +89,9 @@ class TrendFollowingStrategy(AllocationStrategy):
         if len(prices) < self.lookback_days + self.smooth_window:
             # Not enough data, equal weight fallback
             # Return weights for underlying strategies, not price symbols
-            return pd.Series(1.0 / len(self.underlying), index=[s.name for s in self.underlying])
+            return pd.Series(
+                1.0 / len(self.underlying), index=[s.name for s in self.underlying]
+            )
 
         # Step 1: Calculate momentum signals using EWMA
         momentum_signals = self._calculate_momentum_signals(prices)
@@ -117,7 +120,9 @@ class TrendFollowingStrategy(AllocationStrategy):
             for symbol in strategy.get_symbols():
                 symbol_to_strategy_name[symbol] = strategy.name
 
-        new_index = [symbol_to_strategy_name.get(symbol, symbol) for symbol in weights.index]
+        new_index = [
+            symbol_to_strategy_name.get(symbol, symbol) for symbol in weights.index
+        ]
         weights.index = new_index
 
         return weights

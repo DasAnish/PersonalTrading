@@ -27,38 +27,41 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from strategies import (
-    HRPStrategy, TrendFollowingStrategy, EqualWeightStrategy,
-    MinimumVarianceStrategy, RiskParityStrategy, MomentumTopNStrategy,
-    AssetStrategy
+    HRPStrategy,
+    TrendFollowingStrategy,
+    EqualWeightStrategy,
+    MinimumVarianceStrategy,
+    RiskParityStrategy,
+    MomentumTopNStrategy,
+    AssetStrategy,
 )
 from optimization import ParameterSweep, WalkForwardAnalysis
 from data import HistoricalDataCache, align_dataframes
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 # Strategy class mapping
 STRATEGY_CLASSES = {
-    'hrp': HRPStrategy,
-    'trend_following': TrendFollowingStrategy,
-    'equal_weight': EqualWeightStrategy,
-    'minimum_variance': MinimumVarianceStrategy,
-    'risk_parity': RiskParityStrategy,
-    'momentum': MomentumTopNStrategy,
+    "hrp": HRPStrategy,
+    "trend_following": TrendFollowingStrategy,
+    "equal_weight": EqualWeightStrategy,
+    "minimum_variance": MinimumVarianceStrategy,
+    "risk_parity": RiskParityStrategy,
+    "momentum": MomentumTopNStrategy,
 }
 
 # Default UK ETF assets
-SYMBOLS = ['VUSA', 'SSLN', 'SGLN', 'IWRD']
-CURRENCY = 'GBP'
+SYMBOLS = ["VUSA", "SSLN", "SGLN", "IWRD"]
+CURRENCY = "GBP"
 
 
 def parse_param(param_str: str) -> tuple:
     """Parse 'key=val1,val2,val3' into (key, [val1, val2, val3])."""
-    key, values_str = param_str.split('=', 1)
-    values = values_str.split(',')
+    key, values_str = param_str.split("=", 1)
+    values = values_str.split(",")
 
     # Try to convert to appropriate types
     parsed_values = []
@@ -77,21 +80,20 @@ def parse_param(param_str: str) -> tuple:
 
 def load_cached_prices() -> pd.DataFrame:
     """Load prices from cache."""
-    cache = HistoricalDataCache(cache_dir='data/cache')
+    cache = HistoricalDataCache(cache_dir="data/cache")
     data_dict = {}
 
     for symbol in SYMBOLS:
         df = cache.load_cached_data(
-            symbol,
-            pd.Timestamp('2015-01-01'),
-            pd.Timestamp.now(),
-            max_age_days=30
+            symbol, pd.Timestamp("2015-01-01"), pd.Timestamp.now(), max_age_days=30
         )
         if not df.empty:
             data_dict[symbol] = df
 
     if not data_dict:
-        logger.error("No cached data found. Run a backtest first: python scripts/run_backtest.py --all")
+        logger.error(
+            "No cached data found. Run a backtest first: python scripts/run_backtest.py --all"
+        )
         sys.exit(1)
 
     return align_dataframes(data_dict)
@@ -106,37 +108,51 @@ Examples:
   python scripts/run_optimization.py --strategy hrp --param linkage_method=single,complete,ward
   python scripts/run_optimization.py --strategy trend_following --param lookback_days=252,504 --param half_life_days=30,60,90
   python scripts/run_optimization.py --strategy hrp --param linkage_method=single,complete,ward --walk-forward
-        """
+        """,
     )
 
     parser.add_argument(
-        '--strategy', type=str, required=True,
+        "--strategy",
+        type=str,
+        required=True,
         choices=list(STRATEGY_CLASSES.keys()),
-        help='Strategy to optimize'
+        help="Strategy to optimize",
     )
     parser.add_argument(
-        '--param', type=str, action='append', required=True,
-        help='Parameter to sweep: key=val1,val2,val3 (can specify multiple --param flags)'
+        "--param",
+        type=str,
+        action="append",
+        required=True,
+        help="Parameter to sweep: key=val1,val2,val3 (can specify multiple --param flags)",
     )
     parser.add_argument(
-        '--metric', type=str, default='sharpe_ratio',
-        help='Metric to optimize (default: sharpe_ratio)'
+        "--metric",
+        type=str,
+        default="sharpe_ratio",
+        help="Metric to optimize (default: sharpe_ratio)",
     )
     parser.add_argument(
-        '--walk-forward', action='store_true',
-        help='Run walk-forward analysis instead of simple parameter sweep'
+        "--walk-forward",
+        action="store_true",
+        help="Run walk-forward analysis instead of simple parameter sweep",
     )
     parser.add_argument(
-        '--in-sample', type=int, default=756,
-        help='In-sample window size in trading days (default: 756 = ~3 years)'
+        "--in-sample",
+        type=int,
+        default=756,
+        help="In-sample window size in trading days (default: 756 = ~3 years)",
     )
     parser.add_argument(
-        '--out-of-sample', type=int, default=252,
-        help='Out-of-sample window size in trading days (default: 252 = ~1 year)'
+        "--out-of-sample",
+        type=int,
+        default=252,
+        help="Out-of-sample window size in trading days (default: 252 = ~1 year)",
     )
     parser.add_argument(
-        '--output', type=str, default=None,
-        help='Output CSV file path (default: results/optimization_<strategy>.csv)'
+        "--output",
+        type=str,
+        default=None,
+        help="Output CSV file path (default: results/optimization_<strategy>.csv)",
     )
 
     args = parser.parse_args()
@@ -157,7 +173,9 @@ Examples:
     print(f"Target Metric: {args.metric}")
     print(f"Mode: {'Walk-Forward' if args.walk_forward else 'Parameter Sweep'}")
     if args.walk_forward:
-        print(f"In-Sample: {args.in_sample} days, Out-of-Sample: {args.out_of_sample} days")
+        print(
+            f"In-Sample: {args.in_sample} days, Out-of-Sample: {args.out_of_sample} days"
+        )
     print("=" * 60 + "\n")
 
     # Load prices
@@ -182,7 +200,7 @@ Examples:
             out_of_sample_days=args.out_of_sample,
             metric=args.metric,
             initial_capital=10000.0,
-            transaction_cost_bps=7.5
+            transaction_cost_bps=7.5,
         )
 
         results = wfa.run(underlying=underlying, prices=prices)
@@ -199,7 +217,7 @@ Examples:
         if not results.summary_df.empty:
             print(results.summary_df.to_string(index=False))
 
-            output_path = args.output or f'results/walk_forward_{args.strategy}.csv'
+            output_path = args.output or f"results/walk_forward_{args.strategy}.csv"
             Path(output_path).parent.mkdir(exist_ok=True)
             results.summary_df.to_csv(output_path, index=False)
             print(f"\nResults saved to: {output_path}")
@@ -211,7 +229,7 @@ Examples:
             param_grid=param_grid,
             metric=args.metric,
             initial_capital=10000.0,
-            transaction_cost_bps=7.5
+            transaction_cost_bps=7.5,
         )
 
         results_df = sweep.run(
@@ -219,7 +237,7 @@ Examples:
             prices=prices,
             start_date=backtest_start,
             end_date=backtest_end,
-            lookback_days=lookback
+            lookback_days=lookback,
         )
 
         if results_df.empty:
@@ -232,11 +250,11 @@ Examples:
         print(f"\nSorted by: {args.metric} (descending)\n")
         print(results_df.to_string(index=False))
 
-        output_path = args.output or f'results/param_sweep_{args.strategy}.csv'
+        output_path = args.output or f"results/param_sweep_{args.strategy}.csv"
         Path(output_path).parent.mkdir(exist_ok=True)
         results_df.to_csv(output_path, index=False)
         print(f"\nResults saved to: {output_path}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

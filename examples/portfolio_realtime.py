@@ -23,7 +23,7 @@ async def main():
 
     # Callback for portfolio updates
     def on_portfolio_update(update: PortfolioUpdate):
-        timestamp = update.timestamp.strftime('%H:%M:%S')
+        timestamp = update.timestamp.strftime("%H:%M:%S")
         pos = update.position
         print(f"\n[{timestamp}] 📊 Portfolio Update")
         print(f"  Type:           {update.update_type}")
@@ -34,7 +34,7 @@ async def main():
 
     # Callback for account PnL updates
     def on_pnl_update(pnl: PnLUpdate):
-        timestamp = pnl.timestamp.strftime('%H:%M:%S')
+        timestamp = pnl.timestamp.strftime("%H:%M:%S")
         print(f"\n[{timestamp}] 💰 Account PnL Update")
         print(f"  Account:        {pnl.account}")
         print(f"  Daily PnL:      ${pnl.daily_pnl:,.2f}")
@@ -43,7 +43,7 @@ async def main():
 
     # Callback for position-level PnL updates
     def on_position_pnl_update(pnl: PnLSingleUpdate):
-        timestamp = pnl.timestamp.strftime('%H:%M:%S')
+        timestamp = pnl.timestamp.strftime("%H:%M:%S")
         print(f"\n[{timestamp}] 📈 Position PnL Update")
         print(f"  Contract ID:    {pnl.contract_id}")
         print(f"  Position:       {pnl.position:,.0f}")
@@ -64,7 +64,7 @@ async def main():
         print("✓ Subscribed to portfolio updates")
 
         # Get account from config or use default
-        account = config.get('ib_account')
+        account = config.get("ib_account")
         if not account:
             # Try to get from first position
             positions = await client.get_positions()
@@ -83,9 +83,7 @@ async def main():
                 print(f"\nSubscribing to PnL for {len(positions)} positions:")
                 for pos in positions:
                     await client.subscribe_pnl_single(
-                        account,
-                        pos.contract_id,
-                        on_position_pnl_update
+                        account, pos.contract_id, on_position_pnl_update
                     )
                     print(f"  ✓ {pos.symbol} (Contract ID: {pos.contract_id})")
             else:
@@ -109,6 +107,7 @@ async def main():
     except Exception as e:
         print(f"\n✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
 
     finally:

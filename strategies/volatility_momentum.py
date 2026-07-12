@@ -52,7 +52,7 @@ class VolatilityMomentumStrategy(AllocationStrategy):
         top_n: int = 2,
         lookback_days: int = 252,
         vol_lookback_days: int = 63,
-        name: str = None
+        name: str = None,
     ):
         """
         Args:
@@ -87,11 +87,11 @@ class VolatilityMomentumStrategy(AllocationStrategy):
         prices = prices.ffill(limit=3).dropna()
 
         # Calculate trailing returns over lookback period
-        lookback_prices = prices.iloc[-self.lookback_days:]
+        lookback_prices = prices.iloc[-self.lookback_days :]
         trailing_returns = lookback_prices.iloc[-1] / lookback_prices.iloc[0] - 1
 
         # Calculate volatility over vol_lookback_days
-        vol_lookback_prices = prices.iloc[-self.vol_lookback_days:]
+        vol_lookback_prices = prices.iloc[-self.vol_lookback_days :]
         returns = vol_lookback_prices.pct_change().dropna()
         vols = returns.std()
         vols[vols == 0] = 1e-10
@@ -102,7 +102,7 @@ class VolatilityMomentumStrategy(AllocationStrategy):
 
         # Rank and select top N
         ranked = risk_adjusted_scores.sort_values(ascending=False)
-        selected_symbols = ranked.index[:self.top_n].tolist()
+        selected_symbols = ranked.index[: self.top_n].tolist()
 
         logger.debug(
             f"VolatilityMomentum risk-adjusted scores: {dict(ranked.round(4))}. "

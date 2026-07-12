@@ -34,10 +34,10 @@ from strategies.core import OverlayStrategy, Strategy, StrategyContext
 logger = logging.getLogger(__name__)
 
 # 5-asset-class return vector for turbulence (keeps Σ invertible)
-TURBULENCE_ASSETS = ['VUSA', 'IMEU', 'VUTY', 'SGLN', 'COMM']
+TURBULENCE_ASSETS = ["VUSA", "IMEU", "VUTY", "SGLN", "COMM"]
 
 # Safe asset to scale into during turbulence
-SAFE_ASSET = 'VUTY'
+SAFE_ASSET = "VUTY"
 
 
 class TurbulenceOverlayStrategy(OverlayStrategy):
@@ -117,7 +117,7 @@ class TurbulenceOverlayStrategy(OverlayStrategy):
         turb_prices = prices[available_turb_assets]
 
         # Aggregate to monthly (use last day of each month)
-        monthly_prices = turb_prices.resample('ME').last()
+        monthly_prices = turb_prices.resample("ME").last()
 
         if len(monthly_prices) < self.lookback_months + 1:
             # Insufficient history
@@ -134,7 +134,7 @@ class TurbulenceOverlayStrategy(OverlayStrategy):
             return weights
 
         # Get lookback window
-        lookback_window = monthly_returns.iloc[-self.lookback_months:]
+        lookback_window = monthly_returns.iloc[-self.lookback_months :]
 
         # Calculate mean and covariance
         mean_returns = lookback_window.mean()
@@ -162,7 +162,7 @@ class TurbulenceOverlayStrategy(OverlayStrategy):
         # Calculate historical turbulence values for percentile
         turbulence_history = []
         for i in range(len(lookback_window)):
-            window_i = lookback_window.iloc[:i+1]
+            window_i = lookback_window.iloc[: i + 1]
             if len(window_i) < 3:
                 continue
             mean_i = window_i.mean()
@@ -190,14 +190,16 @@ class TurbulenceOverlayStrategy(OverlayStrategy):
         # Scale if turbulent
         is_turbulent = turbulence > threshold
         if is_turbulent:
-            logger.debug(f"TurbulenceOverlay: TURBULENT. Scaling weights by {self.scale}")
+            logger.debug(
+                f"TurbulenceOverlay: TURBULENT. Scaling weights by {self.scale}"
+            )
             scaled_weights = weights * self.scale
 
             # Redirect unallocated weight to VUTY
             safe_idx = None
             for i, name in enumerate(scaled_weights.index):
                 # Look for VUTY in the weight index (by symbol or name)
-                if 'VUTY' in name or name == SAFE_ASSET:
+                if "VUTY" in name or name == SAFE_ASSET:
                     safe_idx = i
                     break
 

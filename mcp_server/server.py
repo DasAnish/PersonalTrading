@@ -59,7 +59,7 @@ async def _get_ib_client():
     try:
         from ib_wrapper.client import IBClient  # noqa: PLC0415
 
-        _ib_client = IBClient()          # reads host/port from .env automatically
+        _ib_client = IBClient()  # reads host/port from .env automatically
         _ib_connected = await asyncio.wait_for(_ib_client.connect(), timeout=10)
 
         if _ib_connected:
@@ -92,6 +92,7 @@ mcp = FastMCP(
 # ═══════════════════════════════════════════════════════════════════════════════
 # Market Data
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @mcp.tool()
 async def get_historical_data(
@@ -149,10 +150,14 @@ async def get_historical_data(
         elif live_error:
             reason = f"live fetch failed ({live_error})"
         else:
-            reason = "IB returned no bars for this contract/exchange/currency combination"
-        return json.dumps({
-            "error": f"No data found for '{symbol}'. {reason} and no local cache exists for this symbol."
-        })
+            reason = (
+                "IB returned no bars for this contract/exchange/currency combination"
+            )
+        return json.dumps(
+            {
+                "error": f"No data found for '{symbol}'. {reason} and no local cache exists for this symbol."
+            }
+        )
 
     # Trim to requested date range when loading from cache
     if isinstance(df.index, pd.DatetimeIndex):
@@ -161,13 +166,15 @@ async def get_historical_data(
         df = df[df["date"] >= start_date]
 
     if df.empty:
-        return json.dumps({
-            "error": (
-                f"No data for '{symbol}' in the last {duration_days} days. "
-                f"Source '{source}' has no rows after {start_date:%Y-%m-%d} "
-                "(cache may be stale — refresh it with IB Gateway online)."
-            )
-        })
+        return json.dumps(
+            {
+                "error": (
+                    f"No data for '{symbol}' in the last {duration_days} days. "
+                    f"Source '{source}' has no rows after {start_date:%Y-%m-%d} "
+                    "(cache may be stale — refresh it with IB Gateway online)."
+                )
+            }
+        )
 
     tail = df.tail(10).copy()
     if isinstance(tail.index, pd.DatetimeIndex):
@@ -183,8 +190,16 @@ async def get_historical_data(
             "symbol": symbol,
             "source": source,
             "rows": len(df),
-            "start": _ts(df.index[0] if isinstance(df.index, pd.DatetimeIndex) else df["date"].iloc[0]),
-            "end":   _ts(df.index[-1] if isinstance(df.index, pd.DatetimeIndex) else df["date"].iloc[-1]),
+            "start": _ts(
+                df.index[0]
+                if isinstance(df.index, pd.DatetimeIndex)
+                else df["date"].iloc[0]
+            ),
+            "end": _ts(
+                df.index[-1]
+                if isinstance(df.index, pd.DatetimeIndex)
+                else df["date"].iloc[-1]
+            ),
             "columns": list(df.columns),
             "last_10_rows": tail.reset_index().to_dict(orient="records"),
         },
@@ -227,6 +242,7 @@ async def get_multiple_historical_data(
 # Portfolio
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @mcp.tool()
 async def get_positions() -> str:
     """
@@ -239,23 +255,25 @@ async def get_positions() -> str:
     """
     client = await _get_ib_client()
     if client is None:
-        return json.dumps({
-            "error": "IB Gateway not available. Start IB Gateway Paper on port 4001 and retry."
-        })
+        return json.dumps(
+            {
+                "error": "IB Gateway not available. Start IB Gateway Paper on port 4001 and retry."
+            }
+        )
 
     try:
         positions = await client.get_positions()
         return json.dumps(
             [
                 {
-                    "symbol":        p.symbol,
-                    "position":      p.position,
-                    "market_price":  p.market_price,
-                    "market_value":  p.market_value,
-                    "average_cost":  p.average_cost,
+                    "symbol": p.symbol,
+                    "position": p.position,
+                    "market_price": p.market_price,
+                    "market_value": p.market_value,
+                    "average_cost": p.average_cost,
                     "unrealized_pnl": p.unrealized_pnl,
-                    "realized_pnl":  p.realized_pnl,
-                    "account":       p.account,
+                    "realized_pnl": p.realized_pnl,
+                    "account": p.account,
                 }
                 for p in positions
             ],
@@ -277,9 +295,11 @@ async def get_account_summary() -> str:
     """
     client = await _get_ib_client()
     if client is None:
-        return json.dumps({
-            "error": "IB Gateway not available. Start IB Gateway Paper on port 4001 and retry."
-        })
+        return json.dumps(
+            {
+                "error": "IB Gateway not available. Start IB Gateway Paper on port 4001 and retry."
+            }
+        )
 
     try:
         summary = await client.get_account_summary()
@@ -292,6 +312,7 @@ async def get_account_summary() -> str:
 # Backtesting
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @mcp.tool()
 async def list_strategies() -> str:
     """
@@ -301,7 +322,7 @@ async def list_strategies() -> str:
     display name, description, parameters).
     """
     try:
-        from strategies import STRATEGY_REGISTRY              # noqa: PLC0415
+        from strategies import STRATEGY_REGISTRY  # noqa: PLC0415
         from strategies.strategy_loader import StrategyLoader  # noqa: PLC0415
 
         result: dict = {}
@@ -309,10 +330,10 @@ async def list_strategies() -> str:
         # Registry-based (hrp, equal_weight, trend_following)
         for key, meta in STRATEGY_REGISTRY.items():
             result[key] = {
-                "source":       "registry",
+                "source": "registry",
                 "display_name": meta.get("display_name", key),
-                "description":  meta.get("description", ""),
-                "parameters":   meta.get("default_params", {}),
+                "description": meta.get("description", ""),
+                "parameters": meta.get("default_params", {}),
             }
 
         # YAML-defined strategies (minimum_variance, risk_parity, momentum, etc.)
@@ -371,19 +392,23 @@ async def run_backtest(
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
 
         if proc.returncode != 0:
-            return json.dumps({
-                "error":  f"Backtest script exited with code {proc.returncode}",
-                "stderr": stderr.decode(errors="replace")[-3000:],
-            })
+            return json.dumps(
+                {
+                    "error": f"Backtest script exited with code {proc.returncode}",
+                    "stderr": stderr.decode(errors="replace")[-3000:],
+                }
+            )
 
         results = _read_strategy_results(strategy)
         if results is None:
-            return json.dumps({
-                "status":      "completed",
-                "warning":     f"Run succeeded but no results found for '{strategy}'. Check the strategy key.",
-                "stdout_tail": stdout.decode(errors="replace")[-1500:],
-                "available":   _list_available_results(),
-            })
+            return json.dumps(
+                {
+                    "status": "completed",
+                    "warning": f"Run succeeded but no results found for '{strategy}'. Check the strategy key.",
+                    "stdout_tail": stdout.decode(errors="replace")[-1500:],
+                    "available": _list_available_results(),
+                }
+            )
 
         return json.dumps(
             {"status": "completed", "strategy": strategy, **results},
@@ -410,10 +435,12 @@ async def get_backtest_results(strategy_key: str) -> str:
     """
     results = _read_strategy_results(strategy_key)
     if results is None:
-        return json.dumps({
-            "error":     f"No results found for '{strategy_key}'. Run run_backtest first.",
-            "available": _list_available_results(),
-        })
+        return json.dumps(
+            {
+                "error": f"No results found for '{strategy_key}'. Run run_backtest first.",
+                "available": _list_available_results(),
+            }
+        )
 
     return json.dumps({"strategy": strategy_key, **results}, indent=2, default=str)
 
@@ -421,6 +448,7 @@ async def get_backtest_results(strategy_key: str) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Internal helpers
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def _load_best_cache(symbol: str) -> Optional[pd.DataFrame]:
     """
@@ -478,11 +506,11 @@ def _read_strategy_results(strategy_key: str) -> Optional[dict]:
         if history:
             first, last = history[0], history[-1]
             result["portfolio_summary"] = {
-                "first_date":    first.get("date"),
-                "last_date":     last.get("date"),
+                "first_date": first.get("date"),
+                "last_date": last.get("date"),
                 "initial_value": first.get("total_value") or first.get("value"),
-                "final_value":   last.get("total_value")  or last.get("value"),
-                "data_points":   len(history),
+                "final_value": last.get("total_value") or last.get("value"),
+                "data_points": len(history),
             }
 
     return result if result else None

@@ -31,7 +31,7 @@ AUTUMN_MONTHS_FULL = {9, 10, 11}
 AUTUMN_MONTHS_SHORT = {9}
 
 # Gold symbols
-GOLD_SYMBOLS = {'SGLN', 'SSLN'}  # SGLN primary, SSLN silver optional
+GOLD_SYMBOLS = {"SGLN", "SSLN"}  # SGLN primary, SSLN silver optional
 
 
 class GoldAutumnSeasonalityStrategy(AllocationStrategy):
@@ -53,7 +53,7 @@ class GoldAutumnSeasonalityStrategy(AllocationStrategy):
         underlying: List[Strategy],
         w_high: float = 0.30,
         w_low: float = 0.05,
-        months: Literal['sep_nov', 'sep_only'] = 'sep_nov',
+        months: Literal["sep_nov", "sep_only"] = "sep_nov",
         name: str = None,
     ):
         """
@@ -73,7 +73,9 @@ class GoldAutumnSeasonalityStrategy(AllocationStrategy):
         self.w_high = w_high
         self.w_low = w_low
         self.months = months
-        self.autumn_set = AUTUMN_MONTHS_FULL if months == 'sep_nov' else AUTUMN_MONTHS_SHORT
+        self.autumn_set = (
+            AUTUMN_MONTHS_FULL if months == "sep_nov" else AUTUMN_MONTHS_SHORT
+        )
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
         """
@@ -112,7 +114,11 @@ class GoldAutumnSeasonalityStrategy(AllocationStrategy):
         gold_symbols_available = GOLD_SYMBOLS & available_symbols
         if gold_symbols_available:
             # Use primary gold symbol (SGLN) if available, else SSLN
-            gold_symbol = 'SGLN' if 'SGLN' in gold_symbols_available else list(gold_symbols_available)[0]
+            gold_symbol = (
+                "SGLN"
+                if "SGLN" in gold_symbols_available
+                else list(gold_symbols_available)[0]
+            )
             gold_name = symbol_to_name.get(gold_symbol, gold_symbol)
             weights[gold_name] = gold_weight
 
@@ -121,7 +127,9 @@ class GoldAutumnSeasonalityStrategy(AllocationStrategy):
         if base_symbols:
             num_base = len(base_symbols)
             base_weight_total = 1.0 - gold_weight
-            base_weight_per_asset = base_weight_total / num_base if num_base > 0 else 0.0
+            base_weight_per_asset = (
+                base_weight_total / num_base if num_base > 0 else 0.0
+            )
 
             for symbol in base_symbols:
                 strategy_name = symbol_to_name.get(symbol, symbol)

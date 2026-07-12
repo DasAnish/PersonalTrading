@@ -101,7 +101,9 @@ class VarianceTargetStrategy(OverlayStrategy):
             return weights
 
         # Filter to dates on or before current_date (important for overlay backtest)
-        values_up_to_date = portfolio_values[portfolio_values.index <= context.current_date]
+        values_up_to_date = portfolio_values[
+            portfolio_values.index <= context.current_date
+        ]
 
         if len(values_up_to_date) < 2:
             return weights
@@ -184,9 +186,7 @@ class VolatilityTargetStrategy(OverlayStrategy):
             target_vol: Target annualized volatility (default 0.15 = 15%)
             lookback_days: Lookback window for volatility calculation (default 252 trading days)
         """
-        super().__init__(
-            underlying, name=f"Vol Target ({target_vol*100:.0f}%)"
-        )
+        super().__init__(underlying, name=f"Vol Target ({target_vol*100:.0f}%)")
         self.target_vol = target_vol
         self.lookback_days = lookback_days
 
@@ -219,7 +219,9 @@ class VolatilityTargetStrategy(OverlayStrategy):
             return weights
 
         # Filter to dates on or before current_date (important for overlay backtest)
-        values_up_to_date = portfolio_values[portfolio_values.index <= context.current_date]
+        values_up_to_date = portfolio_values[
+            portfolio_values.index <= context.current_date
+        ]
 
         if len(values_up_to_date) < 2:
             return weights
@@ -303,7 +305,9 @@ class ConstraintStrategy(OverlayStrategy):
                 "Must satisfy: 0 <= min <= max <= 1.0"
             )
 
-        super().__init__(underlying, name=f"Constraints ({min_weight:.0%}-{max_weight:.0%})")
+        super().__init__(
+            underlying, name=f"Constraints ({min_weight:.0%}-{max_weight:.0%})"
+        )
         self.min_weight = min_weight
         self.max_weight = max_weight
 

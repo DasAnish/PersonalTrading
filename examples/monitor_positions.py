@@ -47,11 +47,11 @@ async def main():
         account_summary = await client.get_account_summary()
 
         key_metrics = [
-            'NetLiquidation',
-            'TotalCashValue',
-            'BuyingPower',
-            'EquityWithLoanValue',
-            'GrossPositionValue'
+            "NetLiquidation",
+            "TotalCashValue",
+            "BuyingPower",
+            "EquityWithLoanValue",
+            "GrossPositionValue",
         ]
 
         for metric in key_metrics:
@@ -79,6 +79,7 @@ async def main():
     except Exception as e:
         print(f"\n✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
 
     finally:

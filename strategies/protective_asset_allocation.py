@@ -111,9 +111,7 @@ class ProtectiveAssetAllocationStrategy(AllocationStrategy):
         sma = lookback_prices.mean()
 
         current_prices = prices.iloc[-1]
-        passed = [
-            sym for sym in risky_symbols if current_prices[sym] > sma[sym]
-        ]
+        passed = [sym for sym in risky_symbols if current_prices[sym] > sma[sym]]
 
         n_good = len(passed)
         n_risky = len(risky_symbols)
@@ -144,9 +142,7 @@ class ProtectiveAssetAllocationStrategy(AllocationStrategy):
                 weights[name] = per_asset_weight
         else:
             # All risky assets filtered out — 100% to safe
-            logger.debug(
-                "PAA: no risky assets above SMA, holding 100% safe asset"
-            )
+            logger.debug("PAA: no risky assets above SMA, holding 100% safe asset")
             weights[safe_name] = 1.0
 
         return weights

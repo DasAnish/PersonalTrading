@@ -40,8 +40,8 @@ from strategies.core import AllocationStrategy, Strategy, StrategyContext
 logger = logging.getLogger(__name__)
 
 # Market proxies for beta estimation
-MARKET_PROXY_PRIMARY = 'IWRD'  # World equities (primary)
-MARKET_PROXY_FALLBACK = 'VUSA'  # US equities (fallback)
+MARKET_PROXY_PRIMARY = "IWRD"  # World equities (primary)
+MARKET_PROXY_FALLBACK = "VUSA"  # US equities (fallback)
 
 
 class LowBetaTiltStrategy(AllocationStrategy):
@@ -210,7 +210,9 @@ class LowBetaTiltStrategy(AllocationStrategy):
         market_var = market_returns.var()
 
         if market_var <= 0:
-            logger.warning(f"LowBetaTilt: market proxy {market_proxy} has zero variance")
+            logger.warning(
+                f"LowBetaTilt: market proxy {market_proxy} has zero variance"
+            )
             return pd.Series(dtype=float)
 
         # Compute beta for each asset

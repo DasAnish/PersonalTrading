@@ -80,7 +80,7 @@ class SkewnessWeightedStrategy(AllocationStrategy):
         if len(prices) < 30:
             return self._equal_weight(prices)
 
-        recent = prices.iloc[-self.lookback_days:]
+        recent = prices.iloc[-self.lookback_days :]
         returns = recent.pct_change().dropna()
 
         # Compute skewness per asset

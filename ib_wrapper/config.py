@@ -52,7 +52,9 @@ class Config:
             self._load_config_file(config_path)
         else:
             # Try to load default config file
-            default_config = Path(__file__).parent.parent / 'config' / 'default_config.yaml'
+            default_config = (
+                Path(__file__).parent.parent / "config" / "default_config.yaml"
+            )
             if default_config.exists():
                 self._load_config_file(str(default_config))
 
@@ -62,30 +64,27 @@ class Config:
     def _load_defaults(self):
         """Load default configuration values."""
         self._config = {
-            'ib_connection': {
-                'host': '127.0.0.1',
-                'port': 7497,
-                'client_id': SESSION_CLIENT_ID,
-                'timeout': 10,
-                'readonly': False
+            "ib_connection": {
+                "host": "127.0.0.1",
+                "port": 7497,
+                "client_id": SESSION_CLIENT_ID,
+                "timeout": 10,
+                "readonly": False,
             },
-            'market_data': {
-                'rate_limit_requests': 50,
-                'rate_limit_window': 600,
-                'default_duration': '1 D',
-                'default_bar_size': '1 min',
-                'default_what_to_show': 'TRADES'
+            "market_data": {
+                "rate_limit_requests": 50,
+                "rate_limit_window": 600,
+                "default_duration": "1 D",
+                "default_bar_size": "1 min",
+                "default_what_to_show": "TRADES",
             },
-            'portfolio': {
-                'auto_subscribe_updates': True,
-                'update_interval': 1.0
+            "portfolio": {"auto_subscribe_updates": True, "update_interval": 1.0},
+            "logging": {
+                "level": "INFO",
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                "file": "logs/ib_wrapper.log",
+                "console": True,
             },
-            'logging': {
-                'level': 'INFO',
-                'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                'file': 'logs/ib_wrapper.log',
-                'console': True
-            }
         }
 
     def _load_config_file(self, config_path: str):
@@ -99,7 +98,7 @@ class Config:
             ConfigurationException: If config file is invalid
         """
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 file_config = yaml.safe_load(f)
 
             if file_config:
@@ -116,40 +115,46 @@ class Config:
     def _load_env_vars(self):
         """Load configuration from environment variables."""
         # IB Connection settings
-        if os.getenv('IB_HOST'):
-            self._config['ib_connection']['host'] = os.getenv('IB_HOST')
+        if os.getenv("IB_HOST"):
+            self._config["ib_connection"]["host"] = os.getenv("IB_HOST")
 
-        if os.getenv('IB_PORT'):
+        if os.getenv("IB_PORT"):
             try:
-                self._config['ib_connection']['port'] = int(os.getenv('IB_PORT'))
+                self._config["ib_connection"]["port"] = int(os.getenv("IB_PORT"))
             except ValueError:
                 logger.warning("Invalid IB_PORT environment variable, using default")
 
-        if os.getenv('IB_CLIENT_ID'):
+        if os.getenv("IB_CLIENT_ID"):
             try:
-                self._config['ib_connection']['client_id'] = int(os.getenv('IB_CLIENT_ID'))
+                self._config["ib_connection"]["client_id"] = int(
+                    os.getenv("IB_CLIENT_ID")
+                )
             except ValueError:
-                logger.warning("Invalid IB_CLIENT_ID environment variable, using default")
+                logger.warning(
+                    "Invalid IB_CLIENT_ID environment variable, using default"
+                )
 
-        if os.getenv('IB_TIMEOUT'):
+        if os.getenv("IB_TIMEOUT"):
             try:
-                self._config['ib_connection']['timeout'] = int(os.getenv('IB_TIMEOUT'))
+                self._config["ib_connection"]["timeout"] = int(os.getenv("IB_TIMEOUT"))
             except ValueError:
                 logger.warning("Invalid IB_TIMEOUT environment variable, using default")
 
-        if os.getenv('IB_READONLY'):
-            self._config['ib_connection']['readonly'] = os.getenv('IB_READONLY').lower() in ('true', '1', 'yes')
+        if os.getenv("IB_READONLY"):
+            self._config["ib_connection"]["readonly"] = os.getenv(
+                "IB_READONLY"
+            ).lower() in ("true", "1", "yes")
 
         # Logging settings
-        if os.getenv('LOG_LEVEL'):
-            self._config['logging']['level'] = os.getenv('LOG_LEVEL')
+        if os.getenv("LOG_LEVEL"):
+            self._config["logging"]["level"] = os.getenv("LOG_LEVEL")
 
-        if os.getenv('LOG_FILE'):
-            self._config['logging']['file'] = os.getenv('LOG_FILE')
+        if os.getenv("LOG_FILE"):
+            self._config["logging"]["file"] = os.getenv("LOG_FILE")
 
         # Account
-        if os.getenv('IB_ACCOUNT'):
-            self._config['ib_account'] = os.getenv('IB_ACCOUNT')
+        if os.getenv("IB_ACCOUNT"):
+            self._config["ib_account"] = os.getenv("IB_ACCOUNT")
 
     def _merge_config(self, base: Dict, override: Dict):
         """
@@ -182,7 +187,7 @@ class Config:
             >>> config.get('ib_connection.port')
             7497
         """
-        keys = key.split('.')
+        keys = key.split(".")
         value = self._config
 
         for k in keys:
@@ -201,11 +206,11 @@ class Config:
             ConnectionConfig instance
         """
         return ConnectionConfig(
-            host=self.get('ib_connection.host', '127.0.0.1'),
-            port=self.get('ib_connection.port', 7497),
-            client_id=self.get('ib_connection.client_id', SESSION_CLIENT_ID),
-            timeout=self.get('ib_connection.timeout', 10),
-            readonly=self.get('ib_connection.readonly', False)
+            host=self.get("ib_connection.host", "127.0.0.1"),
+            port=self.get("ib_connection.port", 7497),
+            client_id=self.get("ib_connection.client_id", SESSION_CLIENT_ID),
+            timeout=self.get("ib_connection.timeout", 10),
+            readonly=self.get("ib_connection.readonly", False),
         )
 
     def validate(self):
@@ -216,17 +221,21 @@ class Config:
             ConfigurationException: If configuration is invalid
         """
         # Validate required fields
-        if not self.get('ib_connection.host'):
+        if not self.get("ib_connection.host"):
             raise ConfigurationException("Missing required config: ib_connection.host")
 
-        if not isinstance(self.get('ib_connection.port'), int):
-            raise ConfigurationException("Invalid config: ib_connection.port must be integer")
+        if not isinstance(self.get("ib_connection.port"), int):
+            raise ConfigurationException(
+                "Invalid config: ib_connection.port must be integer"
+            )
 
-        if not isinstance(self.get('ib_connection.client_id'), int):
-            raise ConfigurationException("Invalid config: ib_connection.client_id must be integer")
+        if not isinstance(self.get("ib_connection.client_id"), int):
+            raise ConfigurationException(
+                "Invalid config: ib_connection.client_id must be integer"
+            )
 
         # Validate port range
-        port = self.get('ib_connection.port')
+        port = self.get("ib_connection.port")
         if port < 1 or port > 65535:
             raise ConfigurationException(f"Invalid port number: {port}")
 

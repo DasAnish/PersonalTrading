@@ -121,7 +121,7 @@ class MaximumDiversificationStrategy(AllocationStrategy):
         # Initial guess: inverse-volatility weights (good starting point)
         sigmas_safe = sigmas.copy()
         sigmas_safe[sigmas_safe == 0] = 1e-10
-        w0 = (1.0 / sigmas_safe)
+        w0 = 1.0 / sigmas_safe
         w0 = w0 / w0.sum()
 
         try:

@@ -86,12 +86,12 @@ class DualMomentumStrategy(AllocationStrategy):
         prices = prices.ffill(limit=3).dropna()
 
         # Step 1: Relative momentum — trailing returns over lookback
-        lookback_prices = prices.iloc[-self.lookback_days:]
+        lookback_prices = prices.iloc[-self.lookback_days :]
         trailing_returns = lookback_prices.iloc[-1] / lookback_prices.iloc[0] - 1
 
         # Rank descending; select top_n
         ranked = trailing_returns.sort_values(ascending=False)
-        candidates = ranked.index[:self.top_n].tolist()
+        candidates = ranked.index[: self.top_n].tolist()
 
         logger.debug(
             f"DualMomentum rankings: {dict(ranked.round(4))}. "
@@ -99,7 +99,9 @@ class DualMomentumStrategy(AllocationStrategy):
         )
 
         # Step 2: Absolute momentum — keep only those with return > threshold
-        passed = [sym for sym in candidates if trailing_returns[sym] > self.abs_threshold]
+        passed = [
+            sym for sym in candidates if trailing_returns[sym] > self.abs_threshold
+        ]
 
         logger.debug(
             f"DualMomentum after absolute filter (threshold={self.abs_threshold}): {passed}"

@@ -37,12 +37,12 @@ def test_config():
     """Test configuration."""
     config = Config()
     # Override with test values
-    config._config['ib_connection'] = {
-        'host': '127.0.0.1',
-        'port': 7497,
-        'client_id': 999,
-        'timeout': 5,
-        'readonly': True
+    config._config["ib_connection"] = {
+        "host": "127.0.0.1",
+        "port": 7497,
+        "client_id": 999,
+        "timeout": 5,
+        "readonly": True,
     }
     return config
 
@@ -51,11 +51,7 @@ def test_config():
 def connection_config():
     """Connection configuration for testing."""
     return ConnectionConfig(
-        host='127.0.0.1',
-        port=7497,
-        client_id=999,
-        timeout=5,
-        readonly=True
+        host="127.0.0.1", port=7497, client_id=999, timeout=5, readonly=True
     )
 
 

@@ -26,7 +26,7 @@ class Position:
     account: str
 
     @classmethod
-    def from_ib_insync(cls, ib_position: Any) -> 'Position':
+    def from_ib_insync(cls, ib_position: Any) -> "Position":
         """
         Create Position from ib_insync Position object.
 
@@ -40,12 +40,12 @@ class Position:
             symbol=ib_position.contract.symbol,
             contract_id=ib_position.contract.conId,
             position=ib_position.position,
-            market_price=getattr(ib_position, 'marketPrice', 0.0) or 0.0,
-            market_value=getattr(ib_position, 'marketValue', 0.0) or 0.0,
-            average_cost=getattr(ib_position, 'averageCost', 0.0) or 0.0,
-            unrealized_pnl=getattr(ib_position, 'unrealizedPNL', 0.0) or 0.0,
-            realized_pnl=getattr(ib_position, 'realizedPNL', 0.0) or 0.0,
-            account=ib_position.account
+            market_price=getattr(ib_position, "marketPrice", 0.0) or 0.0,
+            market_value=getattr(ib_position, "marketValue", 0.0) or 0.0,
+            average_cost=getattr(ib_position, "averageCost", 0.0) or 0.0,
+            unrealized_pnl=getattr(ib_position, "unrealizedPNL", 0.0) or 0.0,
+            realized_pnl=getattr(ib_position, "realizedPNL", 0.0) or 0.0,
+            account=ib_position.account,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -89,7 +89,7 @@ class HistoricalBar:
     bar_count: int
 
     @classmethod
-    def from_ib_insync(cls, ib_bar: Any) -> 'HistoricalBar':
+    def from_ib_insync(cls, ib_bar: Any) -> "HistoricalBar":
         """
         Create HistoricalBar from ib_insync BarData object.
 
@@ -107,13 +107,13 @@ class HistoricalBar:
             close=ib_bar.close,
             volume=ib_bar.volume,
             average=ib_bar.average if ib_bar.average else 0.0,
-            bar_count=ib_bar.barCount if ib_bar.barCount else 0
+            bar_count=ib_bar.barCount if ib_bar.barCount else 0,
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
+        data["timestamp"] = self.timestamp.isoformat()
         return data
 
 
@@ -128,9 +128,9 @@ class PortfolioUpdate:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
-            'timestamp': self.timestamp.isoformat(),
-            'position': self.position.to_dict(),
-            'update_type': self.update_type
+            "timestamp": self.timestamp.isoformat(),
+            "position": self.position.to_dict(),
+            "update_type": self.update_type,
         }
 
 
@@ -138,7 +138,7 @@ class PortfolioUpdate:
 class ConnectionConfig:
     """Connection configuration settings."""
 
-    host: str = '127.0.0.1'
+    host: str = "127.0.0.1"
     port: int = 7497  # 7497 for TWS paper, 4001 for IB Gateway paper
     client_id: int = 1
     timeout: int = 10
@@ -162,7 +162,7 @@ class PnLUpdate:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
+        data["timestamp"] = self.timestamp.isoformat()
         return data
 
 
@@ -182,5 +182,5 @@ class PnLSingleUpdate:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
+        data["timestamp"] = self.timestamp.isoformat()
         return data

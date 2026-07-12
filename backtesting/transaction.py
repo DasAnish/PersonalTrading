@@ -53,9 +53,7 @@ class Transaction:
 
 
 def calculate_transaction_cost(
-    quantity: float,
-    price: float,
-    cost_bps: float = 7.5
+    quantity: float, price: float, cost_bps: float = 7.5
 ) -> float:
     """
     Calculate transaction cost for a trade.

@@ -26,10 +26,7 @@ async def main():
         print("=" * 60)
 
         bars = await client.get_historical_bars(
-            symbol="AAPL",
-            duration="1 D",
-            bar_size="1 min",
-            what_to_show="TRADES"
+            symbol="AAPL", duration="1 D", bar_size="1 min", what_to_show="TRADES"
         )
 
         print(f"\nReceived {len(bars)} bars")
@@ -45,10 +42,7 @@ async def main():
 
         symbols = ["AAPL", "GOOGL", "MSFT"]
         multi_bars = await client.get_multiple_historical_bars(
-            symbols=symbols,
-            duration="1 D",
-            bar_size="5 mins",
-            concurrent=True
+            symbols=symbols, duration="1 D", bar_size="5 mins", concurrent=True
         )
 
         for symbol, data in multi_bars.items():
@@ -64,13 +58,12 @@ async def main():
         start_date = datetime.now() - timedelta(days=90)
         end_date = datetime.now()
 
-        print(f"\nDownloading AAPL daily bars from {start_date.date()} to {end_date.date()}")
+        print(
+            f"\nDownloading AAPL daily bars from {start_date.date()} to {end_date.date()}"
+        )
 
         extended_bars = await client.download_extended_history(
-            symbol="AAPL",
-            start_date=start_date,
-            end_date=end_date,
-            bar_size="1 day"
+            symbol="AAPL", start_date=start_date, end_date=end_date, bar_size="1 day"
         )
 
         print(f"\nReceived {len(extended_bars)} daily bars")

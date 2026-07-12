@@ -58,7 +58,9 @@ class FiftyTwoWeekHighStrategy(AllocationStrategy):
         self.lookback_days = lookback_days
         self.weighting = weighting
         if weighting not in ("equal", "inverse_vol"):
-            raise ValueError(f"weighting must be 'equal' or 'inverse_vol', got {weighting}")
+            raise ValueError(
+                f"weighting must be 'equal' or 'inverse_vol', got {weighting}"
+            )
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
         prices = context.prices
@@ -82,7 +84,7 @@ class FiftyTwoWeekHighStrategy(AllocationStrategy):
         current_prices = prices.iloc[-1]
 
         signal = current_prices / rolling_max
-        signal = signal.replace([float('inf'), -float('inf')], 0)
+        signal = signal.replace([float("inf"), -float("inf")], 0)
 
         # Rank and select top N (highest ratio = closest to 52-week high)
         ranked = signal.sort_values(ascending=False)
@@ -95,7 +97,9 @@ class FiftyTwoWeekHighStrategy(AllocationStrategy):
 
         # Calculate weights for selected assets
         if self.weighting == "equal":
-            selected_weights = pd.Series(1.0 / len(selected_symbols), index=selected_symbols)
+            selected_weights = pd.Series(
+                1.0 / len(selected_symbols), index=selected_symbols
+            )
         else:  # inverse_vol
             returns = prices[selected_symbols].pct_change().dropna()
             vols = returns.std()

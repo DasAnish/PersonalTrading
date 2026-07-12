@@ -77,7 +77,7 @@ class MeanReversionStrategy(AllocationStrategy):
             return self._equal_weight(prices)
 
         # Short-term trailing returns (reversal signal)
-        recent_prices = prices.iloc[-self.lookback_days:]
+        recent_prices = prices.iloc[-self.lookback_days :]
         trailing_returns = recent_prices.iloc[-1] / recent_prices.iloc[0] - 1
 
         # Rank ascending: rank 1 = worst performer (highest reversion weight)
@@ -85,7 +85,7 @@ class MeanReversionStrategy(AllocationStrategy):
         ranks = trailing_returns.rank(ascending=True)  # 1 = worst performer
 
         # Inverse-volatility scaling
-        vol_prices = prices.iloc[-self.vol_lookback_days:]
+        vol_prices = prices.iloc[-self.vol_lookback_days :]
         vols = vol_prices.pct_change().dropna().std() * np.sqrt(252)
         vols = vols.clip(lower=self.min_volatility)
 

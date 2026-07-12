@@ -21,7 +21,7 @@ from .models import (
     PortfolioUpdate,
     ConnectionConfig,
     PnLUpdate,
-    PnLSingleUpdate
+    PnLSingleUpdate,
 )
 from .exceptions import (
     IBWrapperException,
@@ -31,7 +31,7 @@ from .exceptions import (
     RateLimitException,
     InvalidContractException,
     PortfolioException,
-    ConfigurationException
+    ConfigurationException,
 )
 
 __version__ = "0.1.0"

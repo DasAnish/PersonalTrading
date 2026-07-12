@@ -9,4 +9,4 @@ Modules:
 from .param_sweep import ParameterSweep
 from .walk_forward import WalkForwardAnalysis
 
-__all__ = ['ParameterSweep', 'WalkForwardAnalysis']
+__all__ = ["ParameterSweep", "WalkForwardAnalysis"]

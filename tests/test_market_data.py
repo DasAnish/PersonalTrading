@@ -30,7 +30,7 @@ async def test_get_historical_bars(mock_ib):
             close=100.5,
             volume=1000,
             average=100.25,
-            barCount=10
+            barCount=10,
         )
     ]
     mock_ib.reqHistoricalDataAsync = AsyncMock(return_value=mock_bars)
@@ -69,10 +69,7 @@ async def test_get_multiple_historical_bars(mock_ib):
 
     symbols = ["AAPL", "GOOGL"]
     result = await service.get_multiple_historical_bars(
-        symbols,
-        "1 D",
-        "1 min",
-        concurrent=False
+        symbols, "1 D", "1 min", concurrent=False
     )
 
     assert isinstance(result, dict)

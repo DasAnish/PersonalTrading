@@ -65,11 +65,9 @@ class MetaPortfolioStrategy(AllocationStrategy):
     # ------------------------------------------------------------------
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
-        all_symbols = sorted(set(
-            sym
-            for strat in self.underlying
-            for sym in strat.get_symbols()
-        ))
+        all_symbols = sorted(
+            set(sym for strat in self.underlying for sym in strat.get_symbols())
+        )
 
         blended = pd.Series(0.0, index=all_symbols)
         n_ok = 0
@@ -79,7 +77,9 @@ class MetaPortfolioStrategy(AllocationStrategy):
                 sub_weights = sub_strategy.calculate_weights(context)
                 # sub_weights may be indexed by strategy names or asset symbols;
                 # normalise to asset symbols using get_symbols() mapping
-                asset_weights = self._resolve_to_symbols(sub_weights, sub_strategy, all_symbols)
+                asset_weights = self._resolve_to_symbols(
+                    sub_weights, sub_strategy, all_symbols
+                )
                 blended += asset_weights
                 n_ok += 1
             except Exception as e:
@@ -89,7 +89,9 @@ class MetaPortfolioStrategy(AllocationStrategy):
 
         if n_ok == 0:
             # All sub-strategies failed — equal weight fallback
-            logger.warning("MetaPortfolio: all sub-strategies failed, using equal weight")
+            logger.warning(
+                "MetaPortfolio: all sub-strategies failed, using equal weight"
+            )
             return pd.Series(1.0 / len(all_symbols), index=all_symbols)
 
         blended /= n_ok
@@ -144,7 +146,7 @@ class MetaPortfolioStrategy(AllocationStrategy):
         name_to_symbols: dict[str, List[str]] = {}
 
         def _collect_leaves(strat: Strategy) -> None:
-            underlying = getattr(strat, 'underlying', None)
+            underlying = getattr(strat, "underlying", None)
             if underlying is None:
                 # Leaf node (AssetStrategy)
                 for sym in strat.get_symbols():

@@ -52,10 +52,10 @@ from strategies.core import AllocationStrategy, Strategy, StrategyContext
 logger = logging.getLogger(__name__)
 
 # Equity sleeve (tilted up in cycle years 2-3, down in cycle year 1).
-EQUITY_SLEEVE = {'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND', 'AIGC'}
+EQUITY_SLEEVE = {"VUSA", "EQQQ", "IWRD", "IMEU", "IIND", "AIGC"}
 
 # Defensive sleeve (tilted up in cycle year 1, down in cycle years 2-3).
-DEFENSIVE_SLEEVE = {'VUTY', 'SGLN'}
+DEFENSIVE_SLEEVE = {"VUTY", "SGLN"}
 
 # US presidential inaugurations occur every 4 years on Jan 20. 2025 is used
 # as the anchor year, but the residue class (year % 4 == 1) also covers all
@@ -96,9 +96,8 @@ def _cycle_year(current_date: datetime) -> int:
     """
     inauguration = _most_recent_inauguration(current_date)
 
-    months_elapsed = (
-        (current_date.year - inauguration.year) * 12
-        + (current_date.month - inauguration.month)
+    months_elapsed = (current_date.year - inauguration.year) * 12 + (
+        current_date.month - inauguration.month
     )
     if current_date.day < inauguration.day:
         months_elapsed -= 1
@@ -152,7 +151,8 @@ class PresidentialCycleSeasonalityStrategy(AllocationStrategy):
         """
         super().__init__(
             underlying=underlying,
-            name=name or f"Presidential Election Cycle Seasonality ({tilt_magnitude_pp:.0f}pp)",
+            name=name
+            or f"Presidential Election Cycle Seasonality ({tilt_magnitude_pp:.0f}pp)",
         )
         self.tilt_magnitude_pp = tilt_magnitude_pp
         self.tilt_magnitude = tilt_magnitude_pp / 100.0
@@ -277,8 +277,7 @@ class PresidentialCycleSeasonalityStrategy(AllocationStrategy):
     ) -> Set[str]:
         """Resolve a sleeve's symbols to strategy names present in this universe."""
         names = {
-            symbol_to_name.get(sym, sym)
-            for sym in sleeve_symbols & available_symbols
+            symbol_to_name.get(sym, sym) for sym in sleeve_symbols & available_symbols
         }
         return names & set(strategy_names)
 

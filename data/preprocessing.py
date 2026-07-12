@@ -50,12 +50,12 @@ def align_dataframes(data_dict: Dict[str, pd.DataFrame]) -> pd.DataFrame:
             logger.warning(f"Empty DataFrame for {symbol}, skipping")
             continue
 
-        if 'close' not in df.columns:
+        if "close" not in df.columns:
             logger.error(f"No 'close' column in {symbol} DataFrame")
             continue
 
         # Extract close prices
-        close_prices = df['close'].copy()
+        close_prices = df["close"].copy()
         close_prices.name = symbol
 
         price_series[symbol] = close_prices
@@ -98,9 +98,7 @@ def align_dataframes(data_dict: Dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 
 def validate_data_quality(
-    prices: pd.DataFrame,
-    min_data_points: int = 252,
-    max_nan_pct: float = 0.05
+    prices: pd.DataFrame, min_data_points: int = 252, max_nan_pct: float = 0.05
 ) -> bool:
     """
     Validate data quality for backtesting.
@@ -162,10 +160,7 @@ def validate_data_quality(
     return True
 
 
-def resample_to_frequency(
-    prices: pd.DataFrame,
-    frequency: str = '1D'
-) -> pd.DataFrame:
+def resample_to_frequency(prices: pd.DataFrame, frequency: str = "1D") -> pd.DataFrame:
     """
     Resample price data to specified frequency.
 
@@ -196,9 +191,7 @@ def resample_to_frequency(
 
 
 def handle_missing_data(
-    prices: pd.DataFrame,
-    method: str = 'ffill',
-    limit: int = 3
+    prices: pd.DataFrame, method: str = "ffill", limit: int = 3
 ) -> pd.DataFrame:
     """
     Handle missing data in price DataFrame.
@@ -219,13 +212,13 @@ def handle_missing_data(
 
     original_len = len(prices)
 
-    if method == 'ffill':
+    if method == "ffill":
         prices = prices.ffill(limit=limit)
-    elif method == 'bfill':
+    elif method == "bfill":
         prices = prices.bfill(limit=limit)
-    elif method == 'interpolate':
-        prices = prices.interpolate(method='linear', limit=limit)
-    elif method == 'drop':
+    elif method == "interpolate":
+        prices = prices.interpolate(method="linear", limit=limit)
+    elif method == "drop":
         prices = prices.dropna()
     else:
         logger.warning(f"Unknown method '{method}', using ffill")
@@ -235,7 +228,9 @@ def handle_missing_data(
     prices = prices.dropna()
 
     if len(prices) < original_len:
-        logger.info(f"Filled/dropped {original_len - len(prices)} rows with missing data")
+        logger.info(
+            f"Filled/dropped {original_len - len(prices)} rows with missing data"
+        )
 
     return prices
 

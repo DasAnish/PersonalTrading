@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 def create_contract(
     symbol: str,
-    sec_type: str = 'STK',
-    exchange: str = 'SMART',
-    currency: str = 'USD',
-    **kwargs
+    sec_type: str = "STK",
+    exchange: str = "SMART",
+    currency: str = "USD",
+    **kwargs,
 ) -> Contract:
     """
     Create an IB contract from simple parameters.
@@ -80,15 +80,15 @@ def parse_duration(duration_str: str) -> timedelta:
     value = int(parts[0])
     unit = parts[1].upper()
 
-    if unit == 'S':
+    if unit == "S":
         return timedelta(seconds=value)
-    elif unit == 'D':
+    elif unit == "D":
         return timedelta(days=value)
-    elif unit == 'W':
+    elif unit == "W":
         return timedelta(weeks=value)
-    elif unit == 'M':
+    elif unit == "M":
         return timedelta(days=value * 30)  # Approximate
-    elif unit == 'Y':
+    elif unit == "Y":
         return timedelta(days=value * 365)  # Approximate
     else:
         raise ValueError(f"Unknown duration unit: {unit}")
@@ -111,10 +111,27 @@ def validate_bar_size(bar_size: str) -> bool:
         '1 day', '1 week', '1 month'
     """
     valid_bar_sizes = {
-        '1 secs', '5 secs', '10 secs', '15 secs', '30 secs',
-        '1 min', '2 mins', '3 mins', '5 mins', '10 mins', '15 mins', '20 mins', '30 mins',
-        '1 hour', '2 hours', '3 hours', '4 hours', '8 hours',
-        '1 day', '1 week', '1 month'
+        "1 secs",
+        "5 secs",
+        "10 secs",
+        "15 secs",
+        "30 secs",
+        "1 min",
+        "2 mins",
+        "3 mins",
+        "5 mins",
+        "10 mins",
+        "15 mins",
+        "20 mins",
+        "30 mins",
+        "1 hour",
+        "2 hours",
+        "3 hours",
+        "4 hours",
+        "8 hours",
+        "1 day",
+        "1 week",
+        "1 month",
     }
     return bar_size in valid_bar_sizes
 
@@ -219,7 +236,7 @@ async def retry_on_failure(
     func: Callable,
     max_retries: int = 3,
     backoff: float = 1.0,
-    exceptions: tuple = (Exception,)
+    exceptions: tuple = (Exception,),
 ) -> Any:
     """
     Retry an async function with exponential backoff on failure.
@@ -251,24 +268,20 @@ async def retry_on_failure(
         except exceptions as e:
             last_exception = e
             if attempt < max_retries - 1:
-                wait_time = backoff * (2 ** attempt)
+                wait_time = backoff * (2**attempt)
                 logger.warning(
                     f"Attempt {attempt + 1}/{max_retries} failed: {e}. "
                     f"Retrying in {wait_time:.2f} seconds..."
                 )
                 await asyncio.sleep(wait_time)
             else:
-                logger.error(
-                    f"All {max_retries} attempts failed. Last error: {e}"
-                )
+                logger.error(f"All {max_retries} attempts failed. Last error: {e}")
 
     raise last_exception
 
 
 def setup_logging(
-    level: str = "INFO",
-    log_file: Optional[str] = None,
-    console: bool = True
+    level: str = "INFO", log_file: Optional[str] = None, console: bool = True
 ) -> logging.Logger:
     """
     Setup logging configuration for the IB wrapper.
@@ -290,22 +303,19 @@ def setup_logging(
     # Console handler
     if console:
         console_handler = logging.StreamHandler()
-        console_formatter = logging.Formatter(
-            '%(levelname)s - %(name)s - %(message)s'
-        )
+        console_formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
     # File handler
     if log_file:
         from logging.handlers import RotatingFileHandler
+
         file_handler = RotatingFileHandler(
-            log_file,
-            maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
         )
         file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)

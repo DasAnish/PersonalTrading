@@ -6,10 +6,11 @@ import asyncio
 import sys
 from ib_wrapper import IBClient, Config
 
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8')
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
 
-async def main( symbol, CCY ):
+
+async def main(symbol, CCY):
     print("Testing with known LSE symbol (HSBA - HSBC Holdings)")
     print("=" * 70)
 
@@ -27,7 +28,7 @@ async def main( symbol, CCY ):
             bar_size="5 mins",
             sec_type="STK",
             exchange="SMART",
-            currency=CCY
+            currency=CCY,
         )
 
         if not bars.empty:
@@ -43,6 +44,7 @@ async def main( symbol, CCY ):
 
     finally:
         client.disconnect()
+
 
 if __name__ == "__main__":
     asyncio.run(main("SGLN", "GBP"))

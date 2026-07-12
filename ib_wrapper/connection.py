@@ -31,10 +31,7 @@ class IBConnectionManager:
     """
 
     def __init__(
-        self,
-        config: ConnectionConfig,
-        max_retries: int = 3,
-        backoff: float = 2.0
+        self, config: ConnectionConfig, max_retries: int = 3, backoff: float = 2.0
     ):
         """
         Initialize connection manager.
@@ -76,7 +73,7 @@ class IBConnectionManager:
                     port=self.config.port,
                     clientId=self.config.client_id,
                     timeout=self.config.timeout,
-                    readonly=self.config.readonly
+                    readonly=self.config.readonly,
                 )
 
                 # Wait a moment for connection to stabilize
@@ -98,7 +95,7 @@ class IBConnectionManager:
                 logger.error(f"Connection attempt {attempt + 1} failed: {e}")
 
                 if attempt < self.max_retries - 1:
-                    wait_time = self.backoff * (2 ** attempt)
+                    wait_time = self.backoff * (2**attempt)
                     logger.info(f"Retrying in {wait_time:.2f} seconds...")
                     await asyncio.sleep(wait_time)
                 else:
@@ -161,6 +158,7 @@ class IBConnectionManager:
         """
         Setup event handlers for IB connection events.
         """
+
         # Error event handler
         def on_error(reqId, errorCode, errorString, contract):
             """Handle IB error events."""
@@ -258,5 +256,5 @@ class IBConnectionManager:
         """
         Cleanup on deletion.
         """
-        if hasattr(self, 'ib') and self.ib.isConnected():
+        if hasattr(self, "ib") and self.ib.isConnected():
             self.disconnect()

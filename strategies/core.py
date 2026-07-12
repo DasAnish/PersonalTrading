@@ -65,10 +65,10 @@ class DataRequirements:
 
     symbols: List[str]
     lookback_days: int
-    frequency: str = '1 day'
-    currency: str = 'USD'
-    exchange: str = 'SMART'
-    sec_type: str = 'STK'
+    frequency: str = "1 day"
+    currency: str = "USD"
+    exchange: str = "SMART"
+    sec_type: str = "STK"
     underlying_requirements: Optional[List[DataRequirements]] = None
 
     def aggregate_with(self, other: DataRequirements) -> DataRequirements:
@@ -77,10 +77,10 @@ class DataRequirements:
             symbols=list(set(self.symbols + other.symbols)),
             lookback_days=max(self.lookback_days, other.lookback_days),
             frequency=self.frequency,  # Assume same frequency
-            currency=self.currency,    # Assume same currency
+            currency=self.currency,  # Assume same currency
             exchange=self.exchange,
             sec_type=self.sec_type,
-            underlying_requirements=None
+            underlying_requirements=None,
         )
 
 
@@ -248,10 +248,10 @@ class AssetStrategy(Strategy):
     def __init__(
         self,
         symbol: str,
-        currency: str = 'USD',
-        exchange: str = 'SMART',
-        sec_type: str = 'STK',
-        name: Optional[str] = None
+        currency: str = "USD",
+        exchange: str = "SMART",
+        sec_type: str = "STK",
+        name: Optional[str] = None,
     ):
         """Initialize asset strategy.
 
@@ -275,7 +275,9 @@ class AssetStrategy(Strategy):
     def get_price_timeseries(self, context: StrategyContext) -> pd.Series:
         """Return price column for this symbol."""
         if self.symbol not in context.prices.columns:
-            raise ValueError(f"Symbol {self.symbol} not in price data. Available: {list(context.prices.columns)}")
+            raise ValueError(
+                f"Symbol {self.symbol} not in price data. Available: {list(context.prices.columns)}"
+            )
         return context.prices[self.symbol]
 
     def get_data_requirements(self) -> DataRequirements:
@@ -285,7 +287,7 @@ class AssetStrategy(Strategy):
             lookback_days=1,  # Only need current price
             currency=self.currency,
             exchange=self.exchange,
-            sec_type=self.sec_type
+            sec_type=self.sec_type,
         )
 
 
@@ -372,10 +374,7 @@ class AllocationStrategy(Strategy):
     def get_data_requirements(self) -> DataRequirements:
         """Aggregate requirements from all underlying strategies."""
         if not self.underlying:
-            return DataRequirements(
-                symbols=[],
-                lookback_days=0
-            )
+            return DataRequirements(symbols=[], lookback_days=0)
 
         # Start with first underlying
         aggregated = self.underlying[0].get_data_requirements()
@@ -457,7 +456,9 @@ class OverlayStrategy(Strategy):
         return self.transform_weights(base_weights, context)
 
     @abstractmethod
-    def transform_weights(self, weights: pd.Series, context: StrategyContext) -> pd.Series:
+    def transform_weights(
+        self, weights: pd.Series, context: StrategyContext
+    ) -> pd.Series:
         """
         Transform weights from underlying strategy.
 
@@ -558,9 +559,7 @@ def prune_missing_assets(
             dropped_names = [
                 s.name for s, p in zip(strategy.underlying, pruned) if p is None
             ]
-            logger.warning(
-                f"{strategy.name}: dropping {dropped_names} (no price data)"
-            )
+            logger.warning(f"{strategy.name}: dropping {dropped_names} (no price data)")
         if not kept:
             return None
         strategy.underlying = kept

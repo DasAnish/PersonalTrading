@@ -44,13 +44,28 @@ logger = logging.getLogger(__name__)
 # an equity/AI product (an earlier asset-definition label error implied
 # otherwise).
 EQUITY_SLEEVE = {
-    'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND',
-    'ASHR', 'SAEM', 'CACX', 'CSX5', 'IEMU', 'WCLD', 'WSML',
-    'AWESGS', 'EMMCHA', 'EXXW', 'EXX5', 'EXI2', 'EXSA',
+    "VUSA",
+    "EQQQ",
+    "IWRD",
+    "IMEU",
+    "IIND",
+    "ASHR",
+    "SAEM",
+    "CACX",
+    "CSX5",
+    "IEMU",
+    "WCLD",
+    "WSML",
+    "AWESGS",
+    "EMMCHA",
+    "EXXW",
+    "EXX5",
+    "EXI2",
+    "EXSA",
 }
 
 # Defensive sleeve (held outside turn-of-month window)
-DEFENSIVE_SLEEVE = {'VUTY', 'SGLN', 'AGGU', 'SEGA'}
+DEFENSIVE_SLEEVE = {"VUTY", "SGLN", "AGGU", "SEGA"}
 
 
 class TurnOfMonthSeasonalityStrategy(AllocationStrategy):
@@ -158,9 +173,7 @@ class TurnOfMonthSeasonalityStrategy(AllocationStrategy):
             strategy_name = symbol_to_name.get(symbol, symbol)
             weights[strategy_name] = equal_weight
 
-        logger.debug(
-            f"TurnOfMonth weights: {dict(weights[weights > 0].round(4))}"
-        )
+        logger.debug(f"TurnOfMonth weights: {dict(weights[weights > 0].round(4))}")
 
         return weights
 

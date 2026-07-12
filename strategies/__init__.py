@@ -38,7 +38,7 @@ from .core import (
     OverlayStrategy,
     StrategyContext,
     DataRequirements,
-    prune_missing_assets
+    prune_missing_assets,
 )
 
 # Concrete allocation strategies
@@ -75,11 +75,7 @@ from .sma_trend_filter import SMATrendFilterStrategy
 from .low_volatility_tilt import LowVolatilityTiltStrategy
 
 # Overlay strategies
-from .overlays import (
-    VolatilityTargetStrategy,
-    ConstraintStrategy,
-    LeverageStrategy
-)
+from .overlays import VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
 from .turbulence_overlay import TurbulenceOverlayStrategy
 
 # ---------------------------------------------------------------------------
@@ -108,22 +104,25 @@ def get_available_strategies() -> list:
 # Market universe convenience classes (used by YAML strategy definitions)
 # ---------------------------------------------------------------------------
 
+
 def _load_uk_etf_assets() -> list:
     """Dynamically load all UK ETFs from strategy_definitions/assets/*.json."""
     import json
     from pathlib import Path
 
-    assets_dir = Path(__file__).parent.parent / 'strategy_definitions' / 'assets'
+    assets_dir = Path(__file__).parent.parent / "strategy_definitions" / "assets"
     result = []
-    for path in sorted(assets_dir.glob('*.json')):
+    for path in sorted(assets_dir.glob("*.json")):
         with open(path) as f:
             defn = json.load(f)
-        params = defn.get('parameters', {})
-        result.append(AssetStrategy(
-            symbol=params.get('symbol', path.stem.upper()),
-            currency=params.get('currency', 'GBP'),
-            exchange=params.get('exchange', 'SMART'),
-        ))
+        params = defn.get("parameters", {})
+        result.append(
+            AssetStrategy(
+                symbol=params.get("symbol", path.stem.upper()),
+                currency=params.get("currency", "GBP"),
+                exchange=params.get("exchange", "SMART"),
+            )
+        )
     return result
 
 
@@ -146,65 +145,67 @@ class USEquitiesMarket(list):
     """
 
     def __init__(self):
-        super().__init__([
-            AssetStrategy('AAPL', currency='USD'),
-            AssetStrategy('MSFT', currency='USD'),
-            AssetStrategy('GOOGL', currency='USD'),
-            AssetStrategy('AMZN', currency='USD'),
-        ])
+        super().__init__(
+            [
+                AssetStrategy("AAPL", currency="USD"),
+                AssetStrategy("MSFT", currency="USD"),
+                AssetStrategy("GOOGL", currency="USD"),
+                AssetStrategy("AMZN", currency="USD"),
+            ]
+        )
 
 
 __all__ = [
     # Core interfaces
-    'Strategy',
-    'AssetStrategy',
-    'AllocationStrategy',
-    'OverlayStrategy',
-    'StrategyContext',
-    'DataRequirements',
-    'prune_missing_assets',
+    "Strategy",
+    "AssetStrategy",
+    "AllocationStrategy",
+    "OverlayStrategy",
+    "StrategyContext",
+    "DataRequirements",
+    "prune_missing_assets",
     # Allocation strategies
-    'HRPStrategy',
-    'EqualWeightStrategy',
-    'TrendFollowingStrategy',
-    'MinimumVarianceStrategy',
-    'MaximumDiversificationStrategy',
-    'RiskParityStrategy',
-    'MomentumTopNStrategy',
-    'FiftyTwoWeekHighStrategy',
-    'VolatilityTimingStrategy',
-    'VolatilityMomentumStrategy',
-    'TrendSignalMVOStrategy',
-    'MeanReversionStrategy',
-    'LongTermReversalStrategy',
-    'SkewnessWeightedStrategy',
-    'MetaPortfolioStrategy',
-    'DualMomentumStrategy',
-    'AdaptiveAssetAllocationStrategy',
-    'TrendSignalRPStrategy',
-    'ProtectiveAssetAllocationStrategy',
-    'HalloweenSeasonalityStrategy',
-    'TurnOfMonthSeasonalityStrategy',
-    'CarryTiltStrategy',
-    'GoldSafeHavenOverlayStrategy',
-    'BondDurationHedgeOverlayStrategy',
-    'LowBetaTiltStrategy',
-    'QualityWeightedStabilityStrategy',
-    'PresidentialCycleSeasonalityStrategy',
-    'CarryTrendFilterStrategy',
-    'GoldAutumnSeasonalityStrategy',
-    'SMATrendFilterStrategy',
-    'LowVolatilityTiltStrategy',
+    "HRPStrategy",
+    "EqualWeightStrategy",
+    "TrendFollowingStrategy",
+    "MinimumVarianceStrategy",
+    "MaximumDiversificationStrategy",
+    "RiskParityStrategy",
+    "MomentumTopNStrategy",
+    "FiftyTwoWeekHighStrategy",
+    "VolatilityTimingStrategy",
+    "VolatilityMomentumStrategy",
+    "TrendSignalMVOStrategy",
+    "MeanReversionStrategy",
+    "LongTermReversalStrategy",
+    "SkewnessWeightedStrategy",
+    "MetaPortfolioStrategy",
+    "DualMomentumStrategy",
+    "AdaptiveAssetAllocationStrategy",
+    "TrendSignalRPStrategy",
+    "ProtectiveAssetAllocationStrategy",
+    "HalloweenSeasonalityStrategy",
+    "TurnOfMonthSeasonalityStrategy",
+    "CarryTiltStrategy",
+    "GoldSafeHavenOverlayStrategy",
+    "BondDurationHedgeOverlayStrategy",
+    "LowBetaTiltStrategy",
+    "QualityWeightedStabilityStrategy",
+    "PresidentialCycleSeasonalityStrategy",
+    "CarryTrendFilterStrategy",
+    "GoldAutumnSeasonalityStrategy",
+    "SMATrendFilterStrategy",
+    "LowVolatilityTiltStrategy",
     # Overlay strategies
-    'VolatilityTargetStrategy',
-    'ConstraintStrategy',
-    'LeverageStrategy',
-    'TurbulenceOverlayStrategy',
+    "VolatilityTargetStrategy",
+    "ConstraintStrategy",
+    "LeverageStrategy",
+    "TurbulenceOverlayStrategy",
     # Market universe classes
-    'UKETFsMarket',
-    'USEquitiesMarket',
+    "UKETFsMarket",
+    "USEquitiesMarket",
     # Legacy registry stubs
-    'STRATEGY_REGISTRY',
-    'create_strategy',
-    'get_available_strategies',
+    "STRATEGY_REGISTRY",
+    "create_strategy",
+    "get_available_strategies",
 ]

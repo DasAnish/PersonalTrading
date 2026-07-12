@@ -93,7 +93,7 @@ class SMATrendFilterStrategy(AllocationStrategy):
             price_series = context.prices[symbol]
 
             if len(price_series) >= self.lookback_days:
-                sma = price_series.iloc[-self.lookback_days:].mean()
+                sma = price_series.iloc[-self.lookback_days :].mean()
                 current_price = price_series.iloc[-1]
             else:
                 # Insufficient history; use all available

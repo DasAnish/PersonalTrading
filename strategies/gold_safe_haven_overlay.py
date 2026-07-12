@@ -44,13 +44,28 @@ logger = logging.getLogger(__name__)
 # an equity/AI product (an earlier asset-definition label error implied
 # otherwise).
 EQUITY_SLEEVE = {
-    'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND',
-    'ASHR', 'SAEM', 'CACX', 'CSX5', 'IEMU', 'WCLD', 'WSML',
-    'AWESGS', 'EMMCHA', 'EXXW', 'EXX5', 'EXI2', 'EXSA',
+    "VUSA",
+    "EQQQ",
+    "IWRD",
+    "IMEU",
+    "IIND",
+    "ASHR",
+    "SAEM",
+    "CACX",
+    "CSX5",
+    "IEMU",
+    "WCLD",
+    "WSML",
+    "AWESGS",
+    "EMMCHA",
+    "EXXW",
+    "EXX5",
+    "EXI2",
+    "EXSA",
 }
 
 # Gold safe-haven asset
-GOLD_ASSET = 'SGLN'
+GOLD_ASSET = "SGLN"
 
 # Trailing window for drawdown calculation (6 months = ~126 trading days)
 DRAWDOWN_LOOKBACK_DAYS = 126
@@ -130,12 +145,16 @@ class GoldSafeHavenOverlayStrategy(AllocationStrategy):
 
         # Check if SGLN and equity assets are available
         if GOLD_ASSET not in available_symbols:
-            logger.debug(f"GoldSafeHaven: {GOLD_ASSET} not available, using base weights")
+            logger.debug(
+                f"GoldSafeHaven: {GOLD_ASSET} not available, using base weights"
+            )
             return weights
 
         available_equities = EQUITY_SLEEVE & available_symbols
         if not available_equities:
-            logger.debug("GoldSafeHaven: no equity assets available, using base weights")
+            logger.debug(
+                "GoldSafeHaven: no equity assets available, using base weights"
+            )
             return weights
 
         # Compute equity stress signal: drawdown from trailing 6-month high
@@ -153,9 +172,7 @@ class GoldSafeHavenOverlayStrategy(AllocationStrategy):
             )
 
             # Build new weights: scale down equities, add to gold
-            equity_names = {
-                symbol_to_name.get(sym, sym) for sym in available_equities
-            }
+            equity_names = {symbol_to_name.get(sym, sym) for sym in available_equities}
             gold_name = symbol_to_name.get(GOLD_ASSET, GOLD_ASSET)
 
             # Pull gold_tilt_pp from equity sleeve pro-rata

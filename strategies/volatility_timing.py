@@ -56,7 +56,9 @@ class VolatilityTimingStrategy(AllocationStrategy):
         self.lookback_days = lookback_days
         self.mode = mode
         if mode not in ("vol_timing", "reward_to_risk"):
-            raise ValueError(f"mode must be 'vol_timing' or 'reward_to_risk', got {mode}")
+            raise ValueError(
+                f"mode must be 'vol_timing' or 'reward_to_risk', got {mode}"
+            )
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
         prices = context.prices
@@ -104,10 +106,7 @@ class VolatilityTimingStrategy(AllocationStrategy):
         inv_var = 1.0 / variances
         weights_dict = (inv_var / inv_var.sum()).to_dict()
 
-        weights = pd.Series(
-            [weights_dict.get(s, 0.0) for s in symbols],
-            index=index
-        )
+        weights = pd.Series([weights_dict.get(s, 0.0) for s in symbols], index=index)
 
         logger.debug(
             f"Vol Timing (variances): {dict(variances.round(6))}. "
@@ -136,10 +135,7 @@ class VolatilityTimingStrategy(AllocationStrategy):
         else:
             weights_dict = (rtr_ratio / rtr_ratio.sum()).to_dict()
 
-        weights = pd.Series(
-            [weights_dict.get(s, 0.0) for s in symbols],
-            index=index
-        )
+        weights = pd.Series([weights_dict.get(s, 0.0) for s in symbols], index=index)
 
         logger.debug(
             f"Reward-to-Risk (ratios): {dict(rtr_ratio.round(6))}. "

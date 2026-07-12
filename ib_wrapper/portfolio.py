@@ -11,7 +11,13 @@ from typing import List, Dict, Any, Optional, Callable
 
 from ib_insync import IB
 
-from .models import Position, AccountSummary, PortfolioUpdate, PnLUpdate, PnLSingleUpdate
+from .models import (
+    Position,
+    AccountSummary,
+    PortfolioUpdate,
+    PnLUpdate,
+    PnLSingleUpdate,
+)
 from .exceptions import PortfolioException
 from decimal import Decimal
 
@@ -58,10 +64,7 @@ class PortfolioService:
 
             ib_positions = self.ib.positions()
 
-            positions = [
-                Position.from_ib_insync(pos)
-                for pos in ib_positions
-            ]
+            positions = [Position.from_ib_insync(pos) for pos in ib_positions]
 
             logger.info(f"Retrieved {len(positions)} positions")
             return positions
@@ -71,9 +74,7 @@ class PortfolioService:
             raise PortfolioException(f"Failed to get positions: {e}")
 
     async def get_account_summary(
-        self,
-        account: Optional[str] = None,
-        tags: Optional[List[str]] = None
+        self, account: Optional[str] = None, tags: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Get account summary information.
@@ -91,19 +92,19 @@ class PortfolioService:
         """
         try:
             default_tags = [
-                'NetLiquidation',
-                'TotalCashValue',
-                'SettledCash',
-                'AccruedCash',
-                'BuyingPower',
-                'EquityWithLoanValue',
-                'GrossPositionValue',
-                'InitMarginReq',
-                'MaintMarginReq'
+                "NetLiquidation",
+                "TotalCashValue",
+                "SettledCash",
+                "AccruedCash",
+                "BuyingPower",
+                "EquityWithLoanValue",
+                "GrossPositionValue",
+                "InitMarginReq",
+                "MaintMarginReq",
             ]
 
-            tags_to_request = ','.join(tags) if tags else ','.join(default_tags)
-            account_code = account if account else 'All'
+            tags_to_request = ",".join(tags) if tags else ",".join(default_tags)
+            account_code = account if account else "All"
 
             logger.debug(f"Fetching account summary for {account_code}")
 
@@ -127,10 +128,7 @@ class PortfolioService:
             logger.error(f"Failed to get account summary: {e}")
             raise PortfolioException(f"Failed to get account summary: {e}")
 
-    async def get_account_values(
-        self,
-        account: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def get_account_values(self, account: Optional[str] = None) -> Dict[str, Any]:
         """
         Get detailed account values.
 
@@ -165,10 +163,7 @@ class PortfolioService:
             logger.error(f"Failed to get account values: {e}")
             raise PortfolioException(f"Failed to get account values: {e}")
 
-    def subscribe_portfolio_updates(
-        self,
-        callback: Callable[[PortfolioUpdate], None]
-    ):
+    def subscribe_portfolio_updates(self, callback: Callable[[PortfolioUpdate], None]):
         """
         Subscribe to real-time portfolio updates.
 
@@ -180,6 +175,7 @@ class PortfolioService:
             ...     print(f"Position updated: {update.position.symbol}")
             >>> service.subscribe_portfolio_updates(on_update)
         """
+
         def on_portfolio_update(item):
             """Handle portfolio update event from ib_insync."""
             try:
@@ -192,13 +188,11 @@ class PortfolioService:
                     average_cost=item.averageCost if item.averageCost else 0.0,
                     unrealized_pnl=item.unrealizedPNL if item.unrealizedPNL else 0.0,
                     realized_pnl=item.realizedPNL if item.realizedPNL else 0.0,
-                    account=item.account
+                    account=item.account,
                 )
 
                 update = PortfolioUpdate(
-                    timestamp=datetime.now(),
-                    position=position,
-                    update_type='modified'
+                    timestamp=datetime.now(), position=position, update_type="modified"
                 )
 
                 callback(update)
@@ -222,10 +216,7 @@ class PortfolioService:
             logger.info("Unsubscribed from portfolio updates")
 
     async def subscribe_pnl(
-        self,
-        account: str,
-        callback: Callable[[PnLUpdate], None],
-        model_code: str = ""
+        self, account: str, callback: Callable[[PnLUpdate], None], model_code: str = ""
     ):
         """
         Subscribe to account-level PnL updates.
@@ -240,6 +231,7 @@ class PortfolioService:
             ...     print(f"Daily PnL: ${pnl.daily_pnl:.2f}")
             >>> await service.subscribe_pnl("DU123456", on_pnl)
         """
+
         def on_pnl_update(pnl):
             """Handle PnL update event."""
             try:
@@ -248,7 +240,7 @@ class PortfolioService:
                     daily_pnl=pnl.dailyPnL if pnl.dailyPnL else 0.0,
                     unrealized_pnl=pnl.unrealizedPnL if pnl.unrealizedPnL else 0.0,
                     realized_pnl=pnl.realizedPnL if pnl.realizedPnL else 0.0,
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(),
                 )
 
                 callback(pnl_update)
@@ -268,7 +260,7 @@ class PortfolioService:
         account: str,
         contract_id: int,
         callback: Callable[[PnLSingleUpdate], None],
-        model_code: str = ""
+        model_code: str = "",
     ):
         """
         Subscribe to position-level PnL updates.
@@ -284,6 +276,7 @@ class PortfolioService:
             ...     print(f"Position PnL: ${pnl.unrealized_pnl:.2f}")
             >>> await service.subscribe_pnl_single("DU123456", 12345, on_position_pnl)
         """
+
         def on_pnl_single_update(pnl_single):
             """Handle position PnL update event."""
             try:
@@ -292,10 +285,14 @@ class PortfolioService:
                     contract_id=contract_id,
                     position=pnl_single.position if pnl_single.position else 0.0,
                     daily_pnl=pnl_single.dailyPnL if pnl_single.dailyPnL else 0.0,
-                    unrealized_pnl=pnl_single.unrealizedPnL if pnl_single.unrealizedPnL else 0.0,
-                    realized_pnl=pnl_single.realizedPnL if pnl_single.realizedPnL else 0.0,
+                    unrealized_pnl=(
+                        pnl_single.unrealizedPnL if pnl_single.unrealizedPnL else 0.0
+                    ),
+                    realized_pnl=(
+                        pnl_single.realizedPnL if pnl_single.realizedPnL else 0.0
+                    ),
                     value=pnl_single.value if pnl_single.value else 0.0,
-                    timestamp=datetime.now()
+                    timestamp=datetime.now(),
                 )
 
                 callback(pnl_update)
@@ -355,7 +352,7 @@ class PortfolioService:
             self.unsubscribe_pnl(account)
 
         # Cancel position-level PnL
-        for (account, contract_id) in list(self._pnl_single_subscriptions.keys()):
+        for account, contract_id in list(self._pnl_single_subscriptions.keys()):
             self.unsubscribe_pnl_single(account, contract_id)
 
         logger.info("Unsubscribed from all PnL updates")

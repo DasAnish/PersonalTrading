@@ -40,11 +40,7 @@ class RiskParityStrategy(AllocationStrategy):
     Falls back to inverse-volatility weighting if optimization fails.
     """
 
-    def __init__(
-        self,
-        underlying: List[Strategy],
-        name: str = None
-    ):
+    def __init__(self, underlying: List[Strategy], name: str = None):
         super().__init__(underlying, name=name or "Risk Parity")
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
@@ -81,23 +77,23 @@ class RiskParityStrategy(AllocationStrategy):
             marginal = w * (cov @ w) / port_var
             return np.sum((marginal - target_risk) ** 2)
 
-        constraints = {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
+        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
         bounds = tuple((1e-6, 1.0) for _ in range(n))
 
         # Start from inverse-volatility weights (good initial guess)
         vols = np.sqrt(np.diag(cov))
         vols[vols == 0] = 1e-10
-        w0 = (1.0 / vols)
+        w0 = 1.0 / vols
         w0 = w0 / w0.sum()
 
         try:
             result = minimize(
                 risk_contribution_error,
                 w0,
-                method='SLSQP',
+                method="SLSQP",
                 bounds=bounds,
                 constraints=constraints,
-                options={'maxiter': 1000, 'ftol': 1e-14}
+                options={"maxiter": 1000, "ftol": 1e-14},
             )
 
             if result.success and result.fun < 1e-6:
@@ -115,7 +111,9 @@ class RiskParityStrategy(AllocationStrategy):
                 weights = w0
 
         except Exception as e:
-            logger.warning(f"Risk Parity optimization failed: {e}. Using inverse-vol weights.")
+            logger.warning(
+                f"Risk Parity optimization failed: {e}. Using inverse-vol weights."
+            )
             weights = w0
 
         # Map to strategy names

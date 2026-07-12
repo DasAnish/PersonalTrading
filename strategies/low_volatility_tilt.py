@@ -58,7 +58,7 @@ class LowVolatilityTiltStrategy(AllocationStrategy):
         underlying: List[Strategy],
         vol_lookback_days: int = 252,
         held_fraction: float = 0.5,
-        weighting: Literal['equal', 'inverse_vol'] = 'equal',
+        weighting: Literal["equal", "inverse_vol"] = "equal",
         name: str = None,
     ):
         """
@@ -107,7 +107,9 @@ class LowVolatilityTiltStrategy(AllocationStrategy):
             price_series = context.prices[symbol]
 
             if len(price_series) >= self.vol_lookback_days:
-                returns = price_series.iloc[-self.vol_lookback_days:].pct_change().dropna()
+                returns = (
+                    price_series.iloc[-self.vol_lookback_days :].pct_change().dropna()
+                )
             else:
                 returns = price_series.pct_change().dropna()
 
@@ -130,7 +132,7 @@ class LowVolatilityTiltStrategy(AllocationStrategy):
         )
 
         # Step 3: Apply weighting
-        if self.weighting == 'inverse_vol':
+        if self.weighting == "inverse_vol":
             # Inverse-vol weighting: weight = 1/vol / sum(1/vol)
             inverse_vols = {}
             for symbol in held_symbols:

@@ -120,7 +120,7 @@ class TrendSignalMVOStrategy(AllocationStrategy):
 
     def _compute_signals(self, prices: pd.DataFrame) -> pd.Series:
         """EWMA-weighted annualised momentum signal per asset."""
-        recent = prices.iloc[-self.lookback_days:]
+        recent = prices.iloc[-self.lookback_days :]
         returns = recent.pct_change().dropna()
 
         decay = 0.5 ** (1.0 / self.half_life_days)
@@ -136,7 +136,7 @@ class TrendSignalMVOStrategy(AllocationStrategy):
 
     def _compute_covariance(self, prices: pd.DataFrame) -> pd.DataFrame:
         """Annualised covariance matrix from recent returns."""
-        recent = prices.iloc[-self.lookback_days:]
+        recent = prices.iloc[-self.lookback_days :]
         returns = recent.pct_change().dropna()
         return returns.cov() * 252
 
@@ -145,6 +145,7 @@ class TrendSignalMVOStrategy(AllocationStrategy):
         Solve: max mu'w - lambda * w'Cov*w
                s.t. sum(w)=1, w in [0,1]
         """
+
         def neg_utility(w):
             return -(mu @ w - self.risk_aversion * w @ cov @ w)
 

@@ -77,10 +77,10 @@ class AdaptiveAssetAllocationStrategy(AllocationStrategy):
         all_index = [symbol_to_name.get(s, s) for s in prices.columns]
 
         # Step 1: Momentum ranking
-        lookback_prices = prices.iloc[-self.lookback_days:]
+        lookback_prices = prices.iloc[-self.lookback_days :]
         trailing_returns = lookback_prices.iloc[-1] / lookback_prices.iloc[0] - 1
         ranked = trailing_returns.sort_values(ascending=False)
-        selected = ranked.index[:self.top_n].tolist()
+        selected = ranked.index[: self.top_n].tolist()
 
         logger.debug(
             f"AAA momentum rankings: {dict(ranked.round(4))}. Selected: {selected}"
@@ -99,7 +99,7 @@ class AdaptiveAssetAllocationStrategy(AllocationStrategy):
         def portfolio_variance(w):
             return w @ cov @ w
 
-        constraints = {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
+        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
         bounds = [(self.min_weight, self.max_weight)] * n
         w0 = np.ones(n) / n
 
@@ -107,10 +107,10 @@ class AdaptiveAssetAllocationStrategy(AllocationStrategy):
             result = minimize(
                 portfolio_variance,
                 w0,
-                method='SLSQP',
+                method="SLSQP",
                 bounds=bounds,
                 constraints=constraints,
-                options={'maxiter': 1000, 'ftol': 1e-12}
+                options={"maxiter": 1000, "ftol": 1e-12},
             )
             if result.success:
                 sel_weights = result.x

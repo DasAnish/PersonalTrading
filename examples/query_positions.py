@@ -14,8 +14,8 @@ from datetime import datetime
 from ib_wrapper import IBClient, Config
 
 # Fix encoding for Windows console
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8')
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 async def main():
@@ -79,7 +79,9 @@ async def main():
 
                     # Calculate percentage gain/loss
                     if pos.average_cost != 0:
-                        pnl_percent = (pos.unrealized_pnl / (pos.average_cost * abs(pos.position))) * 100
+                        pnl_percent = (
+                            pos.unrealized_pnl / (pos.average_cost * abs(pos.position))
+                        ) * 100
                         print(f"  {'P&L %:':<20} {pnl_percent:>+.2f}%")
 
                 # Display account summary
@@ -126,11 +128,11 @@ async def main():
 
                 # Display key metrics
                 key_metrics = [
-                    ('NetLiquidation', 'Net Liquidation Value'),
-                    ('TotalCashValue', 'Total Cash'),
-                    ('BuyingPower', 'Buying Power'),
-                    ('GrossPositionValue', 'Gross Position Value'),
-                    ('EquityWithLoanValue', 'Equity with Loan'),
+                    ("NetLiquidation", "Net Liquidation Value"),
+                    ("TotalCashValue", "Total Cash"),
+                    ("BuyingPower", "Buying Power"),
+                    ("GrossPositionValue", "Gross Position Value"),
+                    ("EquityWithLoanValue", "Equity with Loan"),
                 ]
 
                 for key, label in key_metrics:
@@ -138,8 +140,11 @@ async def main():
                         print(f"  {label:<30} {account_summary[key]:>15,.2f}")
 
                 # Show all other metrics
-                other_metrics = {k: v for k, v in account_summary.items()
-                               if k not in [m[0] for m in key_metrics]}
+                other_metrics = {
+                    k: v
+                    for k, v in account_summary.items()
+                    if k not in [m[0] for m in key_metrics]
+                }
 
                 if other_metrics:
                     print("\nOther Metrics:")
@@ -165,6 +170,7 @@ async def main():
         print("  4. Check port configuration in .env file\n")
 
         import traceback
+
         print("\nDetailed error:")
         traceback.print_exc()
 

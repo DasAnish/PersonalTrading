@@ -23,9 +23,15 @@ import numpy as np
 
 from strategies.core import AllocationStrategy, Strategy, StrategyContext
 from analytics.metrics import (
-    calculate_returns, calculate_sharpe_ratio, calculate_sortino_ratio,
-    calculate_calmar_ratio, calculate_volatility, calculate_max_drawdown,
-    calculate_cagr, calculate_var, calculate_cvar
+    calculate_returns,
+    calculate_sharpe_ratio,
+    calculate_sortino_ratio,
+    calculate_calmar_ratio,
+    calculate_volatility,
+    calculate_max_drawdown,
+    calculate_cagr,
+    calculate_var,
+    calculate_cvar,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +40,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SweepResult:
     """Result from a single parameter combination."""
+
     params: Dict[str, Any]
     metrics: Dict[str, float]
 
@@ -50,10 +57,10 @@ class ParameterSweep:
         self,
         strategy_class: Type[AllocationStrategy],
         param_grid: Dict[str, List[Any]],
-        metric: str = 'sharpe_ratio',
+        metric: str = "sharpe_ratio",
         initial_capital: float = 10000.0,
         transaction_cost_bps: float = 7.5,
-        rebalance_frequency: str = 'monthly',
+        rebalance_frequency: str = "monthly",
         store_returns: bool = False,
     ):
         """
@@ -90,15 +97,15 @@ class ParameterSweep:
         max_dd = calculate_max_drawdown(values)
 
         return {
-            'total_return': (values.iloc[-1] / values.iloc[0] - 1) * 100,
-            'cagr': cagr * 100,
-            'sharpe_ratio': calculate_sharpe_ratio(returns),
-            'sortino_ratio': calculate_sortino_ratio(returns),
-            'calmar_ratio': cagr / abs(max_dd) if max_dd != 0 else 0,
-            'max_drawdown': max_dd * 100,
-            'volatility': calculate_volatility(returns) * 100,
-            'var_95': calculate_var(returns) * 100,
-            'cvar_95': calculate_cvar(returns) * 100,
+            "total_return": (values.iloc[-1] / values.iloc[0] - 1) * 100,
+            "cagr": cagr * 100,
+            "sharpe_ratio": calculate_sharpe_ratio(returns),
+            "sortino_ratio": calculate_sortino_ratio(returns),
+            "calmar_ratio": cagr / abs(max_dd) if max_dd != 0 else 0,
+            "max_drawdown": max_dd * 100,
+            "volatility": calculate_volatility(returns) * 100,
+            "var_95": calculate_var(returns) * 100,
+            "cvar_95": calculate_cvar(returns) * 100,
         }
 
     def _run_single_combination(
@@ -122,23 +129,24 @@ class ParameterSweep:
 
         actual_lookback = strategy.get_strategy_lookback()
         total_lookback = max(lookback_days, actual_lookback)
-        if hasattr(strategy, 'smooth_window'):
+        if hasattr(strategy, "smooth_window"):
             total_lookback += strategy.smooth_window
 
         portfolio = PortfolioState(
             timestamp=rebalance_dates[0] if rebalance_dates else None,
             cash=self.initial_capital,
             positions={},
-            prices={}
+            prices={},
         )
 
         history = []
 
         for rebalance_date in rebalance_dates:
-            lookback_start = rebalance_date - pd.Timedelta(days=int(total_lookback * 1.5))
+            lookback_start = rebalance_date - pd.Timedelta(
+                days=int(total_lookback * 1.5)
+            )
             context_prices = prices[
-                (prices.index >= lookback_start) &
-                (prices.index <= rebalance_date)
+                (prices.index >= lookback_start) & (prices.index <= rebalance_date)
             ]
 
             if len(context_prices) < 30:
@@ -147,7 +155,7 @@ class ParameterSweep:
             context = StrategyContext(
                 current_date=rebalance_date,
                 lookback_start=context_prices.index[0],
-                prices=context_prices
+                prices=context_prices,
             )
 
             try:
@@ -158,13 +166,15 @@ class ParameterSweep:
                 portfolio.execute_rebalance(
                     target_weights=weights,
                     prices=current_prices,
-                    transaction_cost_bps=self.transaction_cost_bps
+                    transaction_cost_bps=self.transaction_cost_bps,
                 )
 
-                history.append({
-                    'timestamp': rebalance_date,
-                    'total_value': portfolio.total_value()
-                })
+                history.append(
+                    {
+                        "timestamp": rebalance_date,
+                        "total_value": portfolio.total_value(),
+                    }
+                )
             except Exception:
                 continue
 
@@ -172,8 +182,8 @@ class ParameterSweep:
             return None
 
         values = pd.Series(
-            [h['total_value'] for h in history],
-            index=pd.to_datetime([h['timestamp'] for h in history])
+            [h["total_value"] for h in history],
+            index=pd.to_datetime([h["timestamp"] for h in history]),
         )
         metrics = self._calculate_all_metrics(values)
         return metrics, values
@@ -203,7 +213,7 @@ class ParameterSweep:
             col_name = str(dict(key))
             series_list.append(returns.rename(col_name))
 
-        matrix = pd.concat(series_list, axis=1, join='inner')
+        matrix = pd.concat(series_list, axis=1, join="inner")
         return matrix
 
     def run(
@@ -212,7 +222,7 @@ class ParameterSweep:
         prices: pd.DataFrame,
         start_date,
         end_date,
-        lookback_days: int = 252
+        lookback_days: int = 252,
     ) -> pd.DataFrame:
         """
         Run parameter sweep.
@@ -241,8 +251,8 @@ class ParameterSweep:
         ]
 
         # Generate rebalance dates (shared across all combinations)
-        freq_map = {'monthly': 'ME', 'weekly': 'W', 'quarterly': 'QE', 'daily': 'D'}
-        freq = freq_map.get(self.rebalance_frequency, 'ME')
+        freq_map = {"monthly": "ME", "weekly": "W", "quarterly": "QE", "daily": "D"}
+        freq = freq_map.get(self.rebalance_frequency, "ME")
         candidate_dates = pd.date_range(start=start_date, end=end_date, freq=freq)
         rebalance_dates = []
         for date in candidate_dates:

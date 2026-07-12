@@ -31,41 +31,41 @@ logger = logging.getLogger(__name__)
 
 # Ex-ante carry priors (shared with CarryTiltStrategy)
 CARRY_PRIORS = {
-    'VUTY': 0.035,
-    'HYLD': 0.060,
-    'AGGU': 0.045,
-    'SEGA': 0.025,
-    'TIGG': 0.070,
-    'VUSA': 0.020,
-    'EQQQ': 0.008,
-    'IWRD': 0.025,
-    'IMEU': 0.030,
-    'IIND': 0.020,
-    'ASHR': 0.020,
-    'SAEM': 0.025,
-    'CACX': 0.030,
-    'CSX5': 0.030,
-    'IEMU': 0.030,
-    'WCLD': 0.003,
-    'WSML': 0.018,
-    'AWESGS': 0.018,
-    'EMMCHA': 0.025,
-    'EXXW': 0.040,
-    'EXX5': 0.035,
-    'EXI2': 0.022,
-    'EXSA': 0.028,
-    'SGLN': -0.005,
-    'SSLN': -0.005,
-    'BRNT': 0.000,
-    'CRUD': 0.000,
-    'COMM': 0.000,
-    'ICOM': 0.000,
-    'WCOA': 0.000,
-    'AIGC': 0.000,
+    "VUTY": 0.035,
+    "HYLD": 0.060,
+    "AGGU": 0.045,
+    "SEGA": 0.025,
+    "TIGG": 0.070,
+    "VUSA": 0.020,
+    "EQQQ": 0.008,
+    "IWRD": 0.025,
+    "IMEU": 0.030,
+    "IIND": 0.020,
+    "ASHR": 0.020,
+    "SAEM": 0.025,
+    "CACX": 0.030,
+    "CSX5": 0.030,
+    "IEMU": 0.030,
+    "WCLD": 0.003,
+    "WSML": 0.018,
+    "AWESGS": 0.018,
+    "EMMCHA": 0.025,
+    "EXXW": 0.040,
+    "EXX5": 0.035,
+    "EXI2": 0.022,
+    "EXSA": 0.028,
+    "SGLN": -0.005,
+    "SSLN": -0.005,
+    "BRNT": 0.000,
+    "CRUD": 0.000,
+    "COMM": 0.000,
+    "ICOM": 0.000,
+    "WCOA": 0.000,
+    "AIGC": 0.000,
 }
 
 # Safe asset for failed trend filters
-SAFE_ASSET = 'VUTY'
+SAFE_ASSET = "VUTY"
 
 
 class CarryTrendFilterStrategy(AllocationStrategy):
@@ -136,7 +136,7 @@ class CarryTrendFilterStrategy(AllocationStrategy):
             carry_scores[symbol] = CARRY_PRIORS.get(symbol, 0.0)
 
         ranked = sorted(carry_scores.items(), key=lambda x: x[1], reverse=True)
-        top_symbols = [sym for sym, _ in ranked[:self.top_n]]
+        top_symbols = [sym for sym, _ in ranked[: self.top_n]]
 
         logger.debug(
             f"CarryTrendFilter: ranked {ranked}. Top {self.top_n}: {top_symbols}"
@@ -164,14 +164,10 @@ class CarryTrendFilterStrategy(AllocationStrategy):
 
             if price_return > 0:
                 passed_symbols.append(symbol)
-                logger.debug(
-                    f"  {symbol}: trend PASS (return={price_return:.4f})"
-                )
+                logger.debug(f"  {symbol}: trend PASS (return={price_return:.4f})")
             else:
                 failed_symbols.append(symbol)
-                logger.debug(
-                    f"  {symbol}: trend FAIL (return={price_return:.4f})"
-                )
+                logger.debug(f"  {symbol}: trend FAIL (return={price_return:.4f})")
 
         # Step 3: Assign weights
         if not passed_symbols:
@@ -200,9 +196,7 @@ class CarryTrendFilterStrategy(AllocationStrategy):
                 if total_weight > 0:
                     weights /= total_weight
 
-        logger.debug(
-            f"CarryTrendFilter weights: {dict(weights[weights > 0].round(4))}"
-        )
+        logger.debug(f"CarryTrendFilter weights: {dict(weights[weights > 0].round(4))}")
 
         return weights
 

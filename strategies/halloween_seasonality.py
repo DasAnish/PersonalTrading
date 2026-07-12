@@ -41,13 +41,28 @@ WINTER_MONTHS = {11, 12, 1, 2, 3, 4}
 # an equity/AI product (an earlier asset-definition label error implied
 # otherwise).
 EQUITY_SLEEVE = {
-    'VUSA', 'EQQQ', 'IWRD', 'IMEU', 'IIND',
-    'ASHR', 'SAEM', 'CACX', 'CSX5', 'IEMU', 'WCLD', 'WSML',
-    'AWESGS', 'EMMCHA', 'EXXW', 'EXX5', 'EXI2', 'EXSA',
+    "VUSA",
+    "EQQQ",
+    "IWRD",
+    "IMEU",
+    "IIND",
+    "ASHR",
+    "SAEM",
+    "CACX",
+    "CSX5",
+    "IEMU",
+    "WCLD",
+    "WSML",
+    "AWESGS",
+    "EMMCHA",
+    "EXXW",
+    "EXX5",
+    "EXI2",
+    "EXSA",
 }
 
 # Defensive sleeve (summer rotation INTO defensives)
-DEFENSIVE_SLEEVE = {'VUTY', 'SGLN', 'AGGU', 'SEGA'}
+DEFENSIVE_SLEEVE = {"VUTY", "SGLN", "AGGU", "SEGA"}
 
 
 class HalloweenSeasonalityStrategy(AllocationStrategy):

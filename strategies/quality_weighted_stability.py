@@ -55,11 +55,15 @@ class QualityWeightedStabilityStrategy(AllocationStrategy):
             quality_metric: "calmar" or "sortino" (default "calmar")
             name: Display name
         """
-        super().__init__(underlying, name=name or f"Quality-Weighted ({quality_metric})")
+        super().__init__(
+            underlying, name=name or f"Quality-Weighted ({quality_metric})"
+        )
         self.lookback_days = lookback_days
         self.quality_metric = quality_metric
         if quality_metric not in ("calmar", "sortino"):
-            raise ValueError(f"quality_metric must be 'calmar' or 'sortino', got {quality_metric}")
+            raise ValueError(
+                f"quality_metric must be 'calmar' or 'sortino', got {quality_metric}"
+            )
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
         prices = context.prices
@@ -86,7 +90,9 @@ class QualityWeightedStabilityStrategy(AllocationStrategy):
         index = [symbol_to_name.get(s, s) for s in symbols]
 
         if self.quality_metric == "calmar":
-            weights = self._calculate_calmar_weights(lookback_prices, returns, symbols, index)
+            weights = self._calculate_calmar_weights(
+                lookback_prices, returns, symbols, index
+            )
         else:  # sortino
             weights = self._calculate_sortino_weights(returns, symbols, index)
 
@@ -124,10 +130,7 @@ class QualityWeightedStabilityStrategy(AllocationStrategy):
         else:
             weights_dict = (calmar_scores / calmar_scores.sum()).to_dict()
 
-        weights = pd.Series(
-            [weights_dict.get(s, 0.0) for s in symbols],
-            index=index
-        )
+        weights = pd.Series([weights_dict.get(s, 0.0) for s in symbols], index=index)
 
         logger.debug(
             f"Quality-Weighted (Calmar) scores: {dict(calmar_scores.round(4))}. "
@@ -171,10 +174,7 @@ class QualityWeightedStabilityStrategy(AllocationStrategy):
         else:
             weights_dict = (sortino_scores / sortino_scores.sum()).to_dict()
 
-        weights = pd.Series(
-            [weights_dict.get(s, 0.0) for s in symbols],
-            index=index
-        )
+        weights = pd.Series([weights_dict.get(s, 0.0) for s in symbols], index=index)
 
         logger.debug(
             f"Quality-Weighted (Sortino) scores: {dict(sortino_scores.round(4))}. "

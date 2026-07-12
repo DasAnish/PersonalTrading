@@ -57,7 +57,9 @@ class LongTermReversalStrategy(AllocationStrategy):
             bottom_n: Number of bottom (worst) assets to select (default 4)
             name: Display name
         """
-        super().__init__(underlying, name=name or f"Long-Term Reversal ({formation_window_months}m)")
+        super().__init__(
+            underlying, name=name or f"Long-Term Reversal ({formation_window_months}m)"
+        )
         self.formation_window_months = formation_window_months
         self.bottom_n = min(bottom_n, len(underlying))
 
@@ -81,7 +83,7 @@ class LongTermReversalStrategy(AllocationStrategy):
         prices = prices.ffill(limit=3).dropna()
 
         # Calculate long-term trailing returns over formation window
-        lookback_prices = prices.iloc[-lookback_days :]
+        lookback_prices = prices.iloc[-lookback_days:]
         trailing_returns = lookback_prices.iloc[-1] / lookback_prices.iloc[0] - 1
 
         # Rank and select bottom N (worst performers first)
@@ -94,7 +96,9 @@ class LongTermReversalStrategy(AllocationStrategy):
         )
 
         # Equal weight for selected assets
-        selected_weights = pd.Series(1.0 / len(selected_symbols), index=selected_symbols)
+        selected_weights = pd.Series(
+            1.0 / len(selected_symbols), index=selected_symbols
+        )
 
         # Build full weight vector (zeros for unselected)
         symbols = list(prices.columns)

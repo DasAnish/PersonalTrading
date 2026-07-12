@@ -52,11 +52,11 @@ class IBClient:
         self.config = config if config else Config()
 
         # Setup logging
-        log_config = self.config.get('logging', {})
+        log_config = self.config.get("logging", {})
         setup_logging(
-            level=log_config.get('level', 'INFO'),
-            log_file=log_config.get('file'),
-            console=log_config.get('console', True)
+            level=log_config.get("level", "INFO"),
+            log_file=log_config.get("file"),
+            console=log_config.get("console", True),
         )
 
         # Initialize connection manager
@@ -64,11 +64,11 @@ class IBClient:
         self.connection = IBConnectionManager(conn_config)
 
         # Initialize services (will use connection's ib instance)
-        market_data_config = self.config.get('market_data', {})
+        market_data_config = self.config.get("market_data", {})
         self.market_data = MarketDataService(
             ib=self.connection.ib,
-            rate_limit_requests=market_data_config.get('rate_limit_requests', 50),
-            rate_limit_window=market_data_config.get('rate_limit_window', 600)
+            rate_limit_requests=market_data_config.get("rate_limit_requests", 50),
+            rate_limit_window=market_data_config.get("rate_limit_window", 600),
         )
 
         self.portfolio = PortfolioService(ib=self.connection.ib)
@@ -116,11 +116,7 @@ class IBClient:
     # Market Data Methods
 
     async def get_historical_bars(
-        self,
-        symbol: str,
-        duration: str = "1 D",
-        bar_size: str = "1 min",
-        **kwargs
+        self, symbol: str, duration: str = "1 D", bar_size: str = "1 min", **kwargs
     ) -> pd.DataFrame:
         """
         Fetch historical bars for a symbol.
@@ -139,10 +135,7 @@ class IBClient:
             >>> print(bars.head())
         """
         return await self.market_data.get_historical_bars(
-            symbol=symbol,
-            duration=duration,
-            bar_size=bar_size,
-            **kwargs
+            symbol=symbol, duration=duration, bar_size=bar_size, **kwargs
         )
 
     async def get_multiple_historical_bars(
@@ -151,7 +144,7 @@ class IBClient:
         duration: str = "1 D",
         bar_size: str = "1 min",
         concurrent: bool = True,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, pd.DataFrame]:
         """
         Fetch historical bars for multiple symbols.
@@ -178,7 +171,7 @@ class IBClient:
             duration=duration,
             bar_size=bar_size,
             concurrent=concurrent,
-            **kwargs
+            **kwargs,
         )
 
     async def download_extended_history(
@@ -187,7 +180,7 @@ class IBClient:
         start_date: datetime,
         end_date: datetime,
         bar_size: str = "1 day",
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
         """
         Download extended historical data using pagination.
@@ -213,7 +206,7 @@ class IBClient:
             start_date=start_date,
             end_date=end_date,
             bar_size=bar_size,
-            **kwargs
+            **kwargs,
         )
 
     def get_remaining_requests(self) -> int:
@@ -246,9 +239,7 @@ class IBClient:
         return await self.portfolio.get_positions()
 
     async def get_account_summary(
-        self,
-        account: Optional[str] = None,
-        tags: Optional[List[str]] = None
+        self, account: Optional[str] = None, tags: Optional[List[str]] = None
     ) -> Dict[str, float]:
         """
         Get account summary.
@@ -268,8 +259,7 @@ class IBClient:
         return await self.portfolio.get_account_summary(account, tags)
 
     async def get_account_values(
-        self,
-        account: Optional[str] = None
+        self, account: Optional[str] = None
     ) -> Dict[str, float]:
         """
         Get detailed account values.
@@ -287,10 +277,7 @@ class IBClient:
         """
         return await self.portfolio.get_account_values(account)
 
-    def subscribe_portfolio_updates(
-        self,
-        callback: Callable[[PortfolioUpdate], None]
-    ):
+    def subscribe_portfolio_updates(self, callback: Callable[[PortfolioUpdate], None]):
         """
         Subscribe to real-time portfolio updates.
 
@@ -314,11 +301,7 @@ class IBClient:
         """
         self.portfolio.unsubscribe_portfolio_updates()
 
-    async def subscribe_pnl(
-        self,
-        account: str,
-        callback: Callable[[PnLUpdate], None]
-    ):
+    async def subscribe_pnl(self, account: str, callback: Callable[[PnLUpdate], None]):
         """
         Subscribe to account-level PnL updates.
 
@@ -337,7 +320,7 @@ class IBClient:
         self,
         account: str,
         contract_id: int,
-        callback: Callable[[PnLSingleUpdate], None]
+        callback: Callable[[PnLSingleUpdate], None],
     ):
         """
         Subscribe to position-level PnL updates.

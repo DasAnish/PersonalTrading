@@ -24,6 +24,12 @@ from analytics.ledger import (
 )
 from analytics.blend import latest_target_weights
 from analytics.rebalance import compute_rebalance_plan
+from analytics.trackers import (
+    add_tracker,
+    load_trackers,
+    remove_tracker,
+    tracker_with_performance,
+)
 from data.cache import close_price_base
 
 from .risk import _load_positions
@@ -189,3 +195,32 @@ def api_slice_nav(strategy):
     ]
     first_event = series[0]["date"] if series else None
     return jsonify({"strategy": strategy, "series": series, "first_event": first_event})
+
+
+# ---------------------------------------------------------------------------
+# Trackers (watchlist with since-added paper performance)
+# ---------------------------------------------------------------------------
+@ledger_bp.route("/api/trackers")
+def api_trackers():
+    trackers = load_trackers().get("trackers", [])
+    return jsonify([tracker_with_performance(t) for t in trackers])
+
+
+@ledger_bp.route("/api/trackers", methods=["POST"])
+def api_add_tracker():
+    body = request.get_json(silent=True) or {}
+    strategy = body.get("strategy")
+    if not strategy or not _definition_exists(strategy):
+        return jsonify({"error": f"unknown strategy: {strategy!r}"}), 400
+    try:
+        entry = add_tracker(strategy, note=body.get("note", ""))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 409  # already tracked
+    return jsonify(tracker_with_performance(entry)), 201
+
+
+@ledger_bp.route("/api/trackers/<strategy>", methods=["DELETE"])
+def api_remove_tracker(strategy):
+    if not remove_tracker(strategy):
+        return jsonify({"error": f"not tracked: {strategy}"}), 404
+    return jsonify({"removed": strategy})

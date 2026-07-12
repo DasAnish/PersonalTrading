@@ -3,6 +3,7 @@
 import pytest
 
 import analytics.ledger as ledger_mod
+import analytics.trackers as trackers_mod
 import scripts.server.ledger as server_ledger
 import scripts.server.risk as risk_mod
 from scripts.server.app import create_app
@@ -17,6 +18,7 @@ FAKE_POSITIONS = (
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(ledger_mod, "LEDGER_PATH", tmp_path / "ledger.json")
+    monkeypatch.setattr(trackers_mod, "TRACKERS_PATH", tmp_path / "trackers.json")
     monkeypatch.setattr(server_ledger, "_load_positions", lambda: FAKE_POSITIONS)
     monkeypatch.setattr(risk_mod, "_load_positions", lambda: FAKE_POSITIONS)
     monkeypatch.setattr(server_ledger, "_definition_exists", lambda k: k == "hrp_ward")
@@ -100,3 +102,24 @@ def test_scope_strategy_filters_live_risk(client):
     assert d["scope"] == "strategy:hrp_ward"
     assert {p["symbol"] for p in d["positions"]} == {"VUSA"}
     assert d["positions"][0]["shares"] == 6.0
+
+
+def test_trackers_add_duplicate_delete(client):
+    r = client.post("/api/trackers", json={"strategy": "hrp_ward", "note": "watch"})
+    assert r.status_code == 201
+    assert r.get_json()["strategy"] == "hrp_ward"
+
+    # duplicate -> 409
+    assert (
+        client.post("/api/trackers", json={"strategy": "hrp_ward"}).status_code == 409
+    )
+    # unknown strategy -> 400
+    assert client.post("/api/trackers", json={"strategy": "nope"}).status_code == 400
+
+    listed = client.get("/api/trackers").get_json()
+    assert [t["strategy"] for t in listed] == ["hrp_ward"]
+    assert "since_added" in listed[0]
+
+    assert client.delete("/api/trackers/hrp_ward").status_code == 200
+    assert client.get("/api/trackers").get_json() == []
+    assert client.delete("/api/trackers/hrp_ward").status_code == 404

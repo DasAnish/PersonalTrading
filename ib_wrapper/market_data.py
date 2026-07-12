@@ -8,15 +8,23 @@ batch fetching, and extended history downloads.
 import asyncio
 import logging
 from datetime import datetime, timedelta
+from math import ceil
 from typing import List, Dict, Optional
 
 import pandas as pd
 from ib_insync import IB, util
 
 from .utils import create_contract, RateLimiter, retry_on_failure
-from .exceptions import DataRequestException, InvalidContractException, RateLimitException
+from .exceptions import (
+    DataRequestException,
+    InvalidContractException,
+    RateLimitException,
+)
 
 logger = logging.getLogger(__name__)
+
+# Default what_to_show value for market data
+DEFAULT_WHAT_TO_SHOW = "ADJUSTED_LAST"
 
 
 class MarketDataService:
@@ -32,10 +40,7 @@ class MarketDataService:
     """
 
     def __init__(
-        self,
-        ib: IB,
-        rate_limit_requests: int = 50,
-        rate_limit_window: int = 600
+        self, ib: IB, rate_limit_requests: int = 50, rate_limit_window: int = 600
     ):
         """
         Initialize market data service.
@@ -47,8 +52,7 @@ class MarketDataService:
         """
         self.ib = ib
         self.rate_limiter = RateLimiter(
-            max_requests=rate_limit_requests,
-            window=rate_limit_window
+            max_requests=rate_limit_requests, window=rate_limit_window
         )
 
     async def get_historical_bars(
@@ -56,12 +60,12 @@ class MarketDataService:
         symbol: str,
         duration: str = "1 D",
         bar_size: str = "1 min",
-        what_to_show: str = "TRADES",
+        what_to_show: str = DEFAULT_WHAT_TO_SHOW,
         use_rth: bool = True,
         end_datetime: Optional[datetime] = None,
-        sec_type: str = 'STK',
-        exchange: str = 'SMART',
-        currency: str = 'USD'
+        sec_type: str = "STK",
+        exchange: str = "SMART",
+        currency: str = "USD",
     ) -> pd.DataFrame:
         """
         Fetch historical bars for a single symbol.
@@ -87,10 +91,7 @@ class MarketDataService:
         try:
             # Create contract
             contract = create_contract(
-                symbol=symbol,
-                sec_type=sec_type,
-                exchange=exchange,
-                currency=currency
+                symbol=symbol, sec_type=sec_type, exchange=exchange, currency=currency
             )
 
             # Qualify contract
@@ -106,18 +107,16 @@ class MarketDataService:
             await self.rate_limiter.acquire()
 
             # Request historical data
-            logger.info(
-                f"Fetching {duration} of {bar_size} bars for {symbol}"
-            )
+            logger.info(f"Fetching {duration} of {bar_size} bars for {symbol}")
 
             try:
                 bars = await self.ib.reqHistoricalDataAsync(
                     qualified[0],
-                    endDateTime=end_datetime or '',
+                    endDateTime=end_datetime or "",
                     durationStr=duration,
                     barSizeSetting=bar_size,
                     whatToShow=what_to_show,
-                    useRTH=use_rth
+                    useRTH=use_rth,
                 )
             except Exception as e:
                 if "cannot insert" in str(e) or "already exists" in str(e):
@@ -138,11 +137,16 @@ class MarketDataService:
             try:
                 df = util.df(bars)
             except Exception as e:
-                logger.warning(f"util.df failed for {symbol} ({e}), building DataFrame manually")
+                logger.warning(
+                    f"util.df failed for {symbol} ({e}), building DataFrame manually"
+                )
                 records = [
                     {
-                        "open": b.open, "high": b.high, "low": b.low,
-                        "close": b.close, "volume": b.volume,
+                        "open": b.open,
+                        "high": b.high,
+                        "low": b.low,
+                        "close": b.close,
+                        "volume": b.volume,
                         "average": getattr(b, "average", None),
                         "barCount": getattr(b, "barCount", None),
                     }
@@ -162,15 +166,15 @@ class MarketDataService:
                         # util.df(bars) already includes 'date' as a plain column;
                         # drop it before reassigning the index to avoid leaving a
                         # duplicate 'date' column, which breaks reset_index() later.
-                        if 'date' in df.columns:
-                            df = df.drop(columns=['date'])
+                        if "date" in df.columns:
+                            df = df.drop(columns=["date"])
                         df.index = dates
-                        df.index.name = 'date'
+                        df.index.name = "date"
                         # util.df keeps 'date' as a column; drop it so the
                         # index is the only copy (reset_index breaks otherwise)
-                        if 'date' in df.columns:
-                            df = df.drop(columns=['date'])
-                        df = df[~df.index.duplicated(keep='first')]
+                        if "date" in df.columns:
+                            df = df.drop(columns=["date"])
+                        df = df[~df.index.duplicated(keep="first")]
                 except Exception as e:
                     logger.warning(f"Could not set datetime index: {e}")
 
@@ -188,10 +192,10 @@ class MarketDataService:
         symbols: List[str],
         duration: str = "1 D",
         bar_size: str = "1 min",
-        what_to_show: str = "TRADES",
+        what_to_show: str = DEFAULT_WHAT_TO_SHOW,
         use_rth: bool = True,
         concurrent: bool = True,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, pd.DataFrame]:
         """
         Fetch historical bars for multiple symbols.
@@ -229,14 +233,13 @@ class MarketDataService:
                     bar_size=bar_size,
                     what_to_show=what_to_show,
                     use_rth=use_rth,
-                    **kwargs
+                    **kwargs,
                 )
                 tasks.append((symbol, task))
 
             # Gather results
             task_results = await asyncio.gather(
-                *[task for _, task in tasks],
-                return_exceptions=True
+                *[task for _, task in tasks], return_exceptions=True
             )
 
             # Process results
@@ -258,7 +261,7 @@ class MarketDataService:
                         bar_size=bar_size,
                         what_to_show=what_to_show,
                         use_rth=use_rth,
-                        **kwargs
+                        **kwargs,
                     )
                     results[symbol] = df
 
@@ -276,22 +279,25 @@ class MarketDataService:
         start_date: datetime,
         end_date: datetime,
         bar_size: str = "1 day",
-        what_to_show: str = "TRADES",
+        what_to_show: str = DEFAULT_WHAT_TO_SHOW,
         use_rth: bool = True,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
         """
-        Download historical data beyond single request limits using pagination.
+        Download historical data beyond single request limits.
 
-        IB limits the amount of data per request. This method fetches data
-        in chunks and combines them.
+        For ADJUSTED_LAST: uses one un-paginated request (end_datetime=None).
+        For other what_to_show: uses backward pagination by end_datetime.
+
+        IB hard constraint: ADJUSTED_LAST is rejected with non-empty endDateTime,
+        so it must use a single request ending "now". Other types support pagination.
 
         Args:
             symbol: Ticker symbol
             start_date: Start date for data
             end_date: End date for data
             bar_size: Bar size (recommend '1 day' for long ranges)
-            what_to_show: Data type
+            what_to_show: Data type (TRADES, ADJUSTED_LAST, etc.)
             use_rth: Use regular trading hours only
             **kwargs: Additional arguments
 
@@ -307,9 +313,44 @@ class MarketDataService:
         """
         logger.info(
             f"Downloading extended history for {symbol} "
-            f"from {start_date} to {end_date}"
+            f"from {start_date} to {end_date} (what_to_show={what_to_show})"
         )
 
+        # ADJUSTED_LAST path: single un-paginated request (end_datetime=None required)
+        if what_to_show == "ADJUSTED_LAST":
+            logger.debug(
+                f"ADJUSTED_LAST fetch for {symbol}: single request, end_datetime=None"
+            )
+            # Calculate duration from start_date to now
+            now = datetime.now()
+            days_back = max(1, ceil((now - start_date).days / 365.0))
+            duration = f"{days_back} Y"
+
+            try:
+                df = await self.get_historical_bars(
+                    symbol=symbol,
+                    duration=duration,
+                    bar_size=bar_size,
+                    what_to_show=what_to_show,
+                    use_rth=use_rth,
+                    end_datetime=None,  # Critical: ADJUSTED_LAST rejects non-empty endDateTime
+                    **kwargs,
+                )
+
+                if df.empty:
+                    logger.warning(f"No data fetched for {symbol}")
+                    return pd.DataFrame()
+
+                # Filter to requested date range
+                filtered = df[(df.index >= start_date) & (df.index <= end_date)]
+                logger.info(f"Downloaded {len(filtered)} bars for {symbol}")
+                return filtered
+
+            except Exception as e:
+                logger.error(f"Error fetching {symbol}: {e}")
+                raise
+
+        # Other what_to_show values: backward pagination by end_datetime
         all_bars = []
         current_end = end_date
 
@@ -320,10 +361,11 @@ class MarketDataService:
         while current_end > start_date:
             try:
                 logger.debug(
-                    f"Fetching chunk {chunk_count + 1} ending at {current_end}"
+                    f"Fetching chunk {chunk_count + 1} ending at {current_end} "
+                    f"(what_to_show={what_to_show})"
                 )
 
-                # Fetch chunk
+                # Fetch chunk with pagination
                 df = await self.get_historical_bars(
                     symbol=symbol,
                     duration=duration,
@@ -331,7 +373,7 @@ class MarketDataService:
                     what_to_show=what_to_show,
                     use_rth=use_rth,
                     end_datetime=current_end,
-                    **kwargs
+                    **kwargs,
                 )
 
                 if df.empty:
@@ -343,7 +385,7 @@ class MarketDataService:
 
                 # Move end date back for next chunk
                 # Get the first date from the dataframe
-                if hasattr(df.index, 'to_pydatetime'):
+                if hasattr(df.index, "to_pydatetime"):
                     first_date = df.index[0].to_pydatetime()
                 else:
                     first_date = df.index[0]
@@ -352,7 +394,9 @@ class MarketDataService:
                 if isinstance(first_date, datetime):
                     current_end = first_date - timedelta(days=1)
                 else:
-                    logger.warning(f"Could not extract datetime from index: {type(first_date)}")
+                    logger.warning(
+                        f"Could not extract datetime from index: {type(first_date)}"
+                    )
                     break
 
                 # Stop if we've gone before start_date
@@ -374,18 +418,16 @@ class MarketDataService:
         combined = pd.concat(all_bars, axis=0)
 
         # Remove duplicates and sort
-        combined = combined[~combined.index.duplicated(keep='first')]
+        combined = combined[~combined.index.duplicated(keep="first")]
         combined = combined.sort_index()
 
         # Filter to requested date range
         combined = combined[
-            (combined.index >= start_date) &
-            (combined.index <= end_date)
+            (combined.index >= start_date) & (combined.index <= end_date)
         ]
 
         logger.info(
-            f"Downloaded {len(combined)} bars for {symbol} "
-            f"({chunk_count} chunks)"
+            f"Downloaded {len(combined)} bars for {symbol} " f"({chunk_count} chunks)"
         )
 
         return combined

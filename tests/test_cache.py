@@ -105,10 +105,13 @@ class TestAtomicWrite:
         original_bytes = final_path.read_bytes()
 
         # Now simulate a failing write to the same cache key
-        def failing_to_parquet(self, *args, **kwargs):
+        # Patch pq.write_table since save_cached_data now uses pyarrow
+        import pyarrow.parquet as pq
+
+        def failing_write_table(*args, **kwargs):
             raise IOError("simulated disk failure")
 
-        monkeypatch.setattr(pd.DataFrame, "to_parquet", failing_to_parquet)
+        monkeypatch.setattr(pq, "write_table", failing_write_table)
 
         bad_df = _make_df(5)
         cache.save_cached_data("VUSA", bad_df, start, end)

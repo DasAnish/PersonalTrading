@@ -48,7 +48,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from data import HistoricalDataCache  # noqa: E402
+from data import HistoricalDataCache, EXPECTED_WHAT_TO_SHOW  # noqa: E402
 from ib_wrapper.client import IBClient  # noqa: E402
 from ib_wrapper.config import Config  # noqa: E402
 
@@ -99,12 +99,15 @@ async def fetch_proxy(
         start_date=start,
         end_date=end,
         bar_size="1 day",
+        what_to_show=EXPECTED_WHAT_TO_SHOW,
         sec_type=spec.get("sec_type", "STK"),
         exchange=spec.get("exchange", "SMART"),
         currency=spec.get("currency", "USD"),
     )
     if not df.empty:
-        cache.save_cached_data(spec["symbol"], df, start, end)
+        cache.save_cached_data(
+            spec["symbol"], df, start, end, what_to_show=EXPECTED_WHAT_TO_SHOW
+        )
     return df
 
 
@@ -190,6 +193,7 @@ async def run(symbols: list[str], min_overlap: int, min_corr: float) -> dict:
                 extended,
                 extended.index[0].to_pydatetime(),
                 extended.index[-1].to_pydatetime(),
+                what_to_show=EXPECTED_WHAT_TO_SHOW,
             )
             entry["status"] = "ok"
             logger.info(

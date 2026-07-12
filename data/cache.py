@@ -14,13 +14,38 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import logging
 
+import pyarrow.parquet as pq
+import pyarrow as pa
+
 logger = logging.getLogger(__name__)
 
 PRICE_UNITS_PATH = Path("config") / "price_units.json"
 
+# Cache metadata: what_to_show stamp (via parquet schema metadata)
+EXPECTED_WHAT_TO_SHOW = "ADJUSTED_LAST"
+CACHE_META_KEY = b"what_to_show"
+
 _CACHE_FILENAME_RE = re.compile(
     r"^(?P<symbol>.+)_(?P<start>\d{8})_(?P<end>\d{8})\.parquet$"
 )
+
+
+def cache_file_what_to_show(path: Path) -> str | None:
+    """Read what_to_show stamp from parquet schema metadata.
+
+    Args:
+        path: Path to parquet file
+
+    Returns:
+        what_to_show value or None if unmarked
+    """
+    try:
+        schema = pq.read_schema(path)
+        if schema.metadata and CACHE_META_KEY in schema.metadata:
+            return schema.metadata[CACHE_META_KEY].decode("utf-8")
+    except Exception as e:
+        logger.warning(f"Could not read metadata from {path}: {e}")
+    return None
 
 
 class HistoricalDataCache:
@@ -163,6 +188,21 @@ class HistoricalDataCache:
             )
             return pd.DataFrame()
 
+        # Check what_to_show stamp: mismatch or unmarked = miss
+        cached_what_to_show = cache_file_what_to_show(cache_path)
+        if cached_what_to_show is None:
+            logger.warning(
+                f"Cache miss for {symbol}: {cache_path.name} has no what_to_show stamp "
+                f"(legacy unstamped file) — treating as cache miss"
+            )
+            return pd.DataFrame()
+        if cached_what_to_show != EXPECTED_WHAT_TO_SHOW:
+            logger.warning(
+                f"Cache miss for {symbol}: {cache_path.name} stamped {cached_what_to_show!r} "
+                f"but expecting {EXPECTED_WHAT_TO_SHOW!r} — treating as cache miss"
+            )
+            return pd.DataFrame()
+
         # Load cached data
         try:
             df = pd.read_parquet(cache_path)
@@ -190,6 +230,19 @@ class HistoricalDataCache:
         for path in self.cache_dir.glob(f"{symbol}_*.parquet"):
             parsed = self._parse_cache_filename(path)
             if parsed is not None:
+                # Check what_to_show stamp; skip unmarked/mismatched
+                cached_what_to_show = cache_file_what_to_show(path)
+                if cached_what_to_show is None:
+                    logger.debug(
+                        f"Skipping {path.name}: no what_to_show stamp (legacy unstamped file)"
+                    )
+                    continue
+                if cached_what_to_show != EXPECTED_WHAT_TO_SHOW:
+                    logger.debug(
+                        f"Skipping {path.name}: stamped {cached_what_to_show!r} "
+                        f"but expecting {EXPECTED_WHAT_TO_SHOW!r}"
+                    )
+                    continue
                 candidates.append((parsed[1], path))
         if not candidates:
             return pd.DataFrame()
@@ -209,16 +262,22 @@ class HistoricalDataCache:
         return df
 
     def save_cached_data(
-        self, symbol: str, data: pd.DataFrame, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        data: pd.DataFrame,
+        start_date: datetime,
+        end_date: datetime,
+        what_to_show: str = EXPECTED_WHAT_TO_SHOW,
     ):
         """
-        Save data to cache.
+        Save data to cache with what_to_show stamp in parquet metadata.
 
         Args:
             symbol: Ticker symbol
             data: DataFrame to cache
             start_date: Start date of data
             end_date: End date of data
+            what_to_show: Data type used (TRADES, ADJUSTED_LAST, etc.)
         """
         if data.empty:
             logger.warning(f"Not caching empty DataFrame for {symbol}")
@@ -228,9 +287,17 @@ class HistoricalDataCache:
         tmp_path = cache_path.with_suffix(".parquet.tmp")
 
         try:
-            data.to_parquet(tmp_path)
+            # Convert to pyarrow table, stamp metadata, write atomically
+            table = pa.Table.from_pandas(data)
+            metadata = table.schema.metadata or {}
+            metadata[CACHE_META_KEY] = what_to_show.encode("utf-8")
+            new_schema = table.schema.with_metadata(metadata)
+            table = table.cast(new_schema)
+            pq.write_table(table, tmp_path)
             os.replace(tmp_path, cache_path)
-            logger.info(f"Cached {len(data)} rows to {cache_path.name}")
+            logger.info(
+                f"Cached {len(data)} rows to {cache_path.name} (what_to_show={what_to_show})"
+            )
         except Exception as e:
             Path(tmp_path).unlink(missing_ok=True)
             logger.error(f"Failed to save cache {cache_path.name}: {e}")
@@ -241,6 +308,7 @@ class HistoricalDataCache:
         start_date: datetime,
         end_date: datetime,
         market_data_service,
+        what_to_show: str = EXPECTED_WHAT_TO_SHOW,
         **kwargs,
     ) -> pd.DataFrame:
         """
@@ -253,6 +321,7 @@ class HistoricalDataCache:
             start_date: Start date
             end_date: End date
             market_data_service: MarketDataService instance for fetching
+            what_to_show: Data type to fetch (TRADES, ADJUSTED_LAST, etc.)
             **kwargs: Additional arguments to pass to download_extended_history
 
         Returns:
@@ -265,6 +334,7 @@ class HistoricalDataCache:
             ...     datetime(2020, 1, 1),
             ...     datetime(2024, 1, 1),
             ...     market_data_service,
+            ...     what_to_show='ADJUSTED_LAST',
             ...     currency='GBP',
             ...     bar_size='1 day'
             ... )
@@ -280,12 +350,18 @@ class HistoricalDataCache:
 
         try:
             data = await market_data_service.download_extended_history(
-                symbol=symbol, start_date=start_date, end_date=end_date, **kwargs
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                what_to_show=what_to_show,
+                **kwargs,
             )
 
-            # Save to cache
+            # Save to cache with what_to_show stamp
             if not data.empty:
-                self.save_cached_data(symbol, data, start_date, end_date)
+                self.save_cached_data(
+                    symbol, data, start_date, end_date, what_to_show=what_to_show
+                )
 
             return data
 

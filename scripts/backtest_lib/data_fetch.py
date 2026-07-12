@@ -12,7 +12,7 @@ import logging
 
 from ib_wrapper.client import IBClient
 from ib_wrapper.config import Config
-from data import HistoricalDataCache
+from data import HistoricalDataCache, EXPECTED_WHAT_TO_SHOW
 
 from .config import (
     BAR_SIZE,
@@ -90,13 +90,20 @@ async def fetch_historical_data(
                         start_date=START_DATE,
                         end_date=END_DATE,
                         bar_size=BAR_SIZE,
+                        what_to_show=EXPECTED_WHAT_TO_SHOW,
                         sec_type=spec["sec_type"],
                         exchange=spec["exchange"],
                         currency=spec["currency"],
                     )
                     # Save to cache for future use
                     if not df.empty:
-                        cache.save_cached_data(symbol, df, START_DATE, END_DATE)
+                        cache.save_cached_data(
+                            symbol,
+                            df,
+                            START_DATE,
+                            END_DATE,
+                            what_to_show=EXPECTED_WHAT_TO_SHOW,
+                        )
                 else:
                     # Cache-first: only touch IB if this symbol is missing.
                     # The requested range rolls daily, so allow a few days of
@@ -112,6 +119,7 @@ async def fetch_historical_data(
                                 start_date=START_DATE,
                                 end_date=END_DATE,
                                 market_data_service=c.market_data,
+                                what_to_show=EXPECTED_WHAT_TO_SHOW,
                                 bar_size=BAR_SIZE,
                                 sec_type=spec["sec_type"],
                                 exchange=spec["exchange"],

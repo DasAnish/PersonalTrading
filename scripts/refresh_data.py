@@ -33,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from data import HistoricalDataCache  # noqa: E402
+from data import HistoricalDataCache, EXPECTED_WHAT_TO_SHOW  # noqa: E402
 from ib_wrapper.client import IBClient  # noqa: E402
 from ib_wrapper.config import Config  # noqa: E402
 
@@ -74,13 +74,21 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
     try:
         for symbol in symbols:
             spec = SYMBOL_SPECS[symbol]
-            entry: dict = {"status": "failed", "rows": 0, "data_end": None}
+            entry: dict = {
+                "status": "failed",
+                "rows": 0,
+                "data_end": None,
+                "what_to_show": None,
+            }
             try:
+                # Try ADJUSTED_LAST first
+                what_to_show = EXPECTED_WHAT_TO_SHOW
                 df = await client.market_data.download_extended_history(
                     symbol=symbol,
                     start_date=START_DATE,
                     end_date=END_DATE,
                     bar_size=BAR_SIZE,
+                    what_to_show=what_to_show,
                     sec_type=spec["sec_type"],
                     exchange=spec["exchange"],
                     currency=spec["currency"],
@@ -98,16 +106,67 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                         df,
                         df.index[0].to_pydatetime(),
                         df.index[-1].to_pydatetime(),
+                        what_to_show=what_to_show,
                     )
                     entry.update(
                         status="ok",
                         rows=len(df),
                         data_end=df.index[-1].date().isoformat(),
+                        what_to_show=what_to_show,
                     )
-                    logger.info(f"✓ {symbol}: {len(df)} rows, ends {entry['data_end']}")
+                    logger.info(
+                        f"✓ {symbol}: {len(df)} rows, ends {entry['data_end']} (what_to_show={what_to_show})"
+                    )
             except Exception as exc:
-                entry["error"] = str(exc)
-                logger.error(f"✗ {symbol}: {exc}")
+                # Per-symbol fallback: some LSE/IBIS ETFs reject ADJUSTED_LAST
+                # IB error 162 = Unknown error, 321 = Client parameter validation failed
+                exc_str = str(exc)
+                if any(err in exc_str for err in ["162", "321", "ADJUSTED_LAST"]):
+                    logger.warning(
+                        f"✗ {symbol}: ADJUSTED_LAST failed ({exc}), retrying with TRADES fallback"
+                    )
+                    try:
+                        what_to_show = "TRADES"
+                        df = await client.market_data.download_extended_history(
+                            symbol=symbol,
+                            start_date=START_DATE,
+                            end_date=END_DATE,
+                            bar_size=BAR_SIZE,
+                            what_to_show=what_to_show,
+                            sec_type=spec["sec_type"],
+                            exchange=spec["exchange"],
+                            currency=spec["currency"],
+                        )
+                        if not df.empty:
+                            cache.save_cached_data(
+                                symbol,
+                                df,
+                                df.index[0].to_pydatetime(),
+                                df.index[-1].to_pydatetime(),
+                                what_to_show=what_to_show,
+                            )
+                            entry.update(
+                                status="ok",
+                                rows=len(df),
+                                data_end=df.index[-1].date().isoformat(),
+                                what_to_show=what_to_show,
+                            )
+                            logger.info(
+                                f"✓ {symbol}: {len(df)} rows via TRADES fallback, ends {entry['data_end']}"
+                            )
+                        else:
+                            entry["error"] = "empty dataframe (TRADES fallback)"
+                            logger.warning(
+                                f"✗ {symbol}: TRADES fallback returned empty"
+                            )
+                    except Exception as fallback_exc:
+                        entry["error"] = f"TRADES fallback failed: {fallback_exc}"
+                        logger.error(
+                            f"✗ {symbol}: TRADES fallback failed: {fallback_exc}"
+                        )
+                else:
+                    entry["error"] = str(exc)
+                    logger.error(f"✗ {symbol}: {exc}")
             report["symbols"][symbol] = entry
     finally:
         client.disconnect()  # synchronous — do not await

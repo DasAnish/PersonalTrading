@@ -46,6 +46,8 @@ import asyncio
 import pandas as pd
 import logging
 
+from data.cache import EXPECTED_WHAT_TO_SHOW
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,17 +80,13 @@ class MarketDataService:
             return
 
         self._cache: Dict[str, pd.DataFrame] = {}
-        self._ib_client: Optional['IBClient'] = None
-        self._data_cache: Optional['HistoricalDataCache'] = None
+        self._ib_client: Optional["IBClient"] = None
+        self._data_cache: Optional["HistoricalDataCache"] = None
         self._initialized = True
 
         logger.info("MarketDataService singleton initialized")
 
-    def configure(
-        self,
-        ib_client: 'IBClient',
-        cache_dir: str = 'data/cache'
-    ):
+    def configure(self, ib_client: "IBClient", cache_dir: str = "data/cache"):
         """
         Configure the singleton with IB client and cache.
 
@@ -110,10 +108,10 @@ class MarketDataService:
 
     async def fetch_data(
         self,
-        requirements: 'DataRequirements',
+        requirements: "DataRequirements",
         start_date: datetime,
         end_date: datetime,
-        refresh: bool = False
+        refresh: bool = False,
     ) -> pd.DataFrame:
         """
         Fetch and align price data for strategy requirements.
@@ -164,14 +162,15 @@ class MarketDataService:
                     start_date=actual_start,
                     end_date=end_date,
                     market_data_service=self._ib_client.market_data,
+                    what_to_show=EXPECTED_WHAT_TO_SHOW,
                     currency=requirements.currency,
                     exchange=requirements.exchange,
                     sec_type=requirements.sec_type,
-                    bar_size=requirements.frequency
+                    bar_size=requirements.frequency,
                 )
-                if not df.empty and 'close' in df.columns:
+                if not df.empty and "close" in df.columns:
                     logger.debug(f"Fetched {len(df)} rows for {symbol}")
-                    return symbol, df['close']
+                    return symbol, df["close"]
                 else:
                     logger.warning(f"No data for {symbol}")
                     return symbol, None
@@ -179,7 +178,9 @@ class MarketDataService:
                 logger.error(f"Failed to fetch {symbol}: {e}")
                 return symbol, None
 
-        fetch_results = await asyncio.gather(*[_fetch_one(s) for s in requirements.symbols])
+        fetch_results = await asyncio.gather(
+            *[_fetch_one(s) for s in requirements.symbols]
+        )
 
         data_dict = {}
         failed_symbols = []
@@ -219,11 +220,8 @@ class MarketDataService:
         return aligned_df
 
     def get_context_for_date(
-        self,
-        all_data: pd.DataFrame,
-        current_date: datetime,
-        lookback_days: int
-    ) -> 'StrategyContext':
+        self, all_data: pd.DataFrame, current_date: datetime, lookback_days: int
+    ) -> "StrategyContext":
         """
         Create StrategyContext for a specific date.
 
@@ -250,8 +248,7 @@ class MarketDataService:
         # Slice data: from lookback_start up to and including current_date
         # This prevents lookahead bias (no future data)
         sliced_data = all_data[
-            (all_data.index >= lookback_start) &
-            (all_data.index <= current_date)
+            (all_data.index >= lookback_start) & (all_data.index <= current_date)
         ]
 
         # Validate sufficient data
@@ -268,7 +265,7 @@ class MarketDataService:
             lookback_start=lookback_start,
             prices=sliced_data,
             portfolio_values=None,  # Set by overlay strategies if needed
-            metadata={}
+            metadata={},
         )
 
         logger.debug(
@@ -311,15 +308,12 @@ class MarketDataService:
         return df
 
     def _make_cache_key(
-        self,
-        requirements: 'DataRequirements',
-        start: datetime,
-        end: datetime
+        self, requirements: "DataRequirements", start: datetime, end: datetime
     ) -> str:
         """Generate cache key from requirements and dates."""
-        symbols_key = '_'.join(sorted(requirements.symbols))
-        start_str = start.strftime('%Y%m%d')
-        end_str = end.strftime('%Y%m%d')
+        symbols_key = "_".join(sorted(requirements.symbols))
+        start_str = start.strftime("%Y%m%d")
+        end_str = end.strftime("%Y%m%d")
         return f"{symbols_key}_{start_str}_{end_str}"
 
     @classmethod

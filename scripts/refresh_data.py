@@ -31,9 +31,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from data import HistoricalDataCache, EXPECTED_WHAT_TO_SHOW  # noqa: E402
+from data import (  # noqa: E402
+    HistoricalDataCache,
+    EXPECTED_WHAT_TO_SHOW,
+    latest_cache_file,
+)
 from ib_wrapper.client import IBClient  # noqa: E402
 from ib_wrapper.config import Config  # noqa: E402
 
@@ -50,13 +56,117 @@ logger = logging.getLogger(__name__)
 DEFAULT_OUT = Path("results") / "data_refresh.json"
 EXIT_GATEWAY_DOWN = 2
 
+# Incremental refresh parameters
+OVERLAP_MIN_DAYS = 20
+OVERLAP_TOL = 1e-4
 
-async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
+
+async def _try_incremental_fetch(
+    client,
+    symbol: str,
+    spec: dict,
+    cache: HistoricalDataCache,
+) -> tuple[pd.DataFrame, str] | None:
+    """Try incremental 1-year fetch with overlap verification.
+
+    Returns:
+        (DataFrame, what_to_show) if successful, None if overlap mismatch detected
+        (triggering a full refetch).
+    """
+    # Check if we have a cached file to extend
+    result = latest_cache_file(symbol)
+    if result is None:
+        return None  # No cache to extend
+
+    old_path, old_df = result
+    if old_df.empty or "close" not in old_df.columns:
+        return None
+
+    # Fetch 1 year ending now
+    try:
+        df_1y = await client.market_data.download_extended_history(
+            symbol=symbol,
+            start_date=END_DATE - pd.Timedelta(days=365),
+            end_date=END_DATE,
+            bar_size=BAR_SIZE,
+            what_to_show=EXPECTED_WHAT_TO_SHOW,
+            sec_type=spec["sec_type"],
+            exchange=spec["exchange"],
+            currency=spec["currency"],
+        )
+    except Exception:
+        return None  # Can't fetch 1 year; will do full refetch
+
+    if df_1y.empty:
+        return None
+
+    # Find overlap
+    old_dates = set(old_df.index.date)
+    new_dates = set(df_1y.index.date)
+    overlap_dates = sorted(old_dates & new_dates)
+
+    if len(overlap_dates) < OVERLAP_MIN_DAYS:
+        # Not enough overlap; do full refetch
+        logger.debug(
+            f"{symbol}: overlap too short ({len(overlap_dates)} < {OVERLAP_MIN_DAYS})"
+        )
+        return None
+
+    # Check for adjustments: max(abs(new_close/old_close - 1)) over overlap
+    overlap_start = overlap_dates[0]
+    overlap_end = overlap_dates[-1]
+    old_overlap = old_df[
+        (old_df.index.date >= overlap_start) & (old_df.index.date <= overlap_end)
+    ]
+    new_overlap = df_1y[
+        (df_1y.index.date >= overlap_start) & (df_1y.index.date <= overlap_end)
+    ]
+
+    if len(old_overlap) == 0 or len(new_overlap) == 0:
+        return None
+
+    # Align on close prices
+    old_close = old_overlap["close"].values
+    new_close = new_overlap["close"].values
+
+    if len(old_close) != len(new_close):
+        # Date mismatch; do full refetch
+        return None
+
+    # Check tolerance
+    ratio_error = (new_close / old_close) - 1.0
+    max_error = max(abs(ratio_error))
+
+    if max_error > OVERLAP_TOL:
+        # Adjustment detected; log and do full refetch
+        logger.info(
+            f"adjustment detected for {symbol}, max error={max_error:.2e}, full refetch"
+        )
+        return None
+
+    # Overlap verified; concat cached + new, dedup (keep new)
+    # old_df up to (but not including) overlap_start, then all of df_1y
+    pre_overlap = old_df[old_df.index.date < overlap_start]
+    combined = pd.concat([pre_overlap, df_1y])
+    combined = combined[~combined.index.duplicated(keep="last")]
+    combined = combined.sort_index()
+
+    return (combined, EXPECTED_WHAT_TO_SHOW)
+
+
+async def refresh_symbols(
+    symbols: list[str], connect_timeout: float, use_full: bool = False
+) -> dict:
     """
     Connect to IB once and refresh the cache for every symbol.
 
     Returns the report dict. Raises ConnectionError if the initial connect
     fails (mapped to exit code 2 by main()).
+
+    Args:
+        symbols: List of symbols to refresh
+        connect_timeout: Timeout in seconds for IB connection
+        use_full: If True, force full-history fetch for all symbols
     """
     cache = HistoricalDataCache()
     client = IBClient(Config())
@@ -79,9 +189,58 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                 "rows": 0,
                 "data_end": None,
                 "what_to_show": None,
+                "refresh_mode": None,
             }
             try:
-                # Try ADJUSTED_LAST first
+                # Decide on refresh strategy
+                if use_full:
+                    refresh_mode = "full"
+                else:
+                    # Try incremental
+                    result = await _try_incremental_fetch(client, symbol, spec, cache)
+                    if result is not None:
+                        df, what_to_show = result
+                        # Save incremental result
+                        cache.save_cached_data(
+                            symbol,
+                            df,
+                            df.index[0].to_pydatetime(),
+                            df.index[-1].to_pydatetime(),
+                            what_to_show=what_to_show,
+                        )
+                        # Delete old file (find it and remove)
+                        old_result = latest_cache_file(symbol)
+                        if old_result and old_result[0] != cache._get_cache_path(
+                            symbol,
+                            df.index[0].to_pydatetime(),
+                            df.index[-1].to_pydatetime(),
+                        ):
+                            try:
+                                old_result[0].unlink()
+                                logger.debug(
+                                    f"Deleted old cache file: {old_result[0].name}"
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to delete old cache file {old_result[0].name}: {e}"
+                                )
+                        entry.update(
+                            status="ok",
+                            rows=len(df),
+                            data_end=df.index[-1].date().isoformat(),
+                            what_to_show=what_to_show,
+                            refresh_mode="incremental",
+                        )
+                        logger.info(
+                            f"✓ {symbol}: {len(df)} rows (incremental), "
+                            f"ends {entry['data_end']}"
+                        )
+                        report["symbols"][symbol] = entry
+                        continue
+
+                    refresh_mode = "full"
+
+                # Full-history fetch
                 what_to_show = EXPECTED_WHAT_TO_SHOW
                 df = await client.market_data.download_extended_history(
                     symbol=symbol,
@@ -97,10 +256,19 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                     entry["error"] = "empty dataframe returned"
                     logger.warning(f"✗ {symbol}: empty dataframe")
                 else:
-                    # Name the cache file by the data actually received —
-                    # a filename claiming the requested END_DATE when IB
-                    # returned less is exactly the staleness lie the
-                    # validator exists to catch.
+                    # Delete old file before saving new one
+                    old_result = latest_cache_file(symbol)
+                    if old_result:
+                        try:
+                            old_result[0].unlink()
+                            logger.debug(
+                                f"Deleted old cache file: {old_result[0].name}"
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to delete old cache file {old_result[0].name}: {e}"
+                            )
+
                     cache.save_cached_data(
                         symbol,
                         df,
@@ -113,9 +281,15 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                         rows=len(df),
                         data_end=df.index[-1].date().isoformat(),
                         what_to_show=what_to_show,
+                        refresh_mode=(
+                            refresh_mode
+                            if refresh_mode == "full"
+                            else "full_after_adjustment"
+                        ),
                     )
                     logger.info(
-                        f"✓ {symbol}: {len(df)} rows, ends {entry['data_end']} (what_to_show={what_to_show})"
+                        f"✓ {symbol}: {len(df)} rows ({entry['refresh_mode']}), "
+                        f"ends {entry['data_end']} (what_to_show={what_to_show})"
                     )
             except Exception as exc:
                 # Per-symbol fallback: some LSE/IBIS ETFs reject ADJUSTED_LAST
@@ -123,7 +297,8 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                 exc_str = str(exc)
                 if any(err in exc_str for err in ["162", "321", "ADJUSTED_LAST"]):
                     logger.warning(
-                        f"✗ {symbol}: ADJUSTED_LAST failed ({exc}), retrying with TRADES fallback"
+                        f"✗ {symbol}: ADJUSTED_LAST failed ({exc}), "
+                        f"retrying with TRADES fallback"
                     )
                     try:
                         what_to_show = "TRADES"
@@ -150,9 +325,11 @@ async def refresh_symbols(symbols: list[str], connect_timeout: float) -> dict:
                                 rows=len(df),
                                 data_end=df.index[-1].date().isoformat(),
                                 what_to_show=what_to_show,
+                                refresh_mode="full",
                             )
                             logger.info(
-                                f"✓ {symbol}: {len(df)} rows via TRADES fallback, ends {entry['data_end']}"
+                                f"✓ {symbol}: {len(df)} rows via TRADES fallback, "
+                                f"ends {entry['data_end']}"
                             )
                         else:
                             entry["error"] = "empty dataframe (TRADES fallback)"
@@ -199,6 +376,11 @@ def main() -> int:
         default=20.0,
         help="Seconds to wait for the IB connection (default: 20).",
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Force full-history fetch for all symbols (skips incremental refresh).",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -213,7 +395,9 @@ def main() -> int:
         symbols = list(SYMBOLS)
 
     try:
-        report = asyncio.run(refresh_symbols(symbols, args.connect_timeout))
+        report = asyncio.run(
+            refresh_symbols(symbols, args.connect_timeout, use_full=args.full)
+        )
     except ConnectionError as exc:
         logger.warning(f"{exc} — cache left untouched.")
         return EXIT_GATEWAY_DOWN

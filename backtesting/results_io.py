@@ -30,7 +30,13 @@ import pandas as pd
 from analytics.metrics import summarize_performance
 
 from .engine import BacktestResults
-from .results_schema import INDEX_FILE, STRATEGY_FILES, STRESS_TEST_FILE, strategy_dir
+from .results_schema import (
+    INDEX_FILE,
+    METRICS_SCHEMA_VERSION,
+    STRATEGY_FILES,
+    STRESS_TEST_FILE,
+    strategy_dir,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +111,7 @@ def serialize_backtest_results(
         index=pd.DatetimeIndex(results.portfolio_history.index),
     )
     metrics = {k: clean_value(v) for k, v in summarize_performance(values).items()}
+    metrics["metrics_version"] = METRICS_SCHEMA_VERSION
     metrics.update(
         {
             "final_value": clean_value(float(results.final_value)),

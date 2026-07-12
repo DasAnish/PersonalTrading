@@ -31,7 +31,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from backtesting.results_schema import INDEX_FILE, STRATEGY_FILES  # noqa: E402
+from backtesting.results_schema import (  # noqa: E402
+    INDEX_FILE,
+    METRICS_SCHEMA_VERSION,
+    STRATEGY_FILES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +107,18 @@ def rebuild(results_dir: Path) -> dict:
         "distinct_data_ends": len(end_dates),
     }
 
+    # Metrics schema version summary: detect when strategies were built with
+    # different metrics schema versions (e.g., pre-stamp vs stamped). This
+    # indicates strategies built in different runs and not directly comparable.
+    versions = sorted(
+        {e["metrics"].get("metrics_version", 1) for e in entries.values()}
+    )
+    metrics_schema = {
+        "current": METRICS_SCHEMA_VERSION,
+        "versions_present": versions,
+        "mixed": len(versions) > 1,
+    }
+
     return {
         "strategies": entries,
         "config": config,
@@ -111,6 +127,7 @@ def rebuild(results_dir: Path) -> dict:
         "rebuilt": True,
         "skipped": skipped,
         "vintage": vintage,
+        "metrics_schema": metrics_schema,
     }
 
 
@@ -155,6 +172,13 @@ def main() -> int:
             f"{index['vintage']['max_data_end']} "
             f"({index['vintage']['distinct_data_ends']} distinct) — "
             "cross-strategy comparisons are unreliable until a full re-run."
+        )
+    if index["metrics_schema"]["mixed"]:
+        logger.warning(
+            "MIXED METRICS SCHEMA: strategy metrics versions span "
+            f"{index['metrics_schema']['versions_present']} — "
+            "strategies built at different times with different annualization logic. "
+            "Cross-strategy comparisons are unreliable until a full re-run."
         )
 
     if args.dry_run:

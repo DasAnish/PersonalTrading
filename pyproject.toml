@@ -36,6 +36,7 @@ dependencies = [
     "flask>=2.3.0",
     "waitress>=2.1.0",
     "mcp>=1.0.0",
+    "pydantic>=2.5",
 ]
 
 [project.optional-dependencies]

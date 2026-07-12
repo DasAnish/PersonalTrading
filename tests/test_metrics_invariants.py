@@ -19,9 +19,11 @@ import pytest
 
 from analytics.metrics import (
     calculate_sharpe_ratio,
+    calculate_volatility,
     infer_periods_per_year,
     summarize_performance,
 )
+from analytics.summary import generate_metrics_summary
 from backtesting.results_io import serialize_backtest_results
 
 
@@ -102,6 +104,51 @@ class TestSerializeUsesCanonicalMetrics:
             expected["sharpe_ratio"]
         )
         assert payload["metrics"]["data_end"] == expected["data_end"]
+
+
+class TestGenerateMetricsSummaryInferred:
+    def test_monthly_volatility_matches_summarize(self):
+        """Verify generate_metrics_summary infers ppy and matches summarize_performance."""
+        from backtesting.engine import BacktestResults
+
+        # Create synthetic monthly portfolio history
+        values = _series("ME", 48, 0.006, 0.025, seed=42)
+        portfolio_history = pd.DataFrame(
+            {"cash": 0.0, "total_value": values.values},
+            index=pd.Index(values.index, name="timestamp"),
+        )
+        results = BacktestResults(
+            strategy_name="synthetic",
+            portfolio_history=portfolio_history,
+            weights_history=None,
+            transactions=[],
+            final_value=float(values.iloc[-1]),
+        )
+
+        # Generate metrics using generate_metrics_summary
+        generate_metrics_summary(results)
+        metrics = results.metrics
+
+        # Also get metrics from the canonical summarize_performance
+        expected = summarize_performance(values)
+
+        # Verify that periods_per_year is inferred correctly
+        assert metrics["periods_per_year"] == 12
+        assert expected["periods_per_year"] == 12
+
+        # Verify volatility is within 5% (relative error)
+        vol_metric = metrics["volatility"]
+        vol_expected = expected["volatility"] * 100  # convert to percentage
+        rel_error = abs(vol_metric - vol_expected) / abs(vol_expected)
+        assert rel_error < 0.05, (
+            f"Volatility mismatch: {vol_metric:.4f}% vs expected {vol_expected:.4f}%, "
+            f"relative error {rel_error:.4f}"
+        )
+
+        # Verify Sharpe ratio is also consistent
+        assert metrics["sharpe_ratio"] == pytest.approx(
+            expected["sharpe_ratio"], rel=0.01
+        )
 
 
 class TestRebuildIndexVintage:

@@ -347,14 +347,17 @@ def api_compare_multi():
     aligned = {k: v[common] for k, v in returns_series.items()}
     key_list = list(aligned.keys())
 
+    ppy = infer_periods_per_year(common)
+    ann_sqrt = np.sqrt(ppy)
+
     pairwise = []
     for i in range(len(key_list)):
         for j in range(i + 1, len(key_list)):
             k1, k2 = key_list[i], key_list[j]
             active = aligned[k1] - aligned[k2]
-            te = float(active.std() * np.sqrt(252))
+            te = float(active.std() * ann_sqrt)
             ir = (
-                float(active.mean() / active.std() * np.sqrt(252))
+                float(active.mean() / active.std() * ann_sqrt)
                 if active.std() > 0
                 else 0
             )
@@ -408,10 +411,13 @@ def api_compare(key1: str, key2: str):
     returns1 = values1[common].pct_change().dropna()
     returns2 = values2[common].pct_change().dropna()
 
+    ppy = infer_periods_per_year(common)
+    ann_sqrt = np.sqrt(ppy)
+
     active_returns = returns1 - returns2
-    tracking_error = float(active_returns.std() * np.sqrt(252))
+    tracking_error = float(active_returns.std() * ann_sqrt)
     info_ratio = (
-        float(active_returns.mean() / active_returns.std() * np.sqrt(252))
+        float(active_returns.mean() / active_returns.std() * ann_sqrt)
         if active_returns.std() > 0
         else 0
     )

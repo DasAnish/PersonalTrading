@@ -152,12 +152,25 @@ build on it.
 Once builders return their `job_id`s, don't block the chat polling status.
 Pick a trigger by how long you expect to wait:
 
-- **Auto-ping this session (preferred while active):** start a `Monitor` on a
-  command that polls the job_ids and prints a line only when all reach
-  done/failed, e.g. a loop over
-  `curl -s localhost:5000/api/run/status/<job_id>` that exits once none are
-  still "running". The Monitor wakes the conversation with that line — then run
-  Phase 3. No fixed interval, no manual checking.
+- **Auto-ping this session (preferred while active):** after both builders
+  return their `job_id`s, start a `Monitor` on the poller script — it prints one
+  status line per round and a final `ALL DONE ...` line when every job reaches a
+  terminal state (done/failed/interrupted/unknown), which wakes the
+  conversation. Then run Phase 3. Concretely:
+
+  ```
+  Monitor(
+    description="build pipelines -> Phase 3 collect",
+    command="python scripts/wait_jobs.py <job_id_1> <job_id_2> ... [--interval 20]"
+  )
+  ```
+
+  `scripts/wait_jobs.py` polls `localhost:5000/api/run/status/<job_id>` for each
+  id, dedupes, treats a 404 as terminal, and self-terminates on `ALL DONE` or
+  after `--max-rounds` (default 180 × 20s ≈ 1h). No fixed manual checking — the
+  `ALL DONE` event is the trigger to collect. Do not spawn a short-interval
+  Monitor just to keep the session warm; one watch over the real job_ids is
+  enough.
 - **Detached / overnight (session may be closed):** schedule a cloud agent
   (`/schedule` or a cron routine) that runs Phase 3 — poll jobs, read verdicts,
   update backlog, commit. It runs in its own context (it won't ping *this*

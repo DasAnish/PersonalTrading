@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "HRPStrategy",
+  "name": "HRP (core_6)",
+  "description": "Hierarchical Risk Parity across core_6 basket using complete linkage clustering.",
+  "parameters": {
+    "linkage_method": "complete"
+  },
+  "underlying": "universe:core_6",
+  "tags": [
+    "mech:diversification"
+  ]
+}

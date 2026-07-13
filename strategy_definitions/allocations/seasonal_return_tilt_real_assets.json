@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "SeasonalReturnTiltStrategy",
+  "name": "Seasonal Return Tilt (real_assets)",
+  "description": "Seasonal return tilt for real assets. Equal-weights top 2 by expected seasonal return.",
+  "parameters": {
+    "top_n": 2,
+    "history_years": 10
+  },
+  "underlying": "universe:theme_real_assets",
+  "tags": [
+    "mech:seasonality"
+  ]
+}

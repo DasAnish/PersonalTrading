@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "NetworkRiskParityStrategy",
+  "name": "Network Risk Parity (core_6)",
+  "description": "Network Risk Parity variant with 126-day lookback across core_6 basket.",
+  "parameters": {
+    "lookback_days": 126,
+    "centrality_measure": "degree",
+    "graph_filter": "mst",
+    "threshold": 0.5
+  },
+  "underlying": "universe:core_6",
+  "tags": [
+    "mech:diversification",
+    "variant:lookback"
+  ]
+}

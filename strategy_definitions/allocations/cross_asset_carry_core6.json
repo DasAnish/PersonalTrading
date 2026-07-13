@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "CarryTiltStrategy",
+  "name": "Cross-Asset Carry Tilt (core_6)",
+  "description": "Ranks core 6 assets by carry and equal-weights top 4.",
+  "parameters": {
+    "top_n": 4
+  },
+  "underlying": "universe:core_6",
+  "tags": [
+    "mech:carry"
+  ]
+}

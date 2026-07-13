@@ -1,0 +1,11 @@
+{
+  "type": "allocation",
+  "class": "MinimumVarianceStrategy",
+  "name": "Minimum Variance (core_8)",
+  "description": "Minimum Variance optimisation across core_8 basket.",
+  "parameters": {},
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:diversification"
+  ]
+}

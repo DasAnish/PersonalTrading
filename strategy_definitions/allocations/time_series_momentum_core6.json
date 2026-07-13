@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "TimeSeriesMomentumStrategy",
+  "name": "Time-Series Momentum (9m, core_6)",
+  "description": "Time-series momentum variant with 9-month lookback on core 6 assets.",
+  "parameters": {
+    "lookback_months": 9,
+    "vol_window_days": 60,
+    "target_vol": null
+  },
+  "underlying": "universe:core_6",
+  "tags": [
+    "mech:trend",
+    "variant:lookback"
+  ]
+}

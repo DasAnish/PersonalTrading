@@ -48,6 +48,47 @@
     "assets/saem",
     "assets/emmcha"
   ],
+  "core_6": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/iwrd",
+    "assets/comm",
+    "assets/sgln",
+    "assets/vuty"
+  ],
+  "macro_3": [
+    "assets/vusa",
+    "assets/comm",
+    "assets/vuty"
+  ],
+  "core_8": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/iind",
+    "assets/imeu",
+    "assets/sgln",
+    "assets/comm",
+    "assets/brnt",
+    "assets/vuty"
+  ],
+  "theme_growth": [
+    "assets/vusa",
+    "assets/eqqq",
+    "assets/aigc",
+    "assets/iind"
+  ],
+  "theme_defensive": [
+    "assets/iwrd",
+    "assets/sgln",
+    "assets/aggu",
+    "assets/vuty"
+  ],
+  "theme_real_assets": [
+    "assets/sgln",
+    "assets/ssln",
+    "assets/brnt",
+    "assets/comm"
+  ],
   "all": [
     "assets/vusa",
     "assets/eqqq",

@@ -34,13 +34,23 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from analytics.ledger import (  # noqa: E402
+    cash_by_strategy,
+    holdings_by_strategy,
+    load_ledger,
+    personal_holdings,
+    reconcile,
+    slice_value,
+)
 from backtesting.results_schema import STRATEGY_FILES, strategy_dir  # noqa: E402
+from data.cache import close_price_base, load_price_units  # noqa: E402
 from ib_wrapper.client import IBClient  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
 TRACKING_DIR = Path("live_tracking")
 NAV_CSV = TRACKING_DIR / "nav_history.csv"
+SLICE_NAV_CSV = TRACKING_DIR / "slice_nav_history.csv"
 POSITIONS_DIR = TRACKING_DIR / "positions"
 
 NAV_FIELDS = [
@@ -51,6 +61,9 @@ NAV_FIELDS = [
     "gross_position_value",
     "n_positions",
 ]
+
+SLICE_FIELDS = ["date", "strategy", "holdings_value", "cash", "slice_value"]
+PERSONAL_KEY = "__personal__"
 
 
 async def fetch_snapshot() -> tuple[dict, list[dict]]:
@@ -114,6 +127,79 @@ def upsert_nav_row(row: dict) -> None:
         writer.writerows(rows)
 
 
+def _slice_prices(positions: list[dict], symbols: set[str]) -> dict:
+    """Live IB prices where positive, else the cached base-currency close."""
+    units = load_price_units()
+    prices = {
+        p["symbol"]: float(p["price"])
+        for p in positions
+        if float(p.get("price", 0.0) or 0.0) > 0
+    }
+    for sym in symbols:
+        if prices.get(sym, 0.0) <= 0:
+            close = close_price_base(sym, units)
+            if close:
+                prices[sym] = float(close)
+    return prices
+
+
+def compute_slice_rows(positions: list[dict], today: str) -> tuple[list[dict], list]:
+    """Per-strategy slice NAV rows (+ a ``__personal__`` residual row) for today.
+
+    Slice value = holdings marked at current market prices + derived slice cash.
+    Returns ``(rows, reconciliation)`` where reconciliation flags over-claims.
+    """
+    ledger = load_ledger()
+    hbs = holdings_by_strategy(ledger)
+    cbs = cash_by_strategy(ledger)
+    ib_pos = {p["symbol"]: p["shares"] for p in positions}
+
+    symbols = set(ib_pos) | {s for book in hbs.values() for s in book}
+    prices = _slice_prices(positions, symbols)
+
+    rows: list[dict] = []
+    for key, holdings in hbs.items():
+        hv = slice_value(holdings, prices)
+        cash = cbs.get(key, 0.0)
+        rows.append(
+            {
+                "date": today,
+                "strategy": key,
+                "holdings_value": round(hv, 2),
+                "cash": round(cash, 2),
+                "slice_value": round(hv + cash, 2),
+            }
+        )
+
+    personal = personal_holdings(ib_pos, ledger)
+    pv = slice_value(personal, prices)
+    rows.append(
+        {
+            "date": today,
+            "strategy": PERSONAL_KEY,
+            "holdings_value": round(pv, 2),
+            "cash": 0.0,
+            "slice_value": round(pv, 2),
+        }
+    )
+    return rows, reconcile(ib_pos, ledger)
+
+
+def upsert_slice_rows(rows: list[dict], today: str) -> None:
+    """Append today's slice rows to slice_nav_history.csv, replacing same-day rows."""
+    existing: list[dict] = []
+    if SLICE_NAV_CSV.exists():
+        with open(SLICE_NAV_CSV, "r", newline="", encoding="utf-8") as f:
+            existing = [r for r in csv.DictReader(f) if r.get("date") != today]
+    existing.extend({k: str(r[k]) for k in SLICE_FIELDS} for r in rows)
+    existing.sort(key=lambda r: (r["date"], r["strategy"]))
+    SLICE_NAV_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with open(SLICE_NAV_CSV, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=SLICE_FIELDS)
+        writer.writeheader()
+        writer.writerows(existing)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Record daily account NAV + positions for live tracking.",
@@ -168,6 +254,16 @@ def main() -> int:
     with open(detail_path, "w", encoding="utf-8") as f:
         json.dump(detail, f, indent=2)
         f.write("\n")
+
+    slice_rows, reconciliation = compute_slice_rows(positions, today)
+    upsert_slice_rows(slice_rows, today)
+    n_slices = sum(1 for r in slice_rows if r["strategy"] != PERSONAL_KEY)
+    logger.info(f"Slice NAV recorded for {n_slices} slices -> {SLICE_NAV_CSV}")
+    for r in reconciliation:
+        logger.warning(
+            f"Reconcile: ledger claims {r['ledger_shares']} {r['symbol']} "
+            f"but IB holds {r['ib_shares']}"
+        )
 
     logger.info(
         f"NAV {nav_row['net_liquidation']} recorded for {today} "

@@ -25,3 +25,22 @@ async function fetchJSONWithStatus(url, options) {
     const data = await response.json().catch(() => ({}));
     return { ok: response.ok, status: response.status, data };
 }
+
+/**
+ * URL builders for the two endpoints reached with a query string. A static
+ * export (window.STATIC_MODE, set by scripts/export_static_site.py) can't
+ * round-trip a query string through a static host, so those responses are
+ * pre-expanded to flat sub-paths; mirror that mapping here. Against the live
+ * Flask server STATIC_MODE is unset and the normal query URLs are used.
+ */
+function rollingUrl(key, metric, win) {
+    return window.STATIC_MODE
+        ? `/api/strategy/${key}/rolling/${metric}_${win}`
+        : `/api/strategy/${key}/rolling?metric=${metric}&window=${win}`;
+}
+
+function exportUrl(key, type) {
+    return window.STATIC_MODE
+        ? `/api/strategy/${key}/export/${type}.csv`
+        : `/api/strategy/${key}/export?type=${type}`;
+}

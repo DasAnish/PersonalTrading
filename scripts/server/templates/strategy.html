@@ -1383,7 +1383,7 @@
 
             try {
                 const results = await Promise.all(strategies.map(s =>
-                    fetchJSON(`/api/strategy/${s}/rolling?metric=${metric}&window=${window}`)
+                    fetchJSON(rollingUrl(s, metric, window))
                 ));
 
                 if (results[0].error) { console.error(results[0].error); return; }
@@ -1577,7 +1577,7 @@
         function exportCSV(type) {
             const strategies = getStrategySelections();
             if (!strategies.length) return;
-            window.open(`/api/strategy/${strategies[0]}/export?type=${type}`, '_blank');
+            window.open(exportUrl(strategies[0], type), '_blank');
         }
 
         document.addEventListener('DOMContentLoaded', () => {

@@ -65,3 +65,9 @@ results/
 CLAUDE.local.md
 caveman-restore/
 live_tracking/
+
+# Generated static dashboard export (scripts/export_static_site.py)
+site/
+
+# TRADES parquet backup from the ADJUSTED_LAST migration (local data, not source)
+data/cache_trades_backup/

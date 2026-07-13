@@ -370,6 +370,24 @@ def main() -> int:
         except Exception as exc:
             logger.warning(f"Could not read registration status: {exc}")
 
+        # 5c. meta-backtest the selection rule — soft step (never aborts).
+        _run_step(
+            manifest,
+            "meta_selection",
+            [py, str(SCRIPTS_DIR / "meta_backtest_selection.py")],
+        )
+        try:
+            meta = json.loads(
+                (RESULTS_DIR / "meta_selection.json").read_text(encoding="utf-8")
+            )
+            manifest["selection_percentile_vs_random"] = meta.get(
+                "selection_percentile_vs_random"
+            )
+        except FileNotFoundError:
+            pass
+        except Exception as exc:
+            logger.warning(f"Could not read meta selection: {exc}")
+
         # 6. archive for run-over-run diffing
         archive_run(manifest, run_id)
 

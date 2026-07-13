@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "NetworkRiskParityStrategy",
+  "name": "Network Risk Parity",
+  "description": "Network Risk Parity using graph-theory asset weighting. Builds minimum spanning tree from 252-day correlation matrix, computes eigenvector centrality, and allocates weight inversely to centrality so peripheral assets receive more weight. Distinct from HRP by using network topology instead of hierarchical clustering. Full universe long-only.",
+  "parameters": {
+    "lookback_days": 252,
+    "centrality_measure": "eigenvector",
+    "graph_filter": "mst",
+    "threshold": 0.5
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

@@ -73,6 +73,9 @@ from .carry_trend_filter import CarryTrendFilterStrategy
 from .gold_autumn_seasonality import GoldAutumnSeasonalityStrategy
 from .sma_trend_filter import SMATrendFilterStrategy
 from .low_volatility_tilt import LowVolatilityTiltStrategy
+from .time_series_momentum import TimeSeriesMomentumStrategy
+from .network_risk_parity import NetworkRiskParityStrategy
+from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 
 # Overlay strategies
 from .overlays import VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
@@ -196,6 +199,9 @@ __all__ = [
     "GoldAutumnSeasonalityStrategy",
     "SMATrendFilterStrategy",
     "LowVolatilityTiltStrategy",
+    "TimeSeriesMomentumStrategy",
+    "NetworkRiskParityStrategy",
+    "SeasonalReturnTiltStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

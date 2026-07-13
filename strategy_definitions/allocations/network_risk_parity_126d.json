@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "NetworkRiskParityStrategy",
+  "name": "Network Risk Parity (126d)",
+  "description": "Network Risk Parity variant with shorter 126-day (6-month) lookback instead of 252-day, tuned for faster adaptation to changing correlation structure.",
+  "parameters": {
+    "lookback_days": 126,
+    "centrality_measure": "degree",
+    "graph_filter": "mst",
+    "threshold": 0.5
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification",
+    "variant:lookback"
+  ]
+}

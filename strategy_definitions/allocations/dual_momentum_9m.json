@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "DualMomentumStrategy",
+  "name": "Dual Momentum (9-month)",
+  "description": "Gary Antonacci's Dual Momentum across the full asset universe using 9-month (189-day) lookback: selects the top 2 by 9-month relative momentum, then applies an absolute momentum filter (must have positive trailing return). Filtered-out assets remain as cash. Captures trending assets across equities, commodities, and bonds while avoiding downtrending ones. Extended horizon variant between 6-month and annual lookbacks.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 189,
+    "abs_threshold": 0.0,
+    "cash_redistribute": false
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:trend",
+    "mech:momentum-cs"
+  ]
+}

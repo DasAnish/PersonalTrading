@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "TimeSeriesMomentumStrategy",
+  "name": "Time-Series Momentum",
+  "description": "Time-series momentum strategy selecting assets with positive 12-month trailing return, weighted by inverse realized volatility. Long-only, vol-scaled following Moskowitz, Ooi & Pedersen (2012). Expected crisis alpha from sustained trend signals during equity sell-offs.",
+  "parameters": {
+    "lookback_months": 12,
+    "vol_window_days": 60,
+    "target_vol": null
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:trend"
+  ]
+}

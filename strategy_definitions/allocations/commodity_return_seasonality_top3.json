@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "SeasonalReturnTiltStrategy",
+  "name": "Commodity Return Seasonality (top-3)",
+  "description": "Commodity return seasonality variant with top-3 selection instead of top-2, reducing concentration and diversifying the seasonal bet.",
+  "parameters": {
+    "top_n": 3,
+    "history_years": 10
+  },
+  "underlying": "universe:commodity",
+  "tags": [
+    "mech:seasonality",
+    "variant:topn"
+  ]
+}

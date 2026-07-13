@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MeanReversionStrategy",
+  "name": "Mean Reversion (90d)",
+  "description": "Medium-term contrarian strategy across the full asset universe. Ranks assets by 90-day trailing return in ascending order, overweighting recent underperformers. Weights are scaled by inverse volatility. Exploits medium-horizon price reversal across equities, commodities, precious metals, and bonds.",
+  "parameters": {
+    "lookback_days": 90,
+    "vol_lookback_days": 63
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

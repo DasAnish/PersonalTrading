@@ -1,0 +1,26 @@
+{
+  "type": "composed",
+  "class": "VolatilityTargetStrategy",
+  "name": "Risk-Managed Momentum",
+  "description": "Momentum selection (top-3 cross-sectional 12-month) wrapped in VolatilityTargetStrategy overlay. Scales gross exposure by target_vol / realized_vol (6-month window), capped at 1.0 (no leverage, long-only). Targets 15% annualized volatility. Based on Barroso & Santa-Clara (2015) vol-premium logic: momentum crashes are forecastable from momentum vol spikes; risk-managed scaling harvests momentum premium while sidestepping crash risk. Expected Sharpe uplift and shallower max drawdown versus constant-weight momentum.",
+  "parameters": {
+    "target_vol": 0.15,
+    "lookback_days": 126
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTopNStrategy",
+    "parameters": {
+      "top_n": 3,
+      "lookback_days": 252
+    },
+    "underlying": "universe:all"
+  },
+  "tags": [
+    "momentum",
+    "vol-premium",
+    "vol-15",
+    "mech:vol-premium",
+    "research:risk-managed-momentum"
+  ]
+}

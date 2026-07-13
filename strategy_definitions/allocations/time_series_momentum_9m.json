@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "TimeSeriesMomentumStrategy",
+  "name": "Time-Series Momentum (9m)",
+  "description": "Time-series momentum variant with 9-month lookback instead of 12-month, tuned for higher responsiveness to recent trend signals.",
+  "parameters": {
+    "lookback_months": 9,
+    "vol_window_days": 60,
+    "target_vol": null
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:trend",
+    "variant:lookback"
+  ]
+}

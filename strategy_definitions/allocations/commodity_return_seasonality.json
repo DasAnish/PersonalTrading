@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "SeasonalReturnTiltStrategy",
+  "name": "Commodity Return Seasonality",
+  "description": "Seasonal return tilt for commodity sleeve (SGLN, SSLN, BRNT, CRUD, COMM, WCOA, AIGC). Each month, estimates expected return for coming month from mean of that calendar month's returns over trailing 10 years. Equal-weights top 2 commodities by expected seasonal return. Based on 'Return seasonality in commodity futures' (IREF 2024) — structural supply/demand and hedging-pressure flows drive persistent seasonal patterns.",
+  "parameters": {
+    "top_n": 2,
+    "history_years": 10
+  },
+  "underlying": "universe:commodity",
+  "tags": [
+    "mech:seasonality"
+  ]
+}

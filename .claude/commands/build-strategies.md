@@ -69,7 +69,14 @@ Two-phase workflow, replacing the old 4-agent pipeline team:
 5. For each dispatched candidate with a `research_ref`: set that idea's
    frontmatter `status: candidate` and update its `research/backlog.md` row.
 
-## Phase 2 — Build (2 agents)
+## Phase 2 — Build & submit (2 agents)
+
+**Builders do NOT wait for pipeline results.** Their job is to implement each
+candidate and *submit* its run (fire-and-forget), then move on. Backtest →
+validate → overfitting keep running in the background; results are collected
+later in Phase 3 (when the user asks, or before the SPA refresh/commit). This
+keeps builders fast and lets a batch of candidates run their pipelines
+concurrently instead of one builder blocking on each ~minutes-long run.
 
 Ensure the dashboard server is up first (`curl -s localhost:5000/api/strategies`
 — if down, start it detached: `python scripts/serve_results.py`).
@@ -97,41 +104,82 @@ FOR EACH candidate:
      strategies/ and strategies/core.py, write strategies/<snake>.py, add the
      import+__all__ entry to strategies/__init__.py, then write the JSON
      definition.
-2. Run the pipeline via the dashboard REST API (this picks up fresh code —
-   do NOT run the scripts directly):
+2. Submit the pipeline run via the dashboard REST API — do NOT wait for it to
+   finish (this picks up fresh code — do NOT run the scripts directly):
      curl -s -X POST localhost:5000/api/run/<key>
-   Response has job_id. Poll every ~30s:
+   Capture job_id from the response. Do ONE status poll ~5s later
      curl -s localhost:5000/api/run/status/<job_id>
-   until state is "done" or "failed" (steps: backtest -> validate ->
-   overfitting; a full run takes minutes).
-3. On "failed": read the log tail in the status payload (full logs under
-   results/jobs/<job_id>/), fix your implementation, resubmit once. If it
-   fails again, record the reason and move on.
-4. On "done": record from results: metrics (total_return, sharpe_ratio,
-   max_drawdown), validation overall verdict, overfitting DSR/PBO verdicts.
-5. Iterate configurations: if the result is promising (Sharpe > 0.8 and
-   validation not FAIL) and tunable_params is set, create 1-2 parameter or
-   vol-target variants as new definitions (new keys, same rules as above) and
-   run them through the same REST pipeline. Do not exceed 3 variants per
-   candidate.
-6. If the candidate has research_ref: update research/ideas/<research_ref>.md
-   frontmatter status and the matching research/backlog.md row:
-   built -> validated (verdict PASS/WARN) or rejected (FAIL).
+   ONLY to catch an immediate load/submission failure (state "failed" with a
+   config/JSON/import error in the log tail — the strategy never started
+   backtesting). If it failed to load, fix your implementation and resubmit
+   once. Otherwise record <key> + job_id and move straight to the next
+   candidate. Do NOT poll to completion.
+3. Do NOT read metrics, do NOT create parameter/vol-target variants, and do NOT
+   touch research/ backlog verdicts — all of that needs finished results and is
+   done later in the collect phase, not by you.
 
-RETURN when list exhausted: one line per strategy attempted:
-<key> | built|failed | sharpe=X.XX | maxdd=-X% | validation=PASS/WARN/FAIL | overfitting=PASS/WARN/FAIL/skip | note
+RETURN when list exhausted: one line per candidate:
+<key> | submitted|load-failed|not-built | job_id=<id or -> | note
+(include any candidate you could not implement at all, with the reason)
 ```
+
+## Phase 3 — Collect results & finalize (deferred, main thread)
+
+Run this once the pipelines have had time to finish — either when the user asks
+to see results, or immediately before the SPA refresh/commit. Do NOT block the
+build on it.
+
+1. For each submitted `job_id`, poll `curl -s localhost:5000/api/run/status/<job_id>`
+   until state is "done" or "failed" (a full run takes minutes; several run
+   concurrently). On "failed", read the log tail (full logs under
+   `results/jobs/<job_id>/`) and record the reason.
+2. For each "done" key, read `results/strategies/<key>/` yourself — metrics
+   (total_return, sharpe_ratio, max_drawdown), validation `overall` verdict,
+   overfitting DSR/PBO verdicts. **Do not trust a builder's or a prior report's
+   verdict — read the verdict files directly** (haiku builders have
+   misreported PASS/WARN/FAIL).
+3. Promote promising configs: if a result is promising (Sharpe > 0.8 and
+   validation not FAIL) and the candidate had `tunable_params`, create 1–2
+   parameter/vol-target variants as new definitions (new keys) and submit them
+   through the same REST pipeline; re-collect. Max 3 variants per candidate.
+4. For each candidate with `research_ref`: update
+   `research/ideas/<research_ref>.md` frontmatter status and the matching
+   `research/backlog.md` row: `built` -> `validated` (verdict PASS/WARN) or
+   `rejected` (FAIL).
+
+### Triggering Phase 3 (don't sit and poll)
+
+Once builders return their `job_id`s, don't block the chat polling status.
+Pick a trigger by how long you expect to wait:
+
+- **Auto-ping this session (preferred while active):** start a `Monitor` on a
+  command that polls the job_ids and prints a line only when all reach
+  done/failed, e.g. a loop over
+  `curl -s localhost:5000/api/run/status/<job_id>` that exits once none are
+  still "running". The Monitor wakes the conversation with that line — then run
+  Phase 3. No fixed interval, no manual checking.
+- **Detached / overnight (session may be closed):** schedule a cloud agent
+  (`/schedule` or a cron routine) that runs Phase 3 — poll jobs, read verdicts,
+  update backlog, commit. It runs in its own context (it won't ping *this*
+  chat; it does the work and reports in its own run). Use when the build was
+  kicked off unattended.
+- **On demand:** just run Phase 3 by hand next time the user asks for results.
+
+Keep the submitted `key -> job_id` map (from the builders' return lines) so any
+of these can find the jobs later.
 
 ## Orchestration (main thread)
 
 - While builders run, wait for their completion notifications; on each
-  builder's return, verify its report: spot-check that
-  `strategy_definitions/` files exist and `results/strategies/<key>/` is
-  populated for claimed builds.
+  builder's return, verify its report: spot-check that the claimed
+  `strategy_definitions/` files actually exist. (Results won't be populated yet
+  — that's expected; builders no longer wait for them.)
 - If a builder dies or stalls, re-spawn it with its remaining candidates.
-- When both finish: run `python scripts/run_full_analysis.py --skip-backtest
-  --skip-validate` once for the library-wide SPA refresh, then summarise for
-  the user: built/failed table, verdicts, and any backlog status changes.
+- When both builders finish, run Phase 3 to collect results and update
+  verdicts/backlog, then run `python scripts/run_full_analysis.py
+  --skip-backtest --skip-validate` once for the library-wide SPA refresh, and
+  summarise for the user: built/failed table, verdicts (read directly), and any
+  backlog status changes.
 - Commit per milestone (definitions + any new classes) with a descriptive
   message.
 
@@ -139,5 +187,8 @@ RETURN when list exhausted: one line per strategy attempted:
 
 - Never duplicate an existing definition key.
 - Only assets present in `strategy_definitions/assets/`.
-- Builders must use the REST API for all backtest/validation/overfitting runs.
+- Builders must use the REST API to submit all runs (never run the scripts
+  directly), but must NOT block on the results — collection is Phase 3.
+- Verdicts go into the summary only after being read directly from the result
+  files, never from a builder's self-report.
 - Stop immediately on "stop"/"pause"/"enough" and summarise.

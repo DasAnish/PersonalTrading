@@ -34,7 +34,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from analytics.blend import blended_target_weights, load_blend
+from analytics.blend import (
+    blended_target_weights,
+    latest_target_weights,
+    load_blend,
+)
+from analytics.ledger import cash_by_strategy, holdings_by_strategy, load_ledger
 from analytics.rebalance import DEFAULT_HOLD_THRESHOLD, compute_rebalance_plan
 from data.cache import close_price_base, load_price_units
 
@@ -191,6 +196,16 @@ Examples:
         "Pair with --blend for the blended target.",
     )
     parser.add_argument(
+        "--strategy-slice",
+        type=str,
+        default=None,
+        metavar="KEY",
+        help="Rebalance the virtual allocation slice for strategy KEY: current "
+        "holdings and cash come from the ledger (analytics/ledger.py), target "
+        "weights default to the strategy's latest weights (override with "
+        "--weights/--blend). Add investable cash with --budget or --cash.",
+    )
+    parser.add_argument(
         "--json-out",
         action="store_true",
         help="Also print the plan as JSON (machine-readable) after the table.",
@@ -206,10 +221,27 @@ Examples:
                 "No usable preferred blend — set one in config/preferred_blend.json "
                 "or on the live-risk page first."
             )
+    elif args.strategy_slice and args.weights is None and args.weights_json is None:
+        # Slice mode default: the strategy's own latest target weights.
+        weights = latest_target_weights(args.strategy_slice)
+        if not weights:
+            raise SystemExit(
+                f"No target weights found for slice {args.strategy_slice!r} — run "
+                "its backtest first, or pass --weights/--blend."
+            )
     else:
         weights = _load_dict_arg(args.weights, args.weights_json, "weights")
 
-    if args.budget is not None:
+    if args.strategy_slice:
+        # Slice mode: holdings + cash come from the ledger; price from the cache.
+        ledger = load_ledger()
+        positions = dict(holdings_by_strategy(ledger).get(args.strategy_slice, {}))
+        slice_cash = cash_by_strategy(ledger).get(args.strategy_slice, 0.0)
+        units = load_price_units()
+        symbols = set(positions) | set(weights)
+        prices = {sym: (close_price_base(sym, units) or 0.0) for sym in symbols}
+        cash = slice_cash + (args.budget or 0.0) + args.cash
+    elif args.budget is not None:
         # Target-allocation mode: build from zero cash, price from the cache.
         units = load_price_units()
         positions = {}
@@ -230,6 +262,12 @@ Examples:
         cash=cash,
         hold_threshold=args.hold_threshold,
     )
+
+    if args.strategy_slice:
+        print(f"\nSlice: {args.strategy_slice}")
+        print(f"Slice cash (from ledger): {slice_cash:,.2f}")
+        holdings_value = plan.total_portfolio_value - cash
+        print(f"Slice holdings value: {holdings_value:,.2f}")
 
     print_plan_table(plan)
 

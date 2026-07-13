@@ -32,6 +32,7 @@
     <nav class="site-nav" style="margin:8px 0 16px;"><a href="/">Overview</a> · <a href="/live-risk" style="font-weight:800;color:#1f2937;">Live Risk</a> · <a href="/validation">Validation</a> · <a href="/info">Info</a></nav>
     <main style="max-width: 1100px; margin: 0 auto; padding: 0 16px;">
         <div id="banner"></div>
+        <div id="regBanner"></div>
         <p class="muted" id="asOf"></p>
 
         <div id="scopeSelector" style="margin:12px 0; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
@@ -103,6 +104,14 @@
             <span id="trackerMsg" class="muted" style="font-size:0.85rem;"></span>
         </div>
         <div id="trackersTable"></div>
+
+        <h2 style="margin-top:28px;">Pre-registrations <span class="muted" style="font-size:0.85rem;">(frozen promotion metrics + kill criteria — nightly grades realized drawdown)</span></h2>
+        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
+            <select id="regStrategy" style="font-size:0.9rem;padding:4px;"><option value="">— strategy —</option></select>
+            <button onclick="addRegistration()">Register</button>
+            <span id="regMsg" class="muted" style="font-size:0.85rem;"></span>
+        </div>
+        <div id="regTable"></div>
     </main>
   </div>
   </div>
@@ -446,14 +455,75 @@
             loadTrackers();
         }
 
+        // ---- Pre-registrations ----
+        const REG_BADGE = {
+            ok: ['#065f46', '#d1fae5', 'ok'],
+            breach: ['#7f1d1d', '#fee2e2', 'BREACH'],
+            review_due: ['#78350f', '#fef3c7', 'review due'],
+            unknown: ['#374151', '#e5e7eb', 'not yet checked'],
+        };
+
+        function regBadge(status) {
+            const [fg, bg, label] = REG_BADGE[status] || REG_BADGE.unknown;
+            return `<span style="padding:1px 8px;border-radius:10px;font-size:0.78rem;font-weight:700;color:${fg};background:${bg};">${label}</span>`;
+        }
+
+        async function loadRegistrations() {
+            const data = await fetchJSON('/api/registrations');
+            if (!data) return;
+            const alerts = data.filter(r => ['breach', 'review_due'].includes((r.status || {}).status));
+            const banner = document.getElementById('regBanner');
+            banner.innerHTML = alerts.length ? `<div style="margin:8px 0;padding:10px 12px;border-radius:8px;background:#fee2e2;color:#7f1d1d;font-weight:600;">
+                ⚠ Registration alerts: ${alerts.map(a => `${a.strategy} (${a.status.status})`).join(', ')}</div>` : '';
+
+            const el = document.getElementById('regTable');
+            if (!data.length) { el.innerHTML = '<p class="muted">No pre-registrations yet — register a promoted strategy to freeze its risk envelope.</p>'; return; }
+            el.innerHTML = `
+                <table><thead><tr><th>Strategy</th><th>Status</th><th>BT Max DD</th><th>Envelope</th><th>Realized DD</th><th>Portfolio DD</th><th>Registered</th><th></th></tr></thead>
+                <tbody>${data.map(r => {
+                    const s = r.status || {};
+                    const bt = r.backtest || {};
+                    return `<tr>
+                        <td>${r.strategy}</td>
+                        <td>${regBadge(s.status)}${s.reasons && s.reasons.length ? `<div class="muted" style="font-size:0.75rem;">${s.reasons.join('; ')}</div>` : ''}</td>
+                        <td>${pct(bt.max_drawdown)}</td>
+                        <td>${pct(s.envelope_dd)}</td>
+                        <td>${pct(s.realized_dd)}</td>
+                        <td>${pct(s.portfolio_dd)}</td>
+                        <td class="muted" style="font-size:0.8rem;">${(r.registered_at || '').slice(0, 10)}</td>
+                        <td><button onclick="removeRegistration('${r.strategy}')">✕</button></td>
+                    </tr>`;
+                }).join('')}</tbody></table>`;
+        }
+
+        async function addRegistration() {
+            const key = document.getElementById('regStrategy').value;
+            const msg = document.getElementById('regMsg');
+            if (!key) { msg.textContent = 'Pick a strategy.'; return; }
+            const res = await fetch('/api/registrations', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ strategy: key })
+            });
+            const data = await res.json();
+            msg.textContent = res.ok ? 'Registered (frozen from metrics.json).' : (data.error || 'Failed.');
+            if (res.ok) loadRegistrations();
+        }
+
+        async function removeRegistration(key) {
+            await fetch(`/api/registrations/${encodeURIComponent(key)}`, { method: 'DELETE' });
+            loadRegistrations();
+        }
+
         loadBlend().then(() => {
             loadTarget();
             fillSelect('mtStrategy', availableStrategies);
             fillSelect('trackerStrategy', availableStrategies);
+            fillSelect('regStrategy', availableStrategies);
         });
         document.getElementById('mtDate').value = new Date().toISOString().slice(0, 10);
         loadLedger();
         loadTrackers();
+        loadRegistrations();
         loadRisk();
     </script>
 </body>

@@ -12,12 +12,14 @@ def create_app() -> Flask:
     from .risk import risk_bp
     from .jobs import jobs_bp, load_persisted_jobs
     from .ledger import ledger_bp
+    from .registrations import registrations_bp
 
     app.register_blueprint(routes_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(risk_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(ledger_bp)
+    app.register_blueprint(registrations_bp)
 
     # Job history is mirrored to results/jobs/<id>/job.json; reload it so a
     # server restart no longer wipes /api/run/jobs.

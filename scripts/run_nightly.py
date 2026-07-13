@@ -347,6 +347,29 @@ def main() -> int:
         except Exception as exc:
             logger.warning(f"Could not read rebuilt index: {exc}")
 
+        # 5b. registration kill-criteria check — soft step (never aborts).
+        _run_step(
+            manifest,
+            "check_registrations",
+            [py, str(SCRIPTS_DIR / "check_registrations.py")],
+        )
+        try:
+            status = json.loads(
+                (RESULTS_DIR / "registration_status.json").read_text(encoding="utf-8")
+            )
+            alerts = [
+                k
+                for k, v in status.items()
+                if v.get("status") in ("breach", "review_due")
+            ]
+            manifest["registration_alerts"] = alerts
+            if alerts:
+                logger.warning(f"Registration alerts: {', '.join(alerts)}")
+        except FileNotFoundError:
+            manifest["registration_alerts"] = []
+        except Exception as exc:
+            logger.warning(f"Could not read registration status: {exc}")
+
         # 6. archive for run-over-run diffing
         archive_run(manifest, run_id)
 

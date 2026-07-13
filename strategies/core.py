@@ -72,9 +72,16 @@ class DataRequirements:
     underlying_requirements: Optional[List[DataRequirements]] = None
 
     def aggregate_with(self, other: DataRequirements) -> DataRequirements:
-        """Aggregate requirements from multiple sources."""
+        """Aggregate requirements from multiple sources.
+
+        Dedupe is order-preserving (first-seen wins): ``list(set(...))`` gave a
+        per-process, PYTHONHASHSEED-dependent symbol order, which permuted each
+        strategy's price-panel columns and covariance matrix and made backtests
+        non-reproducible run-to-run (float summation drift). dict.fromkeys keeps
+        insertion order and is deterministic.
+        """
         return DataRequirements(
-            symbols=list(set(self.symbols + other.symbols)),
+            symbols=list(dict.fromkeys(self.symbols + other.symbols)),
             lookback_days=max(self.lookback_days, other.lookback_days),
             frequency=self.frequency,  # Assume same frequency
             currency=self.currency,  # Assume same currency

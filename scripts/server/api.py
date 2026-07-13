@@ -66,10 +66,23 @@ def api_strategies():
 
 @bp.route("/api/strategies/summary")
 def api_strategies_summary():
-    """Return key metrics for all strategies (used by overview page)."""
+    """Return key metrics for all strategies (used by overview page).
+
+    Optional ``offset``/``limit`` query params page through the list so the
+    overview can stream results with a progress bar. With ``limit`` the
+    response is ``{"rows": [...], "total": N, "offset": o, "limit": l}``;
+    without it the legacy bare list is returned.
+    """
     keys = list_strategy_keys()
+    total = len(keys)
+    try:
+        offset = max(0, int(request.args.get("offset", 0)))
+        limit = int(request.args["limit"]) if "limit" in request.args else None
+    except (TypeError, ValueError):
+        return jsonify({"error": "offset/limit must be integers"}), 400
+    page_keys = keys[offset : offset + limit] if limit is not None else keys
     rows = []
-    for key in keys:
+    for key in page_keys:
         data = load_strategy_data(key)
         if not data:
             continue
@@ -104,6 +117,10 @@ def api_strategies_summary():
                 "calmar_ratio": calmar,
                 "omega_ratio": omega,
             }
+        )
+    if limit is not None:
+        return jsonify(
+            {"rows": rows, "total": total, "offset": offset, "limit": limit}
         )
     return jsonify(rows)
 

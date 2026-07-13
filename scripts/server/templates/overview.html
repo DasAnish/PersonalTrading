@@ -3,33 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strategy Backtest Dashboard</title>
+    <title>Strategy Library</title>
     <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
     <script src="{{ url_for('routes.static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('routes.static', filename='js/format.js') }}"></script>
     <style>
-        .overview-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-top: 24px;
-        }
-
-        .overview-table thead { background: #4c5cd4; color: white; }
-        .overview-table th { padding: 14px 16px; text-align: left; font-weight: 600; }
-        .overview-table td { padding: 12px 16px; border-bottom: 1px solid #e0e0e0; }
-        .overview-table tbody tr:hover { background: #f5f7ff; cursor: pointer; }
-        .overview-table tbody tr:last-child td { border-bottom: none; }
-
-        .strategy-link { color: #667eea; font-weight: 600; text-decoration: none; }
-        .strategy-link:hover { text-decoration: underline; }
-
         .sort-btn {
             background: none;
             border: none;
-            color: white;
+            color: inherit;
             cursor: pointer;
             font-weight: 600;
             font-size: 1em;
@@ -44,142 +26,16 @@
         .sort-btn.desc::after { content: '↓'; opacity: 1; }
 
         .th-wrap { display: flex; align-items: center; gap: 4px; }
-        .metric-info {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.25);
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-            cursor: help;
-            position: relative;
-            flex-shrink: 0;
-        }
-        .metric-info:hover::after,
-        .metric-info:focus::after {
-            content: attr(data-tip);
-            position: absolute;
-            top: calc(100% + 6px);
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a2e;
-            color: #fff;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 400;
-            white-space: nowrap;
-            z-index: 100;
-            pointer-events: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-        .metric-info:hover::before,
-        .metric-info:focus::before {
-            content: '';
-            position: absolute;
-            top: calc(100% + 2px);
-            left: 50%;
-            transform: translateX(-50%);
-            border: 4px solid transparent;
-            border-bottom-color: #1a1a2e;
-            z-index: 100;
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 8px;
-        }
-
-        .summary-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            color: #1f2937;
-            padding: 18px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .summary-card h3 { font-size: 0.85em; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; }
-        .summary-card .value { font-size: 1.8em; font-weight: bold; }
-        .summary-card .sub { font-size: 0.8em; color: #6b7280; margin-top: 2px; }
-
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            margin: 20px 0 8px;
-            padding: 14px 16px;
-            background: #f8f9ff;
-            border-radius: 8px;
-            border: 1px solid #e0e4f8;
-        }
-
-        .search-input {
-            flex: 1;
-            min-width: 200px;
-            padding: 7px 12px;
-            border: 1px solid #c5cde8;
-            border-radius: 6px;
-            font-size: 0.9em;
-            outline: none;
-            background: white;
-        }
-        .search-input:focus { border-color: #667eea; box-shadow: 0 0 0 2px rgba(102,126,234,0.15); }
-
-        .tag-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            align-items: center;
-        }
-
-        .tag-filter-label {
-            font-size: 0.8em;
-            color: #666;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .tag-btn {
-            padding: 3px 10px;
-            border-radius: 12px;
-            border: 1px solid #c5cde8;
-            background: white;
-            color: #555;
-            font-size: 0.78em;
-            cursor: pointer;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-        .tag-btn:hover { border-color: #667eea; color: #667eea; }
-        .tag-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        .tag-btn.clear-btn {
-            background: #f0f0f0;
-            color: #888;
-            border-color: #ddd;
-        }
-        .tag-btn.clear-btn:hover { background: #e0e0e0; color: #555; }
 
         .tag-pill {
             display: inline-block;
-            padding: 1px 7px;
+            padding: 2px 8px;
             border-radius: 10px;
-            background: #eef0fb;
-            color: #667eea;
+            background: rgba(61, 76, 168, 0.1);
+            color: var(--accent);
             font-size: 0.72em;
             font-weight: 500;
-            border: 1px solid #d4d9f7;
+            border: 1px solid rgba(61, 76, 168, 0.2);
             white-space: nowrap;
         }
 
@@ -190,76 +46,109 @@
             white-space: nowrap;
         }
 
-        .site-nav { margin: 0 0 16px; font-size: 0.9em; }
-        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 16px; }
-        .site-nav a:hover { text-decoration: underline; }
+        .strategy-link { color: var(--accent); font-weight: 600; text-decoration: none; }
+        .strategy-link:hover { text-decoration: underline; }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Strategy Backtest Dashboard</h1>
-            <p>Overview of all backtested strategies</p>
+    <header class="topbar">
+        <a class="brand" href="/">PersonalTrading <small>research dashboard</small></a>
+        <nav>
+            <a href="/" class="active">Overview</a>
+            <a href="/live-risk">Live Risk</a>
+            <a href="/validation">Validation</a>
+            <a href="/info">Info &amp; Glossary</a>
+        </nav>
+        <span class="readonly-tag">read-only — orders entered manually in IB</span>
+    </header>
+
+    <main class="page">
+        <div class="page-title">
+            <h1>Strategy Library</h1>
         </div>
 
-        <div class="content">
-            <nav class="site-nav"><a href="/" style="font-weight:800;color:#1f2937;">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation">Validation</a> · <a href="/info">Info</a></nav>
-
-            <div id="freshnessBanner" style="display:none;margin:10px 0;padding:10px 14px;border-radius:8px;font-size:0.9rem;line-height:1.4;"></div>
-
-            <div class="summary-cards" id="summaryCards">
-                <div class="summary-card">
-                    <h3>Strategies</h3>
-                    <div class="value" id="totalStrategies">—</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Best Sharpe</h3>
-                    <div class="value" id="bestSharpe">—</div>
-                    <div class="sub" id="bestSharpeName"></div>
-                </div>
-                <div class="summary-card">
-                    <h3>Best CAGR</h3>
-                    <div class="value" id="bestCagr">—</div>
-                    <div class="sub" id="bestCagrName"></div>
-                </div>
-                <div class="summary-card">
-                    <h3>Lowest Max DD</h3>
-                    <div class="value" id="lowestDD">—</div>
-                    <div class="sub" id="lowestDDName"></div>
-                </div>
-            </div>
-
-            <div class="filter-bar">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search strategy name..." oninput="debouncedFilters()">
-                <div class="tag-filters" id="tagFilters">
-                    <span class="tag-filter-label">Tags:</span>
-                </div>
-                <button class="tag-btn" onclick="init()" title="Reload results">↻ Refresh</button>
-                <span class="filter-count" id="filterCount"></span>
-            </div>
-
-            <table class="overview-table" id="overviewTable">
-                <thead>
-                    <tr>
-                        <th><button class="sort-btn" onclick="sortTable('name', event)">Strategy</button></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio', event)">Sharpe Ratio</button><span class="metric-info" tabindex="0" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr', event)">CAGR</button><span class="metric-info" tabindex="0" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown', event)">Max Drawdown</button><span class="metric-info" tabindex="0" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility', event)">Volatility</button><span class="metric-info" tabindex="0" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return', event)">Total Return</button><span class="metric-info" tabindex="0" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio', event)">Calmar</button><span class="metric-info" tabindex="0" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
-                        <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio', event)">Omega</button><span class="metric-info" tabindex="0" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values &gt; 1 indicate more gains than losses. Higher is better.">i</span></div></th>
-                    </tr>
-                </thead>
-                <tbody id="overviewBody">
-                    <tr><td colspan="8" class="loading">Loading strategies...</td></tr>
-                </tbody>
-            </table>
+        <div class="page-intro">
+            Every backtested allocation strategy, ranked. Click a row for full detail (equity curve, drawdowns, validation). This site is research-only — it never places orders.
         </div>
-    </div>
+
+        <details class="help">
+            <summary>How to use this dashboard</summary>
+            <div class="help-body">
+                <p><strong>Overview</strong> (this page): Compare all strategies with sortable columns. Hover the <em>i</em> icons for metric definitions.</p>
+                <p><strong>Strategy pages</strong> (click any row): Deep-dive into a single strategy with equity curve, drawdowns, and validation checks.</p>
+                <p><strong><a href="/live-risk">Live Risk</a></strong>: Your actual IB holdings versus strategy targets and the monthly rebalance workflow.</p>
+                <p><strong><a href="/validation">Validation</a></strong>: Library-wide overfitting checks (SPA go/no-go gate for deployment readiness).</p>
+                <p><strong><a href="/info">Info &amp; Glossary</a></strong>: Full definitions of all metrics and terms.</p>
+            </div>
+        </details>
+
+        <div id="freshnessBanner"></div>
+
+        <div class="stat-grid" id="summaryCards">
+            <div class="stat-card">
+                <h3>Strategies</h3>
+                <div class="value" id="totalStrategies">—</div>
+            </div>
+            <div class="stat-card">
+                <h3>Best Sharpe</h3>
+                <div class="value" id="bestSharpe">—</div>
+                <div class="sub" id="bestSharpeName"></div>
+            </div>
+            <div class="stat-card">
+                <h3>Best CAGR</h3>
+                <div class="value" id="bestCagr">—</div>
+                <div class="sub" id="bestCagrName"></div>
+            </div>
+            <div class="stat-card">
+                <h3>Lowest Max DD</h3>
+                <div class="value" id="lowestDD">—</div>
+                <div class="sub" id="lowestDDName"></div>
+            </div>
+        </div>
+
+        <div id="progressContainer" class="progress-wrap" style="display:none;margin:16px 0;">
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <div class="progress-label" id="progressLabel">Loading strategies…</div>
+        </div>
+
+        <div class="toolbar">
+            <input type="search" class="search-input" id="searchInput" placeholder="Search strategy name..." oninput="debouncedFilters()">
+            <div id="tagFilters" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                <span style="font-size:0.8em;color:#666;font-weight:600;white-space:nowrap;">Tags:</span>
+            </div>
+            <button class="btn small" onclick="init()" title="Reload results">↻ Refresh</button>
+            <span class="filter-count" id="filterCount"></span>
+        </div>
+
+        <table class="data-table" id="overviewTable">
+            <thead>
+                <tr>
+                    <th><button class="sort-btn" onclick="sortTable('name', event)">Strategy</button></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('sharpe_ratio', event)">Sharpe Ratio</button><span class="metric-info" tabindex="0" data-tip="Risk-adjusted return: annualised mean return ÷ annualised std dev. Higher is better.">i</span></div></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('cagr', event)">CAGR</button><span class="metric-info" tabindex="0" data-tip="Compound Annual Growth Rate: the geometric average annual return over the full period.">i</span></div></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('max_drawdown', event)">Max Drawdown</button><span class="metric-info" tabindex="0" data-tip="Largest peak-to-trough decline in portfolio value. Less negative is better.">i</span></div></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('volatility', event)">Volatility</button><span class="metric-info" tabindex="0" data-tip="Annualised standard deviation of daily returns. Lower means smoother equity curve.">i</span></div></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('total_return', event)">Total Return</button><span class="metric-info" tabindex="0" data-tip="Cumulative percentage gain from start to end of the backtest period.">i</span></div></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('calmar_ratio', event)">Calmar</button><span class="metric-info" tabindex="0" data-tip="CAGR ÷ |Max Drawdown|. Measures return earned per unit of drawdown risk. Higher is better.">i</span></div></th>
+                    <th><div class="th-wrap"><button class="sort-btn" onclick="sortTable('omega_ratio', event)">Omega</button><span class="metric-info" tabindex="0" data-tip="Sum of gains above 0 ÷ sum of losses below 0. Values > 1 indicate more gains than losses. Higher is better.">i</span></div></th>
+                </tr>
+            </thead>
+            <tbody id="overviewBody">
+                <tr><td colspan="8" class="loading">Loading strategies…</td></tr>
+            </tbody>
+        </table>
+    </main>
 
     <script>
         let allRows = [];
+        let totalStrategies = 0;
         let sortKey = 'sharpe_ratio';
         let sortDir = 'desc';
         let activeTags = new Set();
@@ -400,11 +289,11 @@
                 .map(([tag]) => tag);
 
             const container = document.getElementById('tagFilters');
-            container.innerHTML = '<span class="tag-filter-label">Tags:</span>';
+            container.innerHTML = '<span style="font-size:0.8em;color:#666;font-weight:600;white-space:nowrap;">Tags:</span>';
 
             for (const tag of sorted) {
                 const btn = document.createElement('button');
-                btn.className = 'tag-btn';
+                btn.className = 'chip';
                 btn.textContent = tag;
                 btn.title = `${tagCounts[tag]} strategies`;
                 btn.onclick = () => toggleTag(tag, btn);
@@ -412,7 +301,7 @@
             }
 
             const clear = document.createElement('button');
-            clear.className = 'tag-btn clear-btn';
+            clear.className = 'chip faint';
             clear.id = 'clearTagsBtn';
             clear.textContent = 'Clear';
             clear.onclick = clearTags;
@@ -432,7 +321,7 @@
 
         function clearTags() {
             activeTags.clear();
-            document.querySelectorAll('.tag-btn.active').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.chip.active').forEach(b => b.classList.remove('active'));
             document.getElementById('searchInput').value = '';
             applyFilters();
         }
@@ -480,30 +369,66 @@
             }
         }
 
+        function updateProgress(loaded, total) {
+            const pct = Math.round((loaded / total) * 100);
+            const progressFill = document.getElementById('progressFill');
+            const progressLabel = document.getElementById('progressLabel');
+            progressFill.style.width = pct + '%';
+            progressLabel.textContent = `Loading strategies… ${loaded} of ${total} (${pct}%)`;
+        }
+
         async function init() {
             try {
-                allRows = await fetchJSON('/api/strategies/summary');
+                allRows = [];
+                totalStrategies = 0;
+                document.getElementById('overviewBody').innerHTML = '<tr><td colspan="8" class="loading">Loading strategies…</td></tr>';
+                document.getElementById('progressContainer').style.display = 'block';
 
-                allRows.sort((a, b) => {
-                    const av = a.sharpe_ratio, bv = b.sharpe_ratio;
-                    if (av === null || av === undefined) return 1;
-                    if (bv === null || bv === undefined) return -1;
-                    return bv - av;
-                });
+                const pageSize = 50;
+                let offset = 0;
 
-                colStats = computeColStats(allRows);
-                updateSummaryCards(allRows);
-                buildTagFilters(allRows);
-                applyFilters();
+                while (true) {
+                    const response = await fetchJSON(`/api/strategies/summary?offset=${offset}&limit=${pageSize}`);
+                    const rows = response.rows || [];
+
+                    if (offset === 0) {
+                        totalStrategies = response.total || 0;
+                    }
+
+                    if (rows.length === 0) break;
+
+                    allRows.push(...rows);
+                    offset += pageSize;
+
+                    updateProgress(allRows.length, totalStrategies);
+
+                    // After each batch, update UI incrementally
+                    colStats = computeColStats(allRows);
+                    updateSummaryCards(allRows);
+                    buildTagFilters(allRows);
+                    applyFilters();
+                }
+
+                // Hide progress bar when done
+                document.getElementById('progressContainer').style.display = 'none';
             } catch (err) {
-                document.getElementById('overviewBody').innerHTML =
-                    '<tr><td colspan="8" class="error">Error loading strategies: ' + err.message + '</td></tr>';
+                document.getElementById('progressContainer').style.display = 'none';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'banner error';
+                errorDiv.textContent = 'Error loading strategies: ' + err.message;
+                document.getElementById('overviewTable').parentNode.insertBefore(errorDiv, document.getElementById('overviewTable'));
+
+                // Show what loaded so far
+                if (allRows.length > 0) {
+                    applyFilters();
+                } else {
+                    document.getElementById('overviewBody').innerHTML =
+                        '<tr><td colspan="8" class="error">Error loading strategies: ' + err.message + '</td></tr>';
+                }
             }
         }
 
         async function loadFreshness() {
-            // Data-rot visibility: one stale symbol truncates every aligned
-            // backtest panel to its end date, invisibly. Surface it here.
             const el = document.getElementById('freshnessBanner');
             try {
                 const d = await fetchJSON('/api/data-freshness');
@@ -526,15 +451,11 @@
                     ' — last pipeline run ' + d.last_run.started_at.slice(0, 16).replace('T', ' ') +
                     (d.last_run.ok ? ' (ok)' : ' (FAILED/blocked)') : '';
                 if (c.gate_failed) {
-                    el.style.background = '#fef2f2';
-                    el.style.border = '1px solid #fca5a5';
-                    el.style.color = '#991b1b';
+                    el.className = 'banner error';
                     el.textContent = '⛔ Data freshness gate FAILED: ' + problems.join('; ') + lastRun;
                     el.style.display = 'block';
                 } else if ((v && v.mixed) || c.stale.length || (c.panel_stale_days !== null && c.panel_stale_days > 3)) {
-                    el.style.background = '#fffbeb';
-                    el.style.border = '1px solid #fcd34d';
-                    el.style.color = '#92400e';
+                    el.className = 'banner warn';
                     el.textContent = '⚠ ' + problems.join('; ') + lastRun;
                     el.style.display = 'block';
                 }

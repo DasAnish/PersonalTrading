@@ -5,116 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Risk</title>
     <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
-    <style>
-        .risk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 16px 0; }
-        .risk-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
-        .risk-card h3 { margin: 0 0 8px; font-size: 0.8rem; color: #666; text-transform: uppercase; }
-        .risk-card .big { font-size: 1.6rem; font-weight: 700; }
-        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-        th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #eee; }
-        th:first-child, td:first-child { text-align: left; }
-        .banner { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 10px 14px; border-radius: 6px; margin: 12px 0; }
-        .flagged { color: #dc2626; font-weight: 600; }
-        .muted { color: #6b7280; }
-        .content header { margin-bottom: 8px; }
-        .content header h1 { color: #1f2937; }
-        .content header nav a { color: #667eea; text-decoration: none; font-weight: 600; }
-        .content h2, .content h3 { color: #1f2937; }
-        .site-nav { font-size: 0.9em; }
-        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; margin-right: 16px; }
-        .site-nav a:hover { text-decoration: underline; }
-    </style>
 </head>
 <body>
-  <div class="container">
-  <div class="content">
-    <header><h1>Live Risk <span class="muted" style="font-size:0.9rem;">(read-only — no orders)</span></h1></header>
-    <nav class="site-nav" style="margin:8px 0 16px;"><a href="/">Overview</a> · <a href="/live-risk" style="font-weight:800;color:#1f2937;">Live Risk</a> · <a href="/validation">Validation</a> · <a href="/info">Info</a></nav>
-    <main style="max-width: 1100px; margin: 0 auto; padding: 0 16px;">
+    <header class="topbar">
+        <a class="brand" href="/">PersonalTrading <small>research dashboard</small></a>
+        <nav>
+            <a href="/">Overview</a>
+            <a href="/live-risk" class="active">Live Risk</a>
+            <a href="/validation">Validation</a>
+            <a href="/info">Info &amp; Glossary</a>
+        </nav>
+        <span class="readonly-tag">read-only — orders entered manually in IB</span>
+    </header>
+
+    <main class="page">
+        <h1 class="page-title">Live Risk &amp; Rebalance</h1>
+        <p class="page-intro">Your actual IB holdings versus strategy targets: risk metrics, drift, and the paper trail for your monthly manual rebalance.</p>
+
+        <details class="help">
+            <summary>How the monthly workflow fits together</summary>
+            <div class="help-body">
+                <ol>
+                    <li><strong>Check Current Holdings</strong> for risk and concentration.</li>
+                    <li><strong>Set/adjust your Preferred Blend</strong> (weighted mix of strategies you trust).</li>
+                    <li><strong>Size it with a budget</strong> to get a target book in £ and shares.</li>
+                    <li><strong>Check Drift vs Target</strong> to see what's out of line.</li>
+                    <li><strong>Enter any orders MANUALLY in IB Gateway.</strong></li>
+                    <li><strong>Record what you traded</strong> under Mark as Traded so per-strategy slices stay accurate.</li>
+                </ol>
+                <p><em>Trackers</em> = paper watchlist. <em>Pre-registrations</em> = frozen risk envelopes graded nightly.</p>
+            </div>
+        </details>
+
         <div id="banner"></div>
         <div id="regBanner"></div>
         <p class="muted" id="asOf"></p>
 
-        <div id="scopeSelector" style="margin:12px 0; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-            <span class="muted" style="font-size:0.85rem;">View:</span>
+        <div class="toolbar" id="scopeSelector" style="margin: 16px 0;">
+            <span class="muted" style="font-size: 0.85rem;">View:</span>
         </div>
 
-        <h2 style="margin-top:28px;">Current Holdings <span class="muted" style="font-size:0.85rem;">(what you hold now — risk &amp; drift)</span></h2>
-        <div class="risk-grid" id="cards"></div>
+        <!-- Section A: Current Holdings -->
+        <h2 class="section">Current Holdings</h2>
+        <p class="section-hint">What you hold now — risk and concentration metrics.</p>
 
-        <h3 style="margin:12px 0 0;font-size:1rem;">Positions</h3>
+        <div class="stat-grid" id="cards"></div>
+
+        <h3 class="subsection">Positions</h3>
         <div id="positions"></div>
 
-        <h3 style="margin:12px 0 0;font-size:1rem;">Correlation</h3>
-        <div id="correlation" style="overflow-x:auto;"></div>
+        <h3 class="subsection">Correlation</h3>
+        <div class="table-scroll" id="correlation"></div>
 
-        <h2 style="margin-top:28px;">Preferred Blend <span class="muted" style="font-size:0.85rem;">(drift &amp; rebalance target — a weighted mix of strategies you like)</span></h2>
+        <!-- Section B: Plan -->
+        <h2 class="section">Plan</h2>
+
+        <h3 class="subsection">
+            Preferred Blend
+            <span class="metric-info" tabindex="0" data-tip="Weights are relative and normalized on save — 2 and 1 becomes 67%/33%.">i</span>
+        </h3>
         <div id="blendRows"></div>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
-            <button onclick="addBlendRow()">+ Add strategy</button>
-            <button onclick="saveBlend()">Save blend</button>
+        <div class="toolbar">
+            <button class="btn" onclick="addBlendRow()">+ Add strategy</button>
+            <button class="btn primary" onclick="saveBlend()">Save blend</button>
             <span id="blendMsg" class="muted"></span>
         </div>
-        <div id="blendTarget" class="muted" style="font-size:0.85rem; margin-bottom:8px;"></div>
+        <div id="blendTarget" class="muted" style="font-size: 0.85rem; margin-top: 8px;"></div>
 
-        <h2 style="margin-top:28px;">Target Allocation</h2>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
-            <label style="font-weight:600;">Budget (£)</label>
-            <input id="budgetInput" type="number" step="500" min="0" value="10000" style="width:120px;padding:4px;font-size:0.9rem;">
-            <button onclick="loadTarget()">Size it</button>
+        <h3 class="subsection">Target Allocation</h3>
+        <div class="toolbar">
+            <label>Budget (£)</label>
+            <input id="budgetInput" type="number" step="500" min="0" value="10000" style="width: 120px;">
+            <button class="btn primary" onclick="loadTarget()">Size it</button>
         </div>
         <div id="targetAlloc"></div>
 
-        <h2 style="margin-top:28px;">Drift vs Target</h2>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
-            <label style="font-weight:600;">Override blend:</label>
-            <select id="strategyInput" style="font-size:0.9rem;padding:4px;">
+        <h3 class="subsection">
+            Drift vs Target
+            <span class="metric-info" tabindex="0" data-tip="Difference between current portfolio weights and the blend's target weights. Rows beyond ±5% are flagged.">i</span>
+        </h3>
+        <div class="toolbar">
+            <label>Override blend:</label>
+            <select id="strategyInput">
                 <option value="">— saved blend —</option>
             </select>
-            <button onclick="loadRisk()">Load</button>
+            <button class="btn primary" onclick="loadRisk()">Load</button>
         </div>
         <div id="drift"></div>
 
-        <h2 style="margin-top:28px;">Allocation Ledger <span class="muted" style="font-size:0.85rem;">(virtual per-strategy slices — sizes float with performance)</span></h2>
+        <!-- Section C: Record & Track -->
+        <h2 class="section">Record &amp; Track</h2>
+
+        <h3 class="subsection">
+            Allocation Ledger
+            <span class="metric-info" tabindex="0" data-tip="Virtual sub-portfolios: each strategy 'owns' the shares you recorded for it; slice values float with the market.">i</span>
+        </h3>
         <div id="reconBanner"></div>
         <div id="slicesTable"></div>
 
-        <h3 style="margin:16px 0 0;font-size:1rem;">Mark as traded</h3>
-        <p class="muted" style="font-size:0.85rem;margin:4px 0;">Execute these orders manually in IB first — this only records what you did. Never places orders.</p>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <select id="mtStrategy" style="font-size:0.9rem;padding:4px;"><option value="">— strategy —</option></select>
-            <label class="muted">Add funding (£)</label>
-            <input id="mtBudget" type="number" step="500" min="0" value="0" style="width:100px;padding:4px;">
-            <button onclick="loadSlicePlan()">Suggest plan</button>
-            <input id="mtDate" type="date" style="padding:4px;">
+        <h3 class="subsection">Mark as traded</h3>
+        <p class="section-hint">Execute these orders manually in IB first — this only records what you did.</p>
+        <div class="toolbar">
+            <select id="mtStrategy"><option value="">— strategy —</option></select>
+            <label>Add funding (£)</label>
+            <input id="mtBudget" type="number" step="500" min="0" value="0" style="width: 100px;">
+            <button class="btn primary" onclick="loadSlicePlan()">Suggest plan</button>
+            <input id="mtDate" type="date">
         </div>
         <div id="mtPlan"></div>
-        <div id="mtMsg" class="muted" style="font-size:0.85rem;"></div>
+        <div id="mtMsg" class="muted" style="font-size: 0.85rem;"></div>
 
-        <h3 style="margin:16px 0 0;font-size:1rem;">Slice performance</h3>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
-            <select id="sliceNavKey" style="font-size:0.9rem;padding:4px;" onchange="loadSliceNav()"><option value="">— strategy —</option></select>
+        <h3 class="subsection">Slice performance</h3>
+        <div class="toolbar">
+            <select id="sliceNavKey" onchange="loadSliceNav()"><option value="">— strategy —</option></select>
         </div>
         <div id="sliceNav"></div>
 
-        <h2 style="margin-top:28px;">Trackers <span class="muted" style="font-size:0.85rem;">(watchlist — paper performance since you added them)</span></h2>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
-            <select id="trackerStrategy" style="font-size:0.9rem;padding:4px;"><option value="">— strategy —</option></select>
-            <button onclick="addTracker()">+ Track</button>
-            <span id="trackerMsg" class="muted" style="font-size:0.85rem;"></span>
+        <h3 class="subsection">
+            Trackers
+            <span class="metric-info" tabindex="0" data-tip="Paper performance of a strategy since the day you added it — no money involved.">i</span>
+        </h3>
+        <div class="toolbar">
+            <select id="trackerStrategy"><option value="">— strategy —</option></select>
+            <button class="btn primary" onclick="addTracker()">+ Track</button>
+            <span id="trackerMsg" class="muted" style="font-size: 0.85rem;"></span>
         </div>
         <div id="trackersTable"></div>
 
-        <h2 style="margin-top:28px;">Pre-registrations <span class="muted" style="font-size:0.85rem;">(frozen promotion metrics + kill criteria — nightly grades realized drawdown)</span></h2>
-        <div style="margin:8px 0; display:flex; gap:8px; align-items:center;">
-            <select id="regStrategy" style="font-size:0.9rem;padding:4px;"><option value="">— strategy —</option></select>
-            <button onclick="addRegistration()">Register</button>
-            <span id="regMsg" class="muted" style="font-size:0.85rem;"></span>
+        <h3 class="subsection">
+            Pre-registrations
+            <span class="metric-info" tabindex="0" data-tip="Freezes a strategy's backtest drawdown as a kill envelope; nightly job grades realized drawdown against it.">i</span>
+        </h3>
+        <div class="toolbar">
+            <select id="regStrategy"><option value="">— strategy —</option></select>
+            <button class="btn primary" onclick="addRegistration()">Register</button>
+            <span id="regMsg" class="muted" style="font-size: 0.85rem;"></span>
         </div>
         <div id="regTable"></div>
     </main>
-  </div>
-  </div>
 
     <script src="{{ url_for('routes.static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('routes.static', filename='js/format.js') }}"></script>
@@ -149,27 +177,27 @@
             if (!data) return;
 
             document.getElementById('banner').innerHTML = data.banner
-                ? `<div class="banner">${data.banner}</div>` : '';
+                ? `<div class="banner warn">${data.banner}</div>` : '';
             document.getElementById('asOf').textContent = data.as_of ? ('Data as of: ' + data.as_of) : 'No position data available.';
 
             document.getElementById('cards').innerHTML = `
-                <div class="risk-card"><h3>VaR 95%</h3><div class="big">${pct(data.var_95)}</div></div>
-                <div class="risk-card"><h3>VaR 99%</h3><div class="big">${pct(data.var_99)}</div></div>
-                <div class="risk-card"><h3>CVaR 95%</h3><div class="big">${pct(data.cvar_95)}</div></div>
-                <div class="risk-card"><h3>Concentration (HHI)</h3><div class="big">${data.hhi != null ? data.hhi.toFixed(3) : 'n/a'}</div></div>
-                <div class="risk-card"><h3>Portfolio Value</h3><div class="big">${data.total_value ? '£' + data.total_value.toLocaleString() : 'n/a'}</div></div>`;
+                <div class="stat-card"><h3>VaR 95% <span class="metric-info" tabindex="0" data-tip="Value at Risk: the daily loss you'd exceed only 5% of the time, based on recent history.">i</span></h3><div class="big">${pct(data.var_95)}</div></div>
+                <div class="stat-card"><h3>VaR 99% <span class="metric-info" tabindex="0" data-tip="Value at Risk: the daily loss you'd exceed only 1% of the time, based on recent history.">i</span></h3><div class="big">${pct(data.var_99)}</div></div>
+                <div class="stat-card"><h3>CVaR 95% <span class="metric-info" tabindex="0" data-tip="Expected loss on the days the 95% VaR is breached (average tail loss).">i</span></h3><div class="big">${pct(data.cvar_95)}</div></div>
+                <div class="stat-card"><h3>Concentration (HHI) <span class="metric-info" tabindex="0" data-tip="Herfindahl index of position weights: 0 = perfectly spread, 1 = everything in one asset. Above ~0.3 = concentrated.">i</span></h3><div class="big">${data.hhi != null ? data.hhi.toFixed(3) : 'n/a'}</div></div>
+                <div class="stat-card"><h3>Portfolio Value <span class="metric-info" tabindex="0" data-tip="Total market value of IB positions (cached close prices when IB is offline).">i</span></h3><div class="big">${data.total_value ? '£' + data.total_value.toLocaleString() : 'n/a'}</div></div>`;
 
             const pos = data.positions || [];
             const weights = data.weights || {};
             if (pos.length) {
                 document.getElementById('positions').innerHTML = `
-                    <table><thead><tr><th>Symbol</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th></tr></thead>
+                    <table class="data-table"><thead><tr><th>Symbol</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th></tr></thead>
                     <tbody>${pos.map(p => `<tr><td>${p.symbol}</td><td>${p.shares}</td><td>${p.price}</td><td>${p.value.toLocaleString()}</td><td>${pct(weights[p.symbol])}</td></tr>`).join('')}</tbody></table>`;
             } else if (data.source === 'target_weights' && Object.keys(weights).length) {
                 const syms = Object.keys(weights).sort((a, b) => weights[b] - weights[a]);
                 document.getElementById('positions').innerHTML = `
                     <p class="muted">Hypothetical allocation (target weights — no live positions):</p>
-                    <table><thead><tr><th>Symbol</th><th>Target Weight</th></tr></thead>
+                    <table class="data-table"><thead><tr><th>Symbol</th><th>Target Weight</th></tr></thead>
                     <tbody>${syms.map(s => `<tr><td>${s}</td><td>${pct(weights[s])}</td></tr>`).join('')}</tbody></table>`;
             } else {
                 document.getElementById('positions').innerHTML = '<p class="muted">No positions.</p>';
@@ -178,7 +206,7 @@
             const corr = data.correlation || {};
             const syms = Object.keys(corr);
             document.getElementById('correlation').innerHTML = syms.length ? `
-                <table><thead><tr><th></th>${syms.map(s => `<th>${s}</th>`).join('')}</tr></thead>
+                <table class="data-table"><thead><tr><th></th>${syms.map(s => `<th>${s}</th>`).join('')}</tr></thead>
                 <tbody>${syms.map((r, ri) => `<tr><td>${r}</td>${syms.map((c, ci) => {
                     const v = corr[r][c];
                     if (v == null) return '<td></td>';
@@ -201,8 +229,7 @@
             const driftHdr = data.target_source === 'blend' ? ' (vs preferred blend)'
                 : (data.target_source ? ` (vs ${data.target_source})` : '');
             document.getElementById('drift').innerHTML = drift.length ? `
-                <p class="muted" style="font-size:0.85rem;">Target${driftHdr}. Rows beyond ±5% are flagged.</p>
-                <table><thead><tr><th>Symbol</th><th>Current</th><th>Target</th><th>Drift</th></tr></thead>
+                <table class="data-table"><thead><tr><th>Symbol</th><th>Current</th><th>Target</th><th>Drift</th></tr></thead>
                 <tbody>${drift.map(d => `<tr class="${d.flagged ? 'flagged' : ''}"><td>${d.symbol}</td><td>${pct(d.current_weight)}</td><td>${pct(d.target_weight)}</td><td>${pct(d.drift)}</td></tr>`).join('')}</tbody></table>`
                 : `<p class="muted">${driftMsg}</p>`;
         }
@@ -220,10 +247,10 @@
 
         function renderBlendRows() {
             const html = blendRows.map((r, i) => `
-                <div style="display:flex;gap:8px;align-items:center;margin:4px 0;">
-                    <select style="flex:1;padding:4px;" onchange="blendRows[${i}].key=this.value;blendDirty=true">${strategyOptions(r.key)}</select>
-                    <input type="number" step="0.05" min="0" value="${r.weight}" style="width:90px;padding:4px;" placeholder="weight" oninput="blendRows[${i}].weight=this.value;blendDirty=true">
-                    <button onclick="removeBlendRow(${i})">✕</button>
+                <div class="toolbar">
+                    <select style="flex:1;" onchange="blendRows[${i}].key=this.value;blendDirty=true">${strategyOptions(r.key)}</select>
+                    <input type="number" step="0.05" min="0" value="${r.weight}" style="width:90px;" placeholder="weight" oninput="blendRows[${i}].weight=this.value;blendDirty=true">
+                    <button class="btn small danger" onclick="removeBlendRow(${i})" aria-label="Remove strategy">✕</button>
                 </div>`).join('');
             document.getElementById('blendRows').innerHTML = html || '<p class="muted">No strategies yet — add one.</p>';
         }
@@ -268,12 +295,12 @@
             const rows = data.target || [];
             if (!rows.length) { el.innerHTML = '<p class="muted">Set a preferred blend above, then size it.</p>'; return; }
             const anyPrice = rows.some(r => r.price != null);
-            const staleWarning = blendDirty
-                ? '<p style="color:#92400e;background:#fef3c7;padding:6px 10px;border-radius:6px;margin-bottom:12px;">Blend has unsaved changes — sizing the last SAVED blend.</p>'
+            const warningHtml = blendDirty
+                ? `<div class="banner warn">Blend has unsaved changes — sizing the last SAVED blend.</div>`
                 : '';
             el.innerHTML = `
-                ${staleWarning}
-                <table><thead><tr><th>Symbol</th><th>Weight</th><th>Amount (£)</th><th>Price (£)</th><th>Shares</th></tr></thead>
+                ${warningHtml}
+                <table class="data-table"><thead><tr><th>Symbol</th><th>Weight</th><th>Amount (£)</th><th>Price (£)</th><th>Shares</th></tr></thead>
                 <tbody>${rows.map(r => `<tr>
                     <td>${r.symbol}</td>
                     <td>${pct(r.weight)}</td>
@@ -281,8 +308,7 @@
                     <td>${r.price != null ? r.price.toFixed(2) : '<span class="muted">n/a</span>'}</td>
                     <td>${r.shares != null ? r.shares.toFixed(2) : '<span class="muted">set price</span>'}</td>
                 </tr>`).join('')}</tbody></table>
-                <p class="muted" style="font-size:0.85rem;">Target book for £${budget.toLocaleString()} at cached close prices.${anyPrice ? '' : ' No prices — set them in config/price_units.json.'} Report only — enter orders manually.</p>
-                <p class="muted" style="font-size:0.8rem;">Weights are normalized on save — e.g. 2 and 1 becomes 67% / 33%.</p>`;
+                <p class="muted" style="font-size:0.85rem;">Target book for £${budget.toLocaleString()} at cached close prices.${anyPrice ? '' : ' No prices — set them in config/price_units.json.'} Report only — enter orders manually.</p>`;
         }
 
         async function saveBlend() {
@@ -323,7 +349,7 @@
                 .concat(sliceKeys.map(k => ['strategy:' + k, k]));
             document.getElementById('scopeSelector').innerHTML =
                 '<span class="muted" style="font-size:0.85rem;">View:</span> ' +
-                opts.map(([v, label]) => `<button onclick="setScope('${v}')" style="margin:2px;${v === currentScope ? 'font-weight:700;background:#e0e7ff;' : ''}">${label}</button>`).join('');
+                opts.map(([v, label]) => `<button class="chip${v === currentScope ? ' active' : ''}" onclick="setScope('${v}')">${label}</button>`).join('');
         }
 
         function setScope(s) { currentScope = s; renderScopeSelector(); loadRisk(); }
@@ -336,7 +362,7 @@
 
             const recon = data.reconciliation || [];
             document.getElementById('reconBanner').innerHTML = recon.length
-                ? `<div class="banner" style="background:#fee2e2;border-color:#dc2626;color:#991b1b;">Ledger claims more than IB holds: ${recon.map(r => `${r.symbol} (ledger ${r.ledger_shares} &gt; IB ${r.ib_shares})`).join('; ')} — record missing trades or correct fills.</div>`
+                ? `<div class="banner error">Ledger claims more than IB holds: ${recon.map(r => `${r.symbol} (ledger ${r.ledger_shares} &gt; IB ${r.ib_shares})`).join('; ')} — record missing trades or correct fills.</div>`
                 : '';
 
             const rows = sliceKeys.map(k => {
@@ -346,9 +372,9 @@
             const personal = data.personal || { holdings: {}, value: 0 };
             const unalloc = data.unallocated_cash;
             document.getElementById('slicesTable').innerHTML = `
-                <table><thead><tr><th>Strategy slice</th><th>Value</th><th>Cash</th><th>Holdings</th></tr></thead>
+                <table class="data-table"><thead><tr><th>Strategy slice</th><th>Value</th><th>Cash</th><th>Holdings</th></tr></thead>
                 <tbody>${rows}
-                <tr class="muted"><td>Personal (residual)</td><td>£${(personal.value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td>—</td><td>${Object.keys(personal.holdings || {}).length}</td></tr>
+                <tr><td class="muted">Personal (residual)</td><td>£${(personal.value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td>—</td><td>${Object.keys(personal.holdings || {}).length}</td></tr>
                 </tbody></table>
                 <p class="muted" style="font-size:0.85rem;">Unallocated cash: ${unalloc == null ? 'n/a (run nightly NAV snapshot)' : '£' + unalloc.toLocaleString(undefined, { maximumFractionDigits: 2 })} · ${data.events_count} ledger events${data.ib_online ? '' : ' · IB offline (cached/close prices)'}</p>`;
 
@@ -366,17 +392,17 @@
             const entries = (data.entries || []).filter(e => Math.abs(e.est_shares || 0) > 1e-6);
             if (!entries.length) { document.getElementById('mtPlan').innerHTML = '<p class="muted">No trades suggested (slice already at target).</p>'; return; }
             document.getElementById('mtPlan').innerHTML = `
-                <table><thead><tr><th>Symbol</th><th>Suggested Δ</th><th>Price</th><th>Actual shares Δ</th><th>Actual price</th><th>Commission</th></tr></thead>
+                <table class="data-table"><thead><tr><th>Symbol</th><th>Suggested Δ</th><th>Price</th><th>Actual shares Δ</th><th>Actual price</th><th>Commission</th></tr></thead>
                 <tbody>${entries.map(e => `<tr>
                     <td>${e.symbol}</td>
                     <td>${e.est_shares != null ? e.est_shares.toFixed(2) : '—'}</td>
                     <td>${e.current_price != null ? e.current_price.toFixed(2) : '—'}</td>
-                    <td><input data-sym="${e.symbol}" class="mtShares" type="number" step="0.01" value="${e.est_shares != null ? e.est_shares.toFixed(2) : ''}" style="width:90px;padding:3px;"></td>
-                    <td><input data-sym="${e.symbol}" class="mtPrice" type="number" step="0.01" value="${e.current_price != null ? e.current_price.toFixed(2) : ''}" style="width:90px;padding:3px;"></td>
-                    <td><input data-sym="${e.symbol}" class="mtComm" type="number" step="0.5" value="0" style="width:70px;padding:3px;"></td>
+                    <td><input data-sym="${e.symbol}" class="mtShares" type="number" step="0.01" value="${e.est_shares != null ? e.est_shares.toFixed(2) : ''}" style="width:90px;"></td>
+                    <td><input data-sym="${e.symbol}" class="mtPrice" type="number" step="0.01" value="${e.current_price != null ? e.current_price.toFixed(2) : ''}" style="width:90px;"></td>
+                    <td><input data-sym="${e.symbol}" class="mtComm" type="number" step="0.5" value="0" style="width:70px;"></td>
                 </tr>`).join('')}</tbody></table>
-                <div style="margin:8px 0;"><button onclick="submitMarkTraded()">Record as traded</button>
-                <span class="muted" style="font-size:0.8rem;">Edit to your actual fills first.</span></div>`;
+                <div style="margin:8px 0;"><button class="btn primary" onclick="submitMarkTraded()">Record as traded</button>
+                <span class="muted" style="font-size:0.8rem; margin-left:8px;">Edit to your actual fills first.</span></div>`;
             msg.textContent = '';
         }
 
@@ -422,7 +448,7 @@
             const el = document.getElementById('trackersTable');
             if (!data.length) { el.innerHTML = '<p class="muted">No trackers yet — add a strategy to watch.</p>'; return; }
             el.innerHTML = `
-                <table><thead><tr><th>Strategy</th><th>Added</th><th>Since-added</th><th>Return</th><th>Sharpe</th><th>Max DD</th><th></th></tr></thead>
+                <table class="data-table"><thead><tr><th>Strategy</th><th>Added</th><th>Since-added</th><th>Return</th><th>Sharpe</th><th>Max DD</th><th></th></tr></thead>
                 <tbody>${data.map(t => {
                     const sa = t.since_added || {};
                     return `<tr>
@@ -432,7 +458,7 @@
                         <td>${pct(sa.total_return)}</td>
                         <td>${sa.sharpe != null ? sa.sharpe.toFixed(2) : 'n/a'}</td>
                         <td>${pct(sa.max_drawdown)}</td>
-                        <td><button onclick="removeTracker('${t.strategy}')">✕</button></td>
+                        <td><button class="btn small danger" onclick="removeTracker('${t.strategy}')" aria-label="Remove tracker">✕</button></td>
                     </tr>`;
                 }).join('')}</tbody></table>`;
         }
@@ -456,16 +482,22 @@
         }
 
         // ---- Pre-registrations ----
-        const REG_BADGE = {
-            ok: ['#065f46', '#d1fae5', 'ok'],
-            breach: ['#7f1d1d', '#fee2e2', 'BREACH'],
-            review_due: ['#78350f', '#fef3c7', 'review due'],
-            unknown: ['#374151', '#e5e7eb', 'not yet checked'],
+        const REG_BADGE_MAP = {
+            ok: 'ok',
+            breach: 'breach',
+            review_due: 'WARN',
+            unknown: 'none',
         };
 
         function regBadge(status) {
-            const [fg, bg, label] = REG_BADGE[status] || REG_BADGE.unknown;
-            return `<span style="padding:1px 8px;border-radius:10px;font-size:0.78rem;font-weight:700;color:${fg};background:${bg};">${label}</span>`;
+            const badgeClass = REG_BADGE_MAP[status] || 'none';
+            const labels = {
+                ok: 'ok',
+                breach: 'BREACH',
+                WARN: 'review due',
+                none: 'not yet checked',
+            };
+            return `<span class="badge ${badgeClass}">${labels[badgeClass]}</span>`;
         }
 
         async function loadRegistrations() {
@@ -473,13 +505,13 @@
             if (!data) return;
             const alerts = data.filter(r => ['breach', 'review_due'].includes((r.status || {}).status));
             const banner = document.getElementById('regBanner');
-            banner.innerHTML = alerts.length ? `<div style="margin:8px 0;padding:10px 12px;border-radius:8px;background:#fee2e2;color:#7f1d1d;font-weight:600;">
-                ⚠ Registration alerts: ${alerts.map(a => `${a.strategy} (${a.status.status})`).join(', ')}</div>` : '';
+            banner.innerHTML = alerts.length ? `<div class="banner error">
+                Registration alerts: ${alerts.map(a => `${a.strategy} (${a.status.status})`).join(', ')}</div>` : '';
 
             const el = document.getElementById('regTable');
             if (!data.length) { el.innerHTML = '<p class="muted">No pre-registrations yet — register a promoted strategy to freeze its risk envelope.</p>'; return; }
             el.innerHTML = `
-                <table><thead><tr><th>Strategy</th><th>Status</th><th>BT Max DD</th><th>Envelope</th><th>Realized DD</th><th>Portfolio DD</th><th>Registered</th><th></th></tr></thead>
+                <table class="data-table"><thead><tr><th>Strategy</th><th>Status</th><th>BT Max DD</th><th>Envelope</th><th>Realized DD</th><th>Portfolio DD</th><th>Registered</th><th></th></tr></thead>
                 <tbody>${data.map(r => {
                     const s = r.status || {};
                     const bt = r.backtest || {};
@@ -491,7 +523,7 @@
                         <td>${pct(s.realized_dd)}</td>
                         <td>${pct(s.portfolio_dd)}</td>
                         <td class="muted" style="font-size:0.8rem;">${(r.registered_at || '').slice(0, 10)}</td>
-                        <td><button onclick="removeRegistration('${r.strategy}')">✕</button></td>
+                        <td><button class="btn small danger" onclick="removeRegistration('${r.strategy}')" aria-label="Remove registration">✕</button></td>
                     </tr>`;
                 }).join('')}</tbody></table>`;
         }

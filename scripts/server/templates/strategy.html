@@ -11,19 +11,10 @@
     <script src="{{ url_for('routes.static', filename='js/charts.js') }}"></script>
     <script src="{{ url_for('routes.static', filename='js/tabs.js') }}"></script>
     <style>
-        .nav-bar {
-            background: #f5f5f5;
-            padding: 12px 30px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
         .controls {
-            background: #f5f5f5;
-            padding: 20px 30px;
-            border-bottom: 2px solid #e0e0e0;
+            background: transparent;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--line);
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
@@ -31,22 +22,12 @@
         }
 
         .control-group { display: flex; flex-direction: column; gap: 5px; }
-        .control-group label { font-weight: 600; color: #333; font-size: 0.9em; }
-        .control-group select {
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 1em;
-            background: white;
-            cursor: pointer;
-            transition: border-color 0.3s;
-        }
-        .control-group select:focus { outline: none; border-color: #667eea; }
+        .control-group label { font-weight: 600; color: var(--ink); font-size: 0.9em; }
 
         .tabs {
             display: flex;
-            border-bottom: 2px solid #e0e0e0;
-            background: #f5f5f5;
+            border-bottom: 1px solid var(--line);
+            background: transparent;
         }
 
         .tab-button {
@@ -57,16 +38,14 @@
             cursor: pointer;
             font-size: 1em;
             font-weight: 500;
-            color: #666;
+            color: var(--ink-soft);
             transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        .tab-button:hover { background: #e8e8e8; color: #667eea; }
+        .tab-button:hover { color: var(--accent); }
         .tab-button.active {
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
-            margin-bottom: -2px;
+            color: var(--accent);
+            border-bottom: 3px solid var(--accent);
+            margin-bottom: -1px;
         }
 
         .tab-panel { display: none; }
@@ -76,68 +55,30 @@
 
         .chart-container { position: relative; height: 400px; margin-bottom: 30px; }
 
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .metric-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            color: #1f2937;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .metric-card h3 { font-size: 0.9em; text-transform: uppercase; color: #6b7280; margin-bottom: 10px; }
-        .metric-card .value { font-size: 2em; font-weight: bold; }
-
-        .metrics-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .metrics-table thead { background: #4c5cd4; color: white; }
-        .metrics-table th { padding: 15px; text-align: left; font-weight: 600; }
-        .metrics-table td { padding: 12px 15px; border-bottom: 1px solid #e0e0e0; }
-        .metrics-table tbody tr:hover { background: #f9f9f9; }
-        .metrics-table tbody tr:last-child td { border-bottom: none; }
-
-        .transactions-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
-        .transactions-table thead { background: #f0f0f0; }
-        .transactions-table th {
-            padding: 12px; text-align: left; font-weight: 600;
-            color: #333; border-bottom: 2px solid #ddd;
-        }
-        .transactions-table td { padding: 10px 12px; border-bottom: 1px solid #e0e0e0; }
-        .transactions-table tbody tr:hover { background: #f9f9f9; }
-
         @media (max-width: 768px) {
-            .header h1 { font-size: 1.8em; }
             .tabs { flex-wrap: wrap; }
             .tab-button { flex: 1 1 50%; padding: 15px; }
-            .metrics-grid { grid-template-columns: 1fr; }
             .chart-container { height: 300px; }
             .controls { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 id="pageTitle">{{ strategy_key }}</h1>
-            <p id="pageSubtitle">Strategy backtest detail</p>
-        </div>
+    <header class="topbar">
+        <a class="brand" href="/">PersonalTrading <small>research dashboard</small></a>
+        <nav>
+            <a href="/">Overview</a>
+            <a href="/live-risk">Live Risk</a>
+            <a href="/validation">Validation</a>
+            <a href="/info">Info &amp; Glossary</a>
+        </nav>
+        <span class="readonly-tag">read-only — orders entered manually in IB</span>
+    </header>
 
-        <div class="nav-bar">
-            <a href="/" class="btn">← All Strategies</a>
-            <nav class="site-nav" style="margin-left: 16px;"><a href="/" style="font-weight:800;color:#1f2937;">Overview</a> · <a href="/live-risk">Live Risk</a> · <a href="/validation">Validation</a> · <a href="/info">Info</a></nav>
-        </div>
+    <main class="page">
+        <h1 id="pageTitle" class="page-title">{{ strategy_key }}</h1>
+        <a href="/" class="btn small" style="margin-bottom: 8px; display: inline-block;">← All Strategies</a>
+        <p id="pageSubtitle" class="page-intro">Strategy backtest detail</p>
 
         <div class="controls" id="controls">
             <div class="control-group">
@@ -166,9 +107,13 @@
         <div class="content">
             <!-- Strategy Overview Tab -->
             <div id="overview" class="tab-panel active">
+                <details class="help" open>
+                    <summary>What am I looking at?</summary>
+                    <div class="help-body"><p>This page shows the full backtest for one strategy. Add more strategies with + Add Strategy to compare. Tabs cover the equity curve, drawdowns, monthly heatmap, rolling metrics, per-trade history, and the overfitting battery (see <a href="/info">Info &amp; Glossary</a> for every term).</p></div>
+                </details>
                 <div id="strategyDescriptions" style="margin-bottom: 24px;"></div>
-                <h2>Performance Metrics</h2>
-                <table class="metrics-table" id="metricsTable">
+                <h2 class="section">Performance Metrics</h2>
+                <table class="data-table" id="metricsTable">
                     <thead>
                         <tr id="metricsHeaderRow">
                             <th>Metric</th>
@@ -180,51 +125,51 @@
                     </tbody>
                 </table>
 
-                <h2 style="margin-top: 40px;">Key Metrics</h2>
-                <div class="metrics-grid" id="metricsGrid"></div>
+                <h2 class="section" style="margin-top: 40px;">Key Metrics</h2>
+                <div class="stat-grid" id="metricsGrid"></div>
             </div>
 
             <!-- Portfolio Value Tab -->
             <div id="portfolio" class="tab-panel">
-                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 class="section" style="display: flex; justify-content: space-between; align-items: center;">
                     Portfolio Value Over Time
-                    <button class="btn" onclick="exportCSV('portfolio')" style="font-size: 0.7em; padding: 6px 12px;">Export CSV</button>
+                    <button class="btn small" onclick="exportCSV('portfolio')">Export CSV</button>
                 </h2>
                 <div class="chart-container"><canvas id="portfolioChart"></canvas></div>
             </div>
 
             <!-- Drawdown Tab -->
             <div id="drawdown" class="tab-panel">
-                <h2>Drawdown Analysis</h2>
+                <h2 class="section">Drawdown Analysis</h2>
                 <div class="chart-container"><canvas id="drawdownChart"></canvas></div>
             </div>
 
             <!-- Weights Tab -->
             <div id="weights" class="tab-panel">
                 <div id="weightsScope"></div>
-                <h2>Portfolio Weights Over Time</h2>
+                <h2 class="section">Portfolio Weights Over Time</h2>
                 <div class="chart-container"><canvas id="weightsChart"></canvas></div>
             </div>
 
             <!-- Monthly Returns Tab -->
             <div id="monthly" class="tab-panel">
                 <div id="monthlyScope"></div>
-                <h2>Monthly Returns Heatmap</h2>
-                <div id="monthlyHeatmap" style="overflow-x: auto;"></div>
+                <h2 class="section">Monthly Returns Heatmap</h2>
+                <div id="monthlyHeatmap" class="table-scroll"></div>
             </div>
 
             <!-- Rolling Metrics Tab -->
             <div id="rolling" class="tab-panel">
-                <h2>Rolling Metrics</h2>
+                <h2 class="section">Rolling Metrics</h2>
                 <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
                     <label for="rollingMetricSelect" style="font-weight: 600;">Metric:</label>
-                    <select id="rollingMetricSelect" onchange="loadRollingMetrics()" style="padding: 8px; border-radius: 6px; border: 2px solid #ddd;">
+                    <select id="rollingMetricSelect" onchange="loadRollingMetrics()">
                         <option value="sharpe">Sharpe Ratio</option>
                         <option value="volatility">Volatility</option>
                         <option value="sortino">Sortino Ratio</option>
                     </select>
                     <label for="rollingWindowSelect" style="font-weight: 600; margin-left: 10px;">Window:</label>
-                    <select id="rollingWindowSelect" onchange="loadRollingMetrics()" style="padding: 8px; border-radius: 6px; border: 2px solid #ddd;">
+                    <select id="rollingWindowSelect" onchange="loadRollingMetrics()">
                         <option value="21">21d (~1 month)</option>
                         <option value="63" selected>63d (~3 months)</option>
                         <option value="126">126d (~6 months)</option>
@@ -237,30 +182,32 @@
             <!-- Transactions Tab -->
             <div id="transactions" class="tab-panel">
                 <div id="transactionsScope"></div>
-                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 class="section" style="display: flex; justify-content: space-between; align-items: center;">
                     Transaction History
-                    <button class="btn" onclick="exportCSV('transactions')" style="font-size: 0.7em; padding: 6px 12px;">Export CSV</button>
+                    <button class="btn small" onclick="exportCSV('transactions')">Export CSV</button>
                 </h2>
-                <table class="transactions-table" id="transactionsTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Symbol</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionsBody">
-                        <tr><td colspan="5">No transactions</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="data-table" id="transactionsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Symbol</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsBody">
+                            <tr><td colspan="5">No transactions</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Overfitting Tab -->
             <div id="overfitting" class="tab-panel">
                 <div id="overfittingScope"></div>
-                <h2>Overfitting Analysis</h2>
+                <h2 class="section">Overfitting Analysis</h2>
                 <div id="overfittingContent">
                     <p class="loading">Loading overfitting analysis…</p>
                 </div>
@@ -269,8 +216,8 @@
             <!-- Stress Periods Tab -->
             <div id="stress" class="tab-panel">
                 <div id="stressScope"></div>
-                <h2>Stress Period Analysis</h2>
-                <p style="color:#555; font-size:0.9em; margin-bottom:24px;">
+                <h2 class="section">Stress Period Analysis</h2>
+                <p style="color: var(--ink-soft); font-size:0.9em; margin-bottom:24px;">
                     Strategy performance during major historical crises, and
                     <strong>leave-one-crisis-out</strong> Sharpe delta: how much
                     each event contributed to overall performance.
@@ -281,8 +228,8 @@
             <!-- Attribution Tab -->
             <div id="attribution" class="tab-panel">
                 <div id="attributionScope"></div>
-                <h2>Performance Attribution</h2>
-                <p style="color:#555; font-size:0.9em; margin-bottom:24px;">
+                <h2 class="section">Performance Attribution</h2>
+                <p style="color: var(--ink-soft); font-size:0.9em; margin-bottom:24px;">
                     Daily return contribution of each asset to total portfolio return.
                     Computed as Σ(Δasset_value / prior_total_value) over all periods.
                 </p>
@@ -296,7 +243,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <style>
         .verdict-badge {
@@ -318,8 +265,8 @@
             margin-bottom: 30px;
         }
         .overfitting-card {
-            background: #fff;
-            border: 1px solid #e0e0e0;
+            background: var(--surface);
+            border: 1px solid var(--line);
             border-radius: 10px;
             padding: 24px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.06);
@@ -327,8 +274,8 @@
         .overfitting-card h3 {
             margin: 0 0 16px;
             font-size: 1.1em;
-            color: #333;
-            border-bottom: 2px solid #667eea;
+            color: var(--ink);
+            border-bottom: 2px solid var(--accent);
             padding-bottom: 8px;
         }
         .overfitting-row {
@@ -336,20 +283,20 @@
             justify-content: space-between;
             align-items: center;
             padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--line);
             font-size: 0.95em;
         }
         .overfitting-row:last-child { border-bottom: none; }
-        .overfitting-row .label { color: #666; }
-        .overfitting-row .val { font-weight: 600; color: #333; }
+        .overfitting-row .label { color: var(--ink-soft); }
+        .overfitting-row .val { font-weight: 600; color: var(--ink); }
 
         .overfitting-not-run {
-            background: #f8f9ff;
-            border: 2px dashed #c7d2fe;
+            background: var(--accent-soft);
+            border: 2px dashed var(--accent);
             border-radius: 10px;
             padding: 40px;
             text-align: center;
-            color: #6366f1;
+            color: var(--accent);
         }
         .overfitting-not-run code {
             display: block;
@@ -373,10 +320,6 @@
         .overall-PASS { background: #d1fae5; color: #065f46; }
         .overall-WARN { background: #fef3c7; color: #92400e; }
         .overall-FAIL { background: #fee2e2; color: #991b1b; }
-
-        .site-nav { font-size: 0.9em; display: flex; gap: 16px; align-items: center; }
-        .site-nav a { color: #4c5cd4; text-decoration: none; font-weight: 600; }
-        .site-nav a:hover { text-decoration: underline; }
     </style>
 
     <script>
@@ -401,8 +344,7 @@
                 `<option value="${s}"${s === initialValue ? ' selected' : ''}>${s}</option>`
             ).join('');
             row.innerHTML = `
-                <select class="strategy-select" onchange="handleStrategyChange()"
-                    style="padding:8px;border-radius:6px;border:2px solid #ddd;min-width:200px;">
+                <select class="strategy-select" onchange="handleStrategyChange()" style="min-width:200px;">
                     ${isFirst ? '' : '<option value="">-- none --</option>'}
                     ${optionsHtml}
                 </select>
@@ -472,7 +414,7 @@
                 const desc = (data.info || {}).description;
                 if (!desc) return '';
                 const label = strategies.length > 1 ? `<strong>${strategies[i]}:</strong> ` : '';
-                return `<p style="margin: 0 0 6px; color: #555; font-size: 0.9em;">${label}${desc}</p>`;
+                return `<p style="margin: 0 0 6px; color: var(--ink-soft); font-size: 0.9em;">${label}${desc}</p>`;
             }).join('');
             descContainer.innerHTML = descHtml;
 
@@ -493,7 +435,7 @@
                 for (const id of scopeIds) {
                     const el = document.getElementById(id);
                     if (el) {
-                        el.innerHTML = `<p class="muted" style="font-size:0.85rem;background:#f0f0f0;padding:8px 12px;border-radius:6px;margin-bottom:12px;">${msg}</p>`;
+                        el.innerHTML = `<p class="muted" style="font-size:0.85rem;background:var(--accent-soft);padding:8px 12px;border-radius:6px;margin-bottom:12px;">${msg}</p>`;
                     }
                 }
             } else {
@@ -1102,8 +1044,8 @@
             // Config panel
             if (data.config && data.config.param_grid && Object.keys(data.config.param_grid).length > 0) {
                 const pg = data.config.param_grid;
-                html += `<details style="margin-top:20px;"><summary style="cursor:pointer;font-weight:600;color:#667eea;">Configuration Used</summary>
-                    <table class="metrics-table" style="margin-top:10px;">
+                html += `<details style="margin-top:20px;"><summary style="cursor:pointer;font-weight:600;color:var(--accent);">Configuration Used</summary>
+                    <table class="data-table" style="margin-top:10px;">
                         <thead><tr><th>Parameter</th><th>Values Tested</th></tr></thead>
                         <tbody>${Object.entries(pg).map(([k,v]) => `<tr><td>${k}</td><td>${Array.isArray(v) ? v.join(', ') : v}</td></tr>`).join('')}</tbody>
                     </table></details>`;
@@ -1304,7 +1246,7 @@
 
             container.innerHTML = `
                 <h3>Performance During Crisis Periods</h3>
-                <table class="metrics-table" style="margin-bottom:40px;">
+                <table class="data-table" style="margin-bottom:40px;">
                     <thead><tr>
                         <th>Crisis Period</th><th>Total Return</th><th>Max Drawdown</th>
                         <th>Recovery</th><th>Sharpe</th>
@@ -1313,16 +1255,16 @@
                 </table>
 
                 <h3>Leave-One-Crisis-Out Analysis</h3>
-                <p style="color:#555;font-size:0.9em;margin-bottom:16px;">
+                <p style="color: var(--ink-soft);font-size:0.9em;margin-bottom:16px;">
                     Sharpe delta = Full-history Sharpe minus leave-one-out Sharpe.
                     A large positive delta means the strategy relied heavily on that crisis period.
                 </p>
-                <table class="metrics-table">
+                <table class="data-table">
                     <thead><tr>
                         <th>Removed Period</th><th>Full Sharpe</th>
                         <th>LOO Sharpe</th><th>Δ Sharpe</th><th>Interpretation</th>
                     </tr></thead>
-                    <tbody>${removalRows || '<tr><td colspan="5" style="color:#9ca3af;">No scenario removal data</td></tr>'}</tbody>
+                    <tbody>${removalRows || '<tr><td colspan="5" style="color: var(--ink-soft);">No scenario removal data</td></tr>'}</tbody>
                 </table>`;
         }
 
@@ -1340,7 +1282,7 @@
                                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                 const years = [...new Set(data.map(d => d.year))].sort();
 
-                let html = '<table class="metrics-table"><thead><tr><th>Year</th>';
+                let html = '<table class="data-table"><thead><tr><th>Year</th>';
                 months.forEach(m => html += `<th>${m}</th>`);
                 html += '<th>Annual</th></tr></thead><tbody>';
 
@@ -1555,7 +1497,7 @@
 
             // Summary table
             const tableEl = document.getElementById('attributionTable');
-            let html = `<table class="metrics-table">
+            let html = `<table class="data-table">
                 <thead><tr><th>Asset</th><th>Total Contribution</th></tr></thead><tbody>`;
             for (const [asset, contrib] of attr.sorted) {
                 const positive = contrib >= 0;

@@ -1,0 +1,11 @@
+{
+  "type": "allocation",
+  "class": "MinimumVarianceStrategy",
+  "name": "Minimum Variance (theme_growth)",
+  "description": "Minimum Variance optimisation across theme_growth basket.",
+  "parameters": {},
+  "underlying": "universe:theme_growth",
+  "tags": [
+    "mech:diversification"
+  ]
+}

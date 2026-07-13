@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "NetworkRiskParityStrategy",
+  "name": "Network Risk Parity (theme_growth)",
+  "description": "Network Risk Parity variant with 126-day lookback across theme_growth basket.",
+  "parameters": {
+    "lookback_days": 126,
+    "centrality_measure": "degree",
+    "graph_filter": "mst",
+    "threshold": 0.5
+  },
+  "underlying": "universe:theme_growth",
+  "tags": [
+    "mech:diversification",
+    "variant:lookback"
+  ]
+}

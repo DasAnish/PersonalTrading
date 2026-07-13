@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "TimeSeriesMomentumStrategy",
+  "name": "Time-Series Momentum (9m, theme_defensive)",
+  "description": "Time-series momentum variant with 9-month lookback on theme_defensive assets.",
+  "parameters": {
+    "lookback_months": 9,
+    "vol_window_days": 60,
+    "target_vol": null
+  },
+  "underlying": "universe:theme_defensive",
+  "tags": [
+    "mech:trend",
+    "variant:lookback"
+  ]
+}

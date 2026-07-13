@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "HRPStrategy",
+  "name": "HRP (theme_growth)",
+  "description": "Hierarchical Risk Parity across theme_growth basket using complete linkage clustering.",
+  "parameters": {
+    "linkage_method": "complete"
+  },
+  "underlying": "universe:theme_growth",
+  "tags": [
+    "mech:diversification"
+  ]
+}

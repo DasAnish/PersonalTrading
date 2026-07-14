@@ -97,7 +97,7 @@ class FlexibleAssetAllocationStrategy(AllocationStrategy):
         rank_v = (-realized_vols).rank()  # Negative so low vol gets high rank
 
         # Step 3: Average pairwise correlation ranking (inverse: low corr = high score)
-        corr = returns.corr().values
+        corr = np.array(returns.corr().values, dtype=float)  # writable copy
         # Set diagonal to nan to exclude self-correlation
         np.fill_diagonal(corr, np.nan)
         avg_corr = np.nanmean(np.abs(corr), axis=1)  # Average absolute correlation

@@ -50,6 +50,18 @@ function fmt(val, isPercent) {
     return n.toFixed(3);
 }
 
+// --- HTML escaping for innerHTML interpolation ---------------------------
+
+function escHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // --- verdict badge (PASS / WARN / FAIL -> CSS class) --------------------
 
 function verdictBadge(verdict) {

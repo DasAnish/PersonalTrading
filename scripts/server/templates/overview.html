@@ -204,7 +204,7 @@
         function renderTagPills(tags) {
             if (!tags || tags.length === 0) return '';
             return `<div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px;">` +
-                tags.map(t => `<span class="tag-pill">${t}</span>`).join('') +
+                tags.map(t => `<span class="tag-pill">${escHtml(t)}</span>`).join('') +
                 `</div>`;
         }
 
@@ -223,7 +223,7 @@
                 <tr onclick="window.location='/strategy/${r.key}'">
                     <td>
                         <a class="strategy-link" href="/strategy/${r.key}">${r.key}</a>
-                        ${r.description ? `<div style="font-size: 0.78em; color: var(--ink-soft); margin-top: 2px; font-weight: 400;">${r.description}</div>` : ''}
+                        ${r.description ? `<div style="font-size: 0.78em; color: var(--ink-soft); margin-top: 2px; font-weight: 400;">${escHtml(r.description)}</div>` : ''}
                         ${renderTagPills(r.tags)}
                     </td>
                     <td style="${cellStyle(r.sharpe_ratio, 'sharpe_ratio')}">${fmt(r.sharpe_ratio, false)}</td>
@@ -258,11 +258,14 @@
                 });
             }
 
-            // Maintain current sort order
+            // Maintain current sort order; nulls always last, consistently.
             filtered = [...filtered].sort((a, b) => {
                 const av = a[sortKey], bv = b[sortKey];
-                if (av === null || av === undefined) return 1;
-                if (bv === null || bv === undefined) return -1;
+                const aNull = av === null || av === undefined;
+                const bNull = bv === null || bv === undefined;
+                if (aNull && bNull) return 0;
+                if (aNull) return 1;
+                if (bNull) return -1;
                 if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
                 return sortDir === 'asc' ? av - bv : bv - av;
             });
@@ -296,7 +299,9 @@
                 const btn = document.createElement('button');
                 // Chips are rebuilt on every pagination batch and on Refresh, so
                 // re-apply the active state or applied filters become invisible.
-                btn.className = activeTags.has(tag) ? 'chip active' : 'chip';
+                const isActive = activeTags.has(tag);
+                btn.className = isActive ? 'chip active' : 'chip';
+                btn.setAttribute('aria-pressed', String(isActive));
                 btn.textContent = tag;
                 btn.title = `${tagCounts[tag]} strategies`;
                 btn.onclick = () => toggleTag(tag, btn);
@@ -315,17 +320,22 @@
             if (activeTags.has(tag)) {
                 activeTags.delete(tag);
                 btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
             } else {
                 activeTags.add(tag);
                 btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
             }
             applyFilters();
         }
 
         function clearTags() {
+            // Tags only — the search box has its own native clear control.
             activeTags.clear();
-            document.querySelectorAll('.chip.active').forEach(b => b.classList.remove('active'));
-            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.chip.active').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-pressed', 'false');
+            });
             applyFilters();
         }
 
@@ -339,9 +349,13 @@
 
             document.querySelectorAll('.sort-btn').forEach(btn => {
                 btn.className = 'sort-btn';
+                const th = btn.closest('th');
+                if (th) th.removeAttribute('aria-sort');
             });
             const activeBtn = event.target;
             activeBtn.className = 'sort-btn ' + sortDir;
+            const activeTh = activeBtn.closest('th');
+            if (activeTh) activeTh.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
 
             applyFilters();
         }
@@ -373,6 +387,7 @@
         }
 
         function updateProgress(loaded, total) {
+            if (!total) return;
             const pct = Math.round((loaded / total) * 100);
             const progressFill = document.getElementById('progressFill');
             const progressLabel = document.getElementById('progressLabel');

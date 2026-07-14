@@ -421,7 +421,7 @@
                 .concat(sliceKeys.map(k => ['strategy:' + k, k]));
             document.getElementById('scopeSelector').innerHTML =
                 '<span class="muted" style="font-size:0.85rem;">View:</span> ' +
-                opts.map(([v, label]) => `<button class="chip${v === currentScope ? ' active' : ''}" onclick="setScope('${v}')">${label}</button>`).join('');
+                opts.map(([v, label]) => `<button class="chip${v === currentScope ? ' active' : ''}" aria-pressed="${v === currentScope}" data-scope="${escHtml(v)}" onclick="setScope(this.dataset.scope)">${escHtml(label)}</button>`).join('');
         }
 
         function setScope(s) { currentScope = s; renderScopeSelector(); loadRisk(); }
@@ -536,13 +536,13 @@
                 <tbody>${data.map(t => {
                     const sa = t.since_added || {};
                     return `<tr>
-                        <td>${t.strategy}</td>
+                        <td>${escHtml(t.strategy)}</td>
                         <td>${t.added_on}</td>
                         <td>${sparkline(sa.series, 120, 32)}</td>
                         <td>${pct(sa.total_return)}</td>
                         <td>${sa.sharpe != null ? sa.sharpe.toFixed(2) : 'n/a'}</td>
                         <td>${pct(sa.max_drawdown)}</td>
-                        <td><button class="btn small danger" onclick="removeTracker('${t.strategy}')" aria-label="Remove tracker">✕</button></td>
+                        <td><button class="btn small danger" data-key="${escHtml(t.strategy)}" onclick="removeTracker(this.dataset.key)" aria-label="Remove tracker">✕</button></td>
                     </tr>`;
                 }).join('')}</tbody></table>`;
         }
@@ -603,14 +603,14 @@
                     const s = r.status || {};
                     const bt = r.backtest || {};
                     return `<tr>
-                        <td>${r.strategy}</td>
+                        <td>${escHtml(r.strategy)}</td>
                         <td>${regBadge(s.status)}${s.reasons && s.reasons.length ? `<div class="muted" style="font-size:0.75rem;">${s.reasons.join('; ')}</div>` : ''}</td>
                         <td>${pct(bt.max_drawdown)}</td>
                         <td>${pct(s.envelope_dd)}</td>
                         <td>${pct(s.realized_dd)}</td>
                         <td>${pct(s.portfolio_dd)}</td>
                         <td class="muted" style="font-size:0.8rem;">${(r.registered_at || '').slice(0, 10)}</td>
-                        <td><button class="btn small danger" onclick="removeRegistration('${r.strategy}')" aria-label="Remove registration">✕</button></td>
+                        <td><button class="btn small danger" data-key="${escHtml(r.strategy)}" onclick="removeRegistration(this.dataset.key)" aria-label="Remove registration">✕</button></td>
                     </tr>`;
                 }).join('')}</tbody></table>`;
         }

@@ -4,7 +4,7 @@
 
 // Shared line/bar color palette, cycled through by index.
 const CHART_COLORS = [
-    { border: '#667eea', bg: 'rgba(102,126,234,0.1)' },
+    { border: '#3d4ca8', bg: 'rgba(61,76,168,0.1)' },
     { border: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
     { border: '#10b981', bg: 'rgba(16,185,129,0.1)' },
     { border: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
@@ -65,7 +65,7 @@ function renderHistogram(canvasId, values, options = {}) {
         label = 'Frequency',
         xTitle = '',
         yTitle = 'Frequency',
-        colorFn = () => 'rgba(102,126,234,0.6)',
+        colorFn = () => 'rgba(61,76,168,0.6)',
         existingChart = null,
         tooltipTitle = null,
     } = options;

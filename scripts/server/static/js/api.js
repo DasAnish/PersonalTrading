@@ -39,6 +39,24 @@ function rollingUrl(key, metric, win) {
         : `/api/strategy/${key}/rolling?metric=${metric}&window=${win}`;
 }
 
+/**
+ * The .metric-info tooltips are CSS-only (::after on hover/focus), so screen
+ * readers never see data-tip. Stamp it as aria-label: once on load for static
+ * markup, and lazily on focus/hover for tooltips injected by later renders.
+ */
+function stampTooltipLabel(el) {
+    if (el && el.classList && el.classList.contains('metric-info') &&
+        el.dataset.tip && !el.getAttribute('aria-label')) {
+        el.setAttribute('aria-label', el.dataset.tip);
+        el.setAttribute('role', 'note');
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.metric-info[data-tip]').forEach(stampTooltipLabel);
+});
+document.addEventListener('focusin', e => stampTooltipLabel(e.target));
+document.addEventListener('mouseover', e => stampTooltipLabel(e.target));
+
 function exportUrl(key, type) {
     return window.STATIC_MODE
         ? `/api/strategy/${key}/export/${type}.csv`

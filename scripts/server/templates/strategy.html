@@ -257,6 +257,7 @@
         .verdict-PASS { background: #d1fae5; color: #065f46; }
         .verdict-WARN { background: #fef3c7; color: #92400e; }
         .verdict-FAIL { background: #fee2e2; color: #991b1b; }
+        .verdict-SKIP { background: #eef0f4; color: var(--ink-faint); }
 
         .overfitting-grid {
             display: grid;
@@ -413,8 +414,8 @@
             const descHtml = dataList.map((data, i) => {
                 const desc = (data.info || {}).description;
                 if (!desc) return '';
-                const label = strategies.length > 1 ? `<strong>${strategies[i]}:</strong> ` : '';
-                return `<p style="margin: 0 0 6px; color: var(--ink-soft); font-size: 0.9em;">${label}${desc}</p>`;
+                const label = strategies.length > 1 ? `<strong>${escHtml(strategies[i])}:</strong> ` : '';
+                return `<p style="margin: 0 0 6px; color: var(--ink-soft); font-size: 0.9em;">${label}${escHtml(desc)}</p>`;
             }).join('');
             descContainer.innerHTML = descHtml;
 
@@ -593,7 +594,7 @@
                 .filter(k => k.endsWith('_value') && k !== 'total_value');
             const symbols = assetKeys.map(k => k.replace('_value', ''));
             const dates = history.map(r => r.date || r.timestamp);
-            const colors = ['#667eea', '#764ba2', '#f59e0b', '#ec4899', '#10b981', '#f97316',
+            const colors = ['#3d4ca8', '#7c5cad', '#f59e0b', '#ec4899', '#10b981', '#f97316',
                             '#6366f1', '#14b8a6', '#84cc16', '#f43f5e'];
 
             const datasets = symbols.map((symbol, idx) => ({
@@ -709,6 +710,10 @@
 
             try {
                 const { ok, data } = await fetchJSONWithStatus(`/api/strategy/${strategyKey}/overfitting`);
+                // Selection may have changed while the fetch was in flight —
+                // discard this response so a slow request can't overwrite the
+                // newer strategy's panel.
+                if (getStrategySelections()[0] !== strategyKey) return;
                 if (!ok) {
                     const err = data || {};
                     container.innerHTML = `
@@ -1173,7 +1178,7 @@
                 label: 'Logit Score Frequency',
                 xTitle: 'Logit Score (< 0 = overfitting)',
                 yTitle: 'Frequency',
-                colorFn: l => parseFloat(l) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(102,126,234,0.6)',
+                colorFn: l => parseFloat(l) < 0 ? 'rgba(239,68,68,0.6)' : 'rgba(61,76,168,0.6)',
                 existingChart: overfittingChart,
                 tooltipTitle: label => `Logit ≈ ${label}`,
             });
@@ -1230,6 +1235,8 @@
             const container = document.getElementById('stressContent');
             try {
                 const { ok, data } = await fetchJSONWithStatus(`/api/strategy/${strategyKey}/stress_test`);
+                // Discard if the selection changed mid-flight (see overfitting).
+                if (getStrategySelections()[0] !== strategyKey) return;
                 if (!ok) {
                     const err = data || {};
                     container.innerHTML = `
@@ -1470,7 +1477,7 @@
             const barLabels = attr.sorted.map(([a]) => a);
             const barData = attr.sorted.map(([, v]) => parseFloat(v.toFixed(2)));
             const barColors = barData.map(v =>
-                v >= 0 ? 'rgba(102,126,234,0.75)' : 'rgba(239,68,68,0.75)');
+                v >= 0 ? 'rgba(61,76,168,0.75)' : 'rgba(239,68,68,0.75)');
 
             charts.attributionBar = new Chart(barCtx, {
                 type: 'bar',
@@ -1507,8 +1514,8 @@
             const lineCtx = document.getElementById('attributionLineChart').getContext('2d');
             if (charts.attributionLine) charts.attributionLine.destroy();
 
-            const lineColors = ['#667eea','#f59e0b','#10b981','#ec4899','#f97316',
-                                '#6366f1','#14b8a6','#ef4444','#84cc16','#764ba2'];
+            const lineColors = ['#3d4ca8','#f59e0b','#10b981','#ec4899','#f97316',
+                                '#6366f1','#14b8a6','#ef4444','#84cc16','#7c5cad'];
             const activeAssets = attr.allNames
                 .filter(a => Math.abs(attr.totalContrib[a]) > 0.01);
 

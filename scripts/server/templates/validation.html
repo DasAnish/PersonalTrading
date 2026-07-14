@@ -47,11 +47,11 @@
     <div class="toolbar">
         <input type="text" id="searchInput" placeholder="Search strategy..." style="flex:1;min-width:200px;" oninput="applyFilters()">
         <div style="display:flex;gap:4px;">
-            <button class="chip active" id="verdictAll" onclick="setVerdictFilter(null)">All</button>
-            <button class="chip" id="verdictFail" onclick="setVerdictFilter('FAIL')">FAIL</button>
-            <button class="chip" id="verdictWarn" onclick="setVerdictFilter('WARN')">WARN</button>
-            <button class="chip" id="verdictPass" onclick="setVerdictFilter('PASS')">PASS</button>
-            <button class="chip" id="verdictNone" onclick="setVerdictFilter('none')">No verdict</button>
+            <button class="chip active" aria-pressed="true" id="verdictAll" onclick="setVerdictFilter(null)">All</button>
+            <button class="chip" aria-pressed="false" id="verdictFail" onclick="setVerdictFilter('FAIL')">FAIL</button>
+            <button class="chip" aria-pressed="false" id="verdictWarn" onclick="setVerdictFilter('WARN')">WARN</button>
+            <button class="chip" aria-pressed="false" id="verdictPass" onclick="setVerdictFilter('PASS')">PASS</button>
+            <button class="chip" aria-pressed="false" id="verdictNone" onclick="setVerdictFilter('none')">No verdict</button>
         </div>
         <span class="muted" id="filterCount" style="margin-left:auto;white-space:nowrap;"></span>
     </div>
@@ -79,12 +79,18 @@
 
         function setVerdictFilter(v) {
             verdictFilter = v;
-            document.querySelectorAll('[id^="verdict"]').forEach(b => b.classList.remove('active'));
-            if (v === null) document.getElementById('verdictAll').classList.add('active');
-            else if (v === 'FAIL') document.getElementById('verdictFail').classList.add('active');
-            else if (v === 'WARN') document.getElementById('verdictWarn').classList.add('active');
-            else if (v === 'PASS') document.getElementById('verdictPass').classList.add('active');
-            else if (v === 'none') document.getElementById('verdictNone').classList.add('active');
+            document.querySelectorAll('[id^="verdict"]').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-pressed', 'false');
+            });
+            const activeId = v === null ? 'verdictAll'
+                : v === 'FAIL' ? 'verdictFail'
+                : v === 'WARN' ? 'verdictWarn'
+                : v === 'PASS' ? 'verdictPass'
+                : 'verdictNone';
+            const activeBtn = document.getElementById(activeId);
+            activeBtn.classList.add('active');
+            activeBtn.setAttribute('aria-pressed', 'true');
             applyFilters();
         }
 

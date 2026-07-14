@@ -59,8 +59,12 @@ from .skewness_weighted import SkewnessWeightedStrategy
 from .meta_portfolio import MetaPortfolioStrategy
 from .dual_momentum import DualMomentumStrategy
 from .adaptive_asset_allocation import AdaptiveAssetAllocationStrategy
+from .flexible_asset_allocation import FlexibleAssetAllocationStrategy
 from .trend_signal_rp import TrendSignalRPStrategy
 from .protective_asset_allocation import ProtectiveAssetAllocationStrategy
+from .commodity_momentum_correlation_filter import (
+    CommodityMomentumCorrelationStrategy,
+)
 from .halloween_seasonality import HalloweenSeasonalityStrategy
 from .turn_of_month_seasonality import TurnOfMonthSeasonalityStrategy
 from .cross_asset_carry import CarryTiltStrategy
@@ -185,8 +189,10 @@ __all__ = [
     "MetaPortfolioStrategy",
     "DualMomentumStrategy",
     "AdaptiveAssetAllocationStrategy",
+    "FlexibleAssetAllocationStrategy",
     "TrendSignalRPStrategy",
     "ProtectiveAssetAllocationStrategy",
+    "CommodityMomentumCorrelationStrategy",
     "HalloweenSeasonalityStrategy",
     "TurnOfMonthSeasonalityStrategy",
     "CarryTiltStrategy",

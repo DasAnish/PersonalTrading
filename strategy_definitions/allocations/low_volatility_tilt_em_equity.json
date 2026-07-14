@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "LowVolatilityTiltStrategy",
+  "name": "Low-Volatility Tilt — EM Equity",
+  "description": "Ranks emerging market equity assets by trailing total volatility and tilts toward lowest-vol half, zero-weights highest-vol half. Uses equal-weight weighting within held set. Implements Blitz & van Vliet (2007) — low-volatility assets earn higher risk-adjusted returns than high-volatility assets. Applied to EM equity class for focused volatility harvesting.",
+  "parameters": {
+    "vol_lookback_days": 252,
+    "held_fraction": 0.5,
+    "weighting": "equal"
+  },
+  "underlying": "universe:em_equity",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

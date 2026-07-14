@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MeanReversionStrategy",
+  "name": "Mean Reversion — Real Assets",
+  "description": "Short-term contrarian strategy across real assets (commodities, precious metals, real estate). Ranks assets by 20-day trailing return in ascending order, overweighting recent underperformers. Weights are scaled by inverse volatility. Exploits short-horizon price reversal in real asset class.",
+  "parameters": {
+    "lookback_days": 20,
+    "vol_lookback_days": 63
+  },
+  "underlying": "universe:theme_real_assets",
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

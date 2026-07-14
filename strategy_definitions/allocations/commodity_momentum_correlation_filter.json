@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "CommodityMomentumCorrelationStrategy",
+  "name": "Commodity Momentum + Correlation Filter",
+  "description": "Commodity momentum strategy (Fuertes/Miffre/Rallis framework) with correlation filter. Ranks commodities by trailing return over 6-month lookback. Selects top-k momentum candidates, then from those, picks top-n assets with lowest average pairwise correlation to the broader universe. Favors decorrelated momentum winners for portfolio diversification. Equal-weights held assets. Falls back to equal-weight if all have negative momentum.",
+  "parameters": {
+    "lookback_days": 126,
+    "top_k": 4,
+    "top_n": 2
+  },
+  "underlying": "universe:commodity",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

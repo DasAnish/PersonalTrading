@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MeanReversionStrategy",
+  "name": "Mean Reversion — EM Equity",
+  "description": "Short-term contrarian strategy across EM equity universe. Ranks assets by 20-day trailing return in ascending order, overweighting recent underperformers. Weights are scaled by inverse volatility. Exploits short-horizon price reversal in emerging market equities.",
+  "parameters": {
+    "lookback_days": 20,
+    "vol_lookback_days": 63
+  },
+  "underlying": "universe:em_equity",
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

@@ -35,3 +35,5 @@ in `research/ideas/`.
 | [Network Risk Parity (graph-theory portfolio construction)](ideas/network-risk-parity.md) | diversification | validated | Journal of Asset Management (2023), s41260-023-00347-8 | 2026-07-13 |
 | [Commodity Return Seasonality (calendar-month cross-sectional tilt)](ideas/commodity-return-seasonality.md) | seasonality | validated | Return seasonality in commodity futures, IREF (2024) | 2026-07-13 |
 | [Risk-Managed Momentum (volatility-scaled exposure)](ideas/risk-managed-momentum.md) | vol-premium | rejected | Barroso & Santa-Clara (2015), JFE 116(1) | 2026-07-13 |
+| [Flexible Asset Allocation (Generalized Momentum)](ideas/flexible-asset-allocation.md) | momentum-cs | validated | Keller & van Putten (2012), SSRN 2193735 | 2026-07-14 |
+| [Commodity Momentum with Intra-Market Correlation Filter](ideas/commodity-momentum-correlation-filter.md) | momentum-cs | rejected | Fuertes, Miffre & Rallis (2010), Journal of Banking & Finance 34(10) | 2026-07-14 |

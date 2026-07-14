@@ -1,0 +1,18 @@
+{
+  "type": "allocation",
+  "class": "NationalMarketMeanReversionStrategy",
+  "name": "National-Market Mean Reversion (wide)",
+  "description": "Cross-sectional relative-value reversion of regional equity indices toward a world benchmark. Ranks each equity ETF by its z-scored deviation from IWRD (log price ratio), identifying countries trading cheap. Overweights the cheapest 60% of equity holdings, zeros the most expensive. Exploits slow mean reversion with wider position. Monthly rebalance.",
+  "parameters": {
+    "lookback_days": 756,
+    "held_frac": 0.6,
+    "equity_symbols": ["VUSA", "EQQQ", "IMEU", "IIND"],
+    "benchmark_symbol": "IWRD"
+  },
+  "underlying": "universe:equity",
+  "tags": [
+    "mech:mean-reversion",
+    "regime:cross-sectional",
+    "style:contrarian"
+  ]
+}

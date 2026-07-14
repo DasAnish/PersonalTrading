@@ -76,6 +76,7 @@ from .turn_of_month_seasonality import TurnOfMonthSeasonalityStrategy
 from .cross_asset_carry import CarryTiltStrategy
 from .gold_safe_haven_overlay import GoldSafeHavenOverlayStrategy
 from .bond_duration_hedge_overlay import BondDurationHedgeOverlayStrategy
+from .treasury_flight_to_quality_overlay import TreasuryFlightToQualityOverlayStrategy
 from .dynamic_crisis_hedge_overlay import DynamicCrisisHedgeOverlayStrategy
 from .low_beta_defensive_tilt import LowBetaTiltStrategy
 from .quality_weighted_stability import QualityWeightedStabilityStrategy
@@ -92,6 +93,7 @@ from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
 from .national_market_mean_reversion import NationalMarketMeanReversionStrategy
 from .stock_bond_correlation_regime import StockBondCorrelationRegimeStrategy
+from .strategy_risk_parity_meta import StrategyRiskParityMetaStrategy
 
 # Overlay strategies
 from .overlays import VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
@@ -216,6 +218,7 @@ __all__ = [
     "CarryTiltStrategy",
     "GoldSafeHavenOverlayStrategy",
     "BondDurationHedgeOverlayStrategy",
+    "TreasuryFlightToQualityOverlayStrategy",
     "DynamicCrisisHedgeOverlayStrategy",
     "LowBetaTiltStrategy",
     "QualityWeightedStabilityStrategy",
@@ -232,6 +235,7 @@ __all__ = [
     "GoldSilverRatioStrategy",
     "NationalMarketMeanReversionStrategy",
     "StockBondCorrelationRegimeStrategy",
+    "StrategyRiskParityMetaStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

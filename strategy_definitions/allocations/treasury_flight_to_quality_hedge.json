@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "TreasuryFlightToQualityOverlayStrategy",
+  "name": "Treasury Flight-to-Quality Hedge Overlay",
+  "description": "Regime-dependent overlay that tilts duration (VUTY) when flight-to-quality conditions are detected. Classifies regime from joint behavior of equity sleeve and Treasury prices over 20-day trailing window: flight-to-quality regime = negative stock-bond correlation + equities in drawdown signals growth/demand shock and triggers 15pp tilt to VUTY funded from equity sleeve. Inflation/rate-shock regime (positive correlation or no stress) leaves base weights unchanged — critically does NOT fire on positive-correlation sell-offs. Expected benefit: 0.1-0.2 Sharpe uplift and drawdown reduction in growth-shock episodes, offset by neutral-to-mildly-negative effect in inflation shocks.",
+  "parameters": {
+    "class_window": 20,
+    "duration_tilt_pp": 15,
+    "correlation_threshold": -0.1
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:hedging-overlay",
+    "regime-based"
+  ]
+}

@@ -2,7 +2,7 @@
 title: Strategy-Level Risk Parity Ensemble (volatility-weighted meta-portfolio)
 source: "Qian, E. (2005), PanAgora Asset Management — 'Risk Parity Portfolios: Efficient Portfolios Through True Diversification' (https://www.panagora.com/assets/PanAgora-Risk-Parity-Portfolios-Efficient-Portfolios-Through-True-Diversification.pdf)"
 mechanism: meta
-status: candidate
+status: validated
 date_added: 2026-07-08
 ---
 

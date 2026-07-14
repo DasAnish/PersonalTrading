@@ -2,7 +2,7 @@
 title: Treasury Flight-to-Quality Hedge Overlay
 source: "https://www.sciencedirect.com/science/article/abs/pii/S1057521922004173 — 'Stock-bond dependence and flight to/from quality'"
 mechanism: hedging-overlay
-status: candidate
+status: validated
 date_added: 2026-07-08
 ---
 

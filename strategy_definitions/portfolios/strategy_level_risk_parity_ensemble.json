@@ -1,0 +1,24 @@
+{
+  "type": "portfolio",
+  "class": "StrategyRiskParityMetaStrategy",
+  "name": "Strategy-Level Risk Parity Ensemble",
+  "description": "Meta-portfolio blending 5 diverse validated sub-strategies using inverse-volatility weighting (Qian 2005 risk parity applied across strategies). Each sub-strategy weighted by 1/trailing_volatility (504d = 24-month lookback), normalized to sum 1.0. Produces more balanced ensemble risk contribution than naive equal-weight blending. Targets modest Sharpe uplift (+0.05-0.15) and reduced volatility clustering.",
+  "parameters": {
+    "vol_lookback": 504,
+    "weight_floor": 0.05,
+    "weight_cap": 0.50
+  },
+  "underlying": [
+    "allocations/flexible_asset_allocation",
+    "allocations/stock_bond_correlation_regime",
+    "allocations/short_term_reversal",
+    "allocations/minimum_cvar_full",
+    "allocations/residual_momentum"
+  ],
+  "tags": [
+    "ensemble",
+    "diversified",
+    "mech:meta",
+    "risk-parity"
+  ]
+}

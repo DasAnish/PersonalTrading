@@ -19,8 +19,8 @@ in `research/ideas/`.
 | [Volatility / Reward-to-Risk Timing](ideas/volatility-timing.md) | regime | rejected | Kirby & Ostdiek (2012), JFQA 47(2) | 2026-07-08 |
 | [Long-Term Reversal (Overreaction)](ideas/long-term-reversal.md) | mean-reversion | rejected | De Bondt & Thaler (1985), JF 40(3) | 2026-07-08 |
 | [Simple Moving-Average Trend Filter (Faber Tactical Timing)](ideas/sma-trend-filter.md) | trend | rejected | Faber (2007), Journal of Wealth Management | 2026-07-08 |
-| [Strategy-Level Risk Parity Ensemble](ideas/strategy-level-risk-parity-ensemble.md) | meta | candidate | Qian (2005), PanAgora Asset Management | 2026-07-08 |
-| [Treasury Flight-to-Quality Hedge Overlay](ideas/treasury-flight-to-quality-hedge.md) | hedging-overlay | candidate | ScienceDirect — Stock-bond dependence and flight to/from quality | 2026-07-08 |
+| [Strategy-Level Risk Parity Ensemble](ideas/strategy-level-risk-parity-ensemble.md) | meta | validated | Qian (2005), PanAgora Asset Management | 2026-07-08 |
+| [Treasury Flight-to-Quality Hedge Overlay](ideas/treasury-flight-to-quality-hedge.md) | hedging-overlay | validated | ScienceDirect — Stock-bond dependence and flight to/from quality | 2026-07-08 |
 | [Presidential Election Cycle Seasonality](ideas/presidential-election-cycle.md) | seasonality | candidate | Herbst & Slinkman (1984), Financial Analysts Journal 40(2) | 2026-07-08 |
 | [Residual (Idiosyncratic) Momentum](ideas/residual-momentum.md) | momentum-cs | validated | Blitz, Huij & Martens (2011), Journal of Empirical Finance 18(3) | 2026-07-08 |
 | [National-Market Mean Reversion (Parametric Contrarian)](ideas/national-market-mean-reversion.md) | mean-reversion | validated | Balvers, Wu & Gilliland (2000), Journal of Finance 55(2) | 2026-07-08 |

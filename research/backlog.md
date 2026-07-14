@@ -39,3 +39,4 @@ in `research/ideas/`.
 | [Commodity Momentum with Intra-Market Correlation Filter](ideas/commodity-momentum-correlation-filter.md) | momentum-cs | rejected | Fuertes, Miffre & Rallis (2010), Journal of Banking & Finance 34(10) | 2026-07-14 |
 | [Defensive Asset Allocation (Breadth Momentum + Canary)](ideas/defensive-asset-allocation-canary.md) | regime | validated | Keller & Keuning (2018), SSRN 3212862 | 2026-07-14 |
 | [Gold–Silver Ratio Mean Reversion](ideas/gold-silver-ratio-mean-reversion.md) | mean-reversion | validated | Escribano & Granger (1998), Journal of Forecasting 17(2) | 2026-07-14 |
+| [Vigilant Asset Allocation (VAA)](ideas/vigilant-asset-allocation.md) | regime | rejected | Keller & Keuning (2017), SSRN 3002624 | 2026-07-14 |

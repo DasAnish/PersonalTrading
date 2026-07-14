@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "VigilantAssetAllocationStrategy",
+  "name": "Vigilant Asset Allocation (Binary Breadth)",
+  "description": "Keller & Keuning (2017) VAA. Monthly. Binary regime detection on offensive assets. Monitors offensive universe (equities/gold/commodity) breadth. If weak_count >= breadth_threshold: hold 100% single best defensive asset. Else: hold top_n offensive assets, equal-weighted. Uses 13612W momentum weighting (1m,3m,6m,12m with 12,4,2,1 weights).",
+  "parameters": {
+    "offensive_assets": ["VUSA", "EQQQ", "IWRD", "IMEU", "IIND", "SGLN", "COMM", "BRNT"],
+    "defensive_assets": ["VUTY", "AGGU"],
+    "top_n": 1,
+    "breadth_threshold": 1,
+    "lookback_days": 252
+  },
+  "underlying": ["assets/vusa", "assets/eqqq", "assets/iwrd", "assets/imeu", "assets/iind", "assets/sgln", "assets/comm", "assets/brnt", "assets/vuty", "assets/aggu"],
+  "tags": [
+    "mech:regime"
+  ]
+}

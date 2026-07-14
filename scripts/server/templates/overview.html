@@ -294,7 +294,9 @@
 
             for (const tag of sorted) {
                 const btn = document.createElement('button');
-                btn.className = 'chip';
+                // Chips are rebuilt on every pagination batch and on Refresh, so
+                // re-apply the active state or applied filters become invisible.
+                btn.className = activeTags.has(tag) ? 'chip active' : 'chip';
                 btn.textContent = tag;
                 btn.title = `${tagCounts[tag]} strategies`;
                 btn.onclick = () => toggleTag(tag, btn);
@@ -382,6 +384,8 @@
             try {
                 allRows = [];
                 totalStrategies = 0;
+                const oldBanner = document.getElementById('loadErrorBanner');
+                if (oldBanner) oldBanner.remove();
                 document.getElementById('overviewBody').innerHTML = '<tr><td colspan="8" class="loading">Loading strategies…</td></tr>';
                 document.getElementById('progressContainer').style.display = 'block';
 
@@ -415,6 +419,7 @@
             } catch (err) {
                 document.getElementById('progressContainer').style.display = 'none';
                 const errorDiv = document.createElement('div');
+                errorDiv.id = 'loadErrorBanner';
                 errorDiv.className = 'banner error';
                 errorDiv.textContent = 'Error loading strategies: ' + err.message;
                 document.getElementById('overviewTable').parentNode.insertBefore(errorDiv, document.getElementById('overviewTable'));

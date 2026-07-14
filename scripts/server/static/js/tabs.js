@@ -34,3 +34,13 @@ function showTab(tabName, event) {
     const loader = TAB_LAZY_LOADERS[tabName];
     if (loader) loader();
 }
+
+// Keep browser back/forward working: the hash changes but showTab was never
+// called, so switch to the panel the URL now points at.
+window.addEventListener('hashchange', () => {
+    const tabName = window.location.hash.slice(1);
+    const panel = tabName && document.getElementById(tabName);
+    if (panel && panel.classList.contains('tab-panel') && !panel.classList.contains('active')) {
+        showTab(tabName, null);
+    }
+});

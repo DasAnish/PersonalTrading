@@ -182,6 +182,14 @@
     <script>
         function pct(x) { return x == null ? 'n/a' : (x * 100).toFixed(2) + '%'; }
 
+        // Every section fetches independently; a failed API call must say so in
+        // that section rather than leaving it silently blank on the page used
+        // for the monthly rebalance decision.
+        function showLoadError(elId, label, err) {
+            const el = document.getElementById(elId);
+            if (el) el.innerHTML = `<div class="banner error">Failed to load ${label}: ${err.message} — check the server and retry.</div>`;
+        }
+
         // Tiny dependency-free sparkline (normalized series -> inline SVG).
         function sparkline(series, w = 320, h = 48) {
             if (!series || series.length < 2) return '<span class="muted">not enough data</span>';
@@ -206,7 +214,10 @@
             const key = document.getElementById('strategyInput').value.trim();
             if (key) params.set('strategy', key);
             const qs = params.toString();
-            const data = await fetchJSON('/api/live-risk' + (qs ? '?' + qs : ''));
+            let data;
+            try {
+                data = await fetchJSON('/api/live-risk' + (qs ? '?' + qs : ''));
+            } catch (err) { showLoadError('banner', 'live risk data', err); return; }
             if (!data) return;
 
             document.getElementById('banner').innerHTML = data.banner
@@ -322,7 +333,10 @@
         }
 
         async function loadBlend() {
-            const data = await fetchJSON('/api/preferred-blend');
+            let data;
+            try {
+                data = await fetchJSON('/api/preferred-blend');
+            } catch (err) { showLoadError('blendRows', 'preferred blend', err); return; }
             if (!data) return;
             availableStrategies = data.available_strategies || [];
 
@@ -344,7 +358,10 @@
         // ---- Target allocation (blend × budget → £ and shares) ----
         async function loadTarget() {
             const budget = parseFloat(document.getElementById('budgetInput').value) || 0;
-            const data = await fetchJSON('/api/target-allocation?budget=' + encodeURIComponent(budget));
+            let data;
+            try {
+                data = await fetchJSON('/api/target-allocation?budget=' + encodeURIComponent(budget));
+            } catch (err) { showLoadError('targetAlloc', 'target allocation', err); return; }
             const el = document.getElementById('targetAlloc');
             if (!data) { el.innerHTML = ''; return; }
             const rows = data.target || [];
@@ -410,7 +427,10 @@
         function setScope(s) { currentScope = s; renderScopeSelector(); loadRisk(); }
 
         async function loadLedger() {
-            const data = await fetchJSON('/api/ledger');
+            let data;
+            try {
+                data = await fetchJSON('/api/ledger');
+            } catch (err) { showLoadError('slicesTable', 'allocation ledger', err); return; }
             if (!data) return;
             const strats = data.strategies || {};
             sliceKeys = Object.keys(strats).sort();
@@ -442,7 +462,10 @@
             const msg = document.getElementById('mtMsg');
             if (!key) { msg.textContent = 'Pick a strategy.'; return; }
             const budget = parseFloat(document.getElementById('mtBudget').value) || 0;
-            const data = await fetchJSON(`/api/ledger/slice-plan/${encodeURIComponent(key)}?budget=${budget}`);
+            let data;
+            try {
+                data = await fetchJSON(`/api/ledger/slice-plan/${encodeURIComponent(key)}?budget=${budget}`);
+            } catch (err) { showLoadError('mtPlan', 'slice plan', err); return; }
             if (!data) return;
             const entries = (data.entries || []).filter(e => Math.abs(e.est_shares || 0) > 1e-6);
             if (!entries.length) { document.getElementById('mtPlan').innerHTML = '<p class="muted">No trades suggested (slice already at target).</p>'; return; }
@@ -490,7 +513,10 @@
             const key = document.getElementById('sliceNavKey').value;
             const el = document.getElementById('sliceNav');
             if (!key) { el.innerHTML = ''; return; }
-            const data = await fetchJSON(`/api/ledger/slice/${encodeURIComponent(key)}/nav`);
+            let data;
+            try {
+                data = await fetchJSON(`/api/ledger/slice/${encodeURIComponent(key)}/nav`);
+            } catch (err) { showLoadError('sliceNav', 'slice NAV', err); return; }
             if (!data || !data.series || !data.series.length) { el.innerHTML = '<p class="muted">No NAV history yet — record trades to build it.</p>'; return; }
             const first = data.series[0].value, last = data.series[data.series.length - 1].value;
             el.innerHTML = `${sparkline(data.series, 360, 56)}<p class="muted" style="font-size:0.85rem;">Since ${data.first_event}: £${first.toLocaleString(undefined, { maximumFractionDigits: 0 })} → £${last.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>`;
@@ -498,7 +524,10 @@
 
         // ---- Trackers ----
         async function loadTrackers() {
-            const data = await fetchJSON('/api/trackers');
+            let data;
+            try {
+                data = await fetchJSON('/api/trackers');
+            } catch (err) { showLoadError('trackersTable', 'trackers', err); return; }
             if (!data) return;
             const el = document.getElementById('trackersTable');
             if (!data.length) { el.innerHTML = '<p class="muted">No trackers yet — add a strategy to watch.</p>'; return; }
@@ -556,7 +585,10 @@
         }
 
         async function loadRegistrations() {
-            const data = await fetchJSON('/api/registrations');
+            let data;
+            try {
+                data = await fetchJSON('/api/registrations');
+            } catch (err) { showLoadError('regTable', 'pre-registrations', err); return; }
             if (!data) return;
             const alerts = data.filter(r => ['breach', 'review_due'].includes((r.status || {}).status));
             const banner = document.getElementById('regBanner');

@@ -419,6 +419,8 @@
             descContainer.innerHTML = descHtml;
 
             attributionRendered = false;
+            overfittingLoaded = false;
+            stressLoaded = false;
             updateScopeLabels(strategies);
             displayMetrics(dataList, strategies);
             displayPortfolioChart(dataList, strategies);
@@ -426,6 +428,14 @@
             displayWeightsChart(dataList[0], strategies[0]);
             displayTransactions(dataList[0]);
             loadMonthlyReturns(strategies[0]);
+
+            // If the user is currently on a lazy-loaded tab, refresh it now so
+            // the visible panel never shows the previous strategy's data.
+            const activePanel = document.querySelector('.tab-panel.active');
+            if (activePanel) {
+                const loader = TAB_LAZY_LOADERS[activePanel.id];
+                if (loader) loader();
+            }
         }
 
         function updateScopeLabels(strategies) {
@@ -467,18 +477,23 @@
             const ctx = document.getElementById('portfolioChart').getContext('2d');
             if (charts.portfolio) charts.portfolio.destroy();
 
-            const dates = (dataList[0].portfolio_history || []).map(p => p.date || p.timestamp);
+            const aligned = alignSeriesByDate(dataList.map(data => {
+                const hist = data.portfolio_history || [];
+                return { dates: hist.map(p => p.date || p.timestamp), values: hist.map(p => p.total_value) };
+            }));
+            const dates = aligned.labels;
 
             const datasets = dataList.map((data, i) => {
                 const color = CHART_COLORS[i % CHART_COLORS.length];
                 return {
                     label: names[i],
-                    data: (data.portfolio_history || []).map(p => p.total_value),
+                    data: aligned.data[i],
                     borderColor: color.border,
                     backgroundColor: color.bg,
                     tension: 0.4,
                     pointRadius: 0,
                     borderWidth: 2,
+                    spanGaps: true,
                 };
             });
 
@@ -507,26 +522,33 @@
             const ctx = document.getElementById('drawdownChart').getContext('2d');
             if (charts.drawdown) charts.drawdown.destroy();
 
-            const dates = (dataList[0].portfolio_history || []).map(p => p.date || p.timestamp);
-
-            const datasets = dataList.map((data, i) => {
+            const ddSeries = dataList.map(data => {
                 const portfolio = (data.portfolio_history || []);
                 const values = portfolio.map(p => p.total_value);
                 const runningMax = values.reduce((acc, val) => {
                     acc.push(acc.length === 0 ? val : Math.max(acc[acc.length - 1], val));
                     return acc;
                 }, []);
-                const drawdown = values.map((val, j) => ((val - runningMax[j]) / runningMax[j]) * 100);
+                return {
+                    dates: portfolio.map(p => p.date || p.timestamp),
+                    values: values.map((val, j) => ((val - runningMax[j]) / runningMax[j]) * 100),
+                };
+            });
+            const aligned = alignSeriesByDate(ddSeries);
+            const dates = aligned.labels;
+
+            const datasets = dataList.map((data, i) => {
                 const color = CHART_COLORS[i % CHART_COLORS.length];
                 return {
                     label: names[i],
-                    data: drawdown,
+                    data: aligned.data[i],
                     borderColor: color.border,
                     backgroundColor: color.bg.replace('0.1', '0.2'),
                     tension: 0.4,
                     pointRadius: 0,
                     borderWidth: 2,
                     fill: true,
+                    spanGaps: true,
                 };
             });
 
@@ -546,12 +568,25 @@
             // Derive actual weights from portfolio_history so cash is included naturally.
             // weights_history only stores target allocations (sum = 100%, no cash column).
             const history = (data1 && data1.portfolio_history) || [];
+            const canvas = document.getElementById('weightsChart');
+            let weightsMsg = document.getElementById('weightsMsg');
+            if (!weightsMsg) {
+                weightsMsg = document.createElement('p');
+                weightsMsg.id = 'weightsMsg';
+                weightsMsg.className = 'muted';
+                canvas.parentElement.insertAdjacentElement('beforebegin', weightsMsg);
+            }
             if (history.length === 0) {
-                document.getElementById('weightsChart').parentElement.innerHTML = '<p>Weights data not available</p>';
+                // Keep the canvas alive — destroying it would break every later render.
+                if (charts.weights) { charts.weights.destroy(); charts.weights = null; }
+                canvas.parentElement.style.display = 'none';
+                weightsMsg.textContent = 'Weights data not available';
                 return;
             }
+            canvas.parentElement.style.display = '';
+            weightsMsg.textContent = '';
 
-            const ctx = document.getElementById('weightsChart').getContext('2d');
+            const ctx = canvas.getContext('2d');
             if (charts.weights) charts.weights.destroy();
 
             const assetKeys = Object.keys(history[0])
@@ -1294,16 +1329,19 @@
                         if (entry) {
                             const val = entry.return;
                             yearReturn *= (1 + val / 100);
-                            const color = val >= 0
-                                ? `rgba(40,167,69,${Math.min(Math.abs(val)/5, 0.8)})`
-                                : `rgba(220,53,69,${Math.min(Math.abs(val)/5, 0.8)})`;
-                            html += `<td style="background:${color}; text-align:center; font-weight:600;">${val.toFixed(1)}%</td>`;
+                            // Same token-based diverging encoding as the overview
+                            // table: --good/--bad mixed into the surface, capped so
+                            // the default ink stays readable (WCAG contrast).
+                            const tone = val >= 0 ? 'var(--good)' : 'var(--bad)';
+                            const strength = Math.round(Math.min(Math.abs(val) / 5, 1) * 45);
+                            const bg = `color-mix(in srgb, ${tone} ${strength}%, var(--surface))`;
+                            html += `<td style="background:${bg}; text-align:center; font-weight:600;">${val.toFixed(1)}%</td>`;
                         } else {
-                            html += '<td style="text-align:center; color:#ccc;">-</td>';
+                            html += '<td style="text-align:center; color: var(--ink-faint);">-</td>';
                         }
                     }
                     const annualReturn = (yearReturn - 1) * 100;
-                    const annualColor = annualReturn >= 0 ? '#28a745' : '#dc3545';
+                    const annualColor = annualReturn >= 0 ? 'var(--good)' : 'var(--bad)';
                     html += `<td style="text-align:center; font-weight:700; color:${annualColor};">${annualReturn.toFixed(1)}%</td>`;
                     html += '</tr>';
                 }
@@ -1333,22 +1371,27 @@
                 const ctx = document.getElementById('rollingChart').getContext('2d');
                 if (charts.rolling) charts.rolling.destroy();
 
-                const dates = results[0].data.map(d => d.date);
+                const valid = results.map((result, i) => ({ result, i })).filter(x => !x.result.error);
+                const aligned = alignSeriesByDate(valid.map(({ result }) => ({
+                    dates: result.data.map(d => d.date),
+                    values: result.data.map(d => d.value),
+                })));
+                const dates = aligned.labels;
 
-                const datasets = results.map((result, i) => {
-                    if (result.error) return null;
+                const datasets = valid.map(({ i }, j) => {
                     const color = CHART_COLORS[i % CHART_COLORS.length];
                     return {
                         label: `Rolling ${metricLabels[metric]} (${window}d) - ${strategies[i]}`,
-                        data: result.data.map(d => d.value),
+                        data: aligned.data[j],
                         borderColor: color.border,
                         backgroundColor: color.bg,
                         tension: 0.4,
                         pointRadius: 0,
                         borderWidth: 2,
                         fill: true,
+                        spanGaps: true,
                     };
-                }).filter(Boolean);
+                });
 
                 charts.rolling = new Chart(ctx, {
                     type: 'line',

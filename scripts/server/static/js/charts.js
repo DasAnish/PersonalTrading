@@ -13,6 +13,26 @@ const CHART_COLORS = [
 ];
 
 /**
+ * Align multiple date-indexed series onto one shared label axis.
+ *
+ * Chart.js category axes align datasets by index, so plotting two series of
+ * different lengths against the first series' dates silently shifts the
+ * second one. This builds the sorted union of all dates and re-indexes each
+ * series onto it, filling gaps with null (pair with `spanGaps: true`).
+ *
+ * @param {{dates: string[], values: number[]}[]} seriesList
+ * @returns {{labels: string[], data: (number|null)[][]}}
+ */
+function alignSeriesByDate(seriesList) {
+    const labels = [...new Set(seriesList.flatMap(s => s.dates))].sort();
+    const data = seriesList.map(s => {
+        const byDate = new Map(s.dates.map((d, i) => [d, s.values[i]]));
+        return labels.map(d => byDate.has(d) ? byDate.get(d) : null);
+    });
+    return { labels, data };
+}
+
+/**
  * Render a frequency histogram of `values` into a Chart.js bar chart.
  *
  * Generic enough to back the overfitting-tab logit-score histogram today,

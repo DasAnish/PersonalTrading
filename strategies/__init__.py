@@ -55,6 +55,7 @@ from .volatility_momentum import VolatilityMomentumStrategy
 from .trend_signal_mvo import TrendSignalMVOStrategy
 from .mean_reversion import MeanReversionStrategy
 from .long_term_reversal import LongTermReversalStrategy
+from .short_term_reversal import ShortTermReversalStrategy
 from .skewness_weighted import SkewnessWeightedStrategy
 from .meta_portfolio import MetaPortfolioStrategy
 from .dual_momentum import DualMomentumStrategy
@@ -188,6 +189,7 @@ __all__ = [
     "TrendSignalMVOStrategy",
     "MeanReversionStrategy",
     "LongTermReversalStrategy",
+    "ShortTermReversalStrategy",
     "SkewnessWeightedStrategy",
     "MetaPortfolioStrategy",
     "DualMomentumStrategy",

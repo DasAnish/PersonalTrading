@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "DefensiveAssetAllocationStrategy",
+  "name": "Defensive Asset Allocation (wide canary + top5)",
+  "description": "Keller & Keuning (2018) DAA. Monthly. Monitors canary assets (EM equity + bonds + emerging metals) for weakness. Shifts allocation to SAFE (bonds) when many canary assets are in downtrend. Otherwise allocates to top-momentum risky assets (equities + gold). Uses 13612W momentum weighting (1m,3m,6m,12m with 12,4,2,1 weights). Wider selection of risky assets (top 5).",
+  "parameters": {
+    "canary_assets": ["IIND", "SAEM", "AGGU"],
+    "risky_assets": ["VUSA", "IWRD", "EQQQ", "SGLN", "SSLN", "COMM"],
+    "safe_asset": "VUTY",
+    "top_n": 5,
+    "lookback_days": 252
+  },
+  "underlying": ["assets/iind", "assets/saem", "assets/aggu", "assets/vusa", "assets/iwrd", "assets/eqqq", "assets/sgln", "assets/ssln", "assets/comm", "assets/vuty"],
+  "tags": [
+    "mech:regime"
+  ]
+}

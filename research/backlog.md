@@ -40,3 +40,4 @@ in `research/ideas/`.
 | [Defensive Asset Allocation (Breadth Momentum + Canary)](ideas/defensive-asset-allocation-canary.md) | regime | validated | Keller & Keuning (2018), SSRN 3212862 | 2026-07-14 |
 | [Gold–Silver Ratio Mean Reversion](ideas/gold-silver-ratio-mean-reversion.md) | mean-reversion | validated | Escribano & Granger (1998), Journal of Forecasting 17(2) | 2026-07-14 |
 | [Vigilant Asset Allocation (VAA)](ideas/vigilant-asset-allocation.md) | regime | rejected | Keller & Keuning (2017), SSRN 3002624 | 2026-07-14 |
+| [Short-Term (1-Month) Reversal](ideas/short-term-reversal.md) | mean-reversion | validated | Jegadeesh (1990), Journal of Finance 45(3) | 2026-07-14 |

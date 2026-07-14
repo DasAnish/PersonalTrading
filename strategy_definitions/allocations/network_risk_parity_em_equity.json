@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "NetworkRiskParityStrategy",
+  "name": "Network Risk Parity — EM Equity",
+  "description": "Network Risk Parity variant with 126-day lookback across EM equity basket.",
+  "parameters": {
+    "lookback_days": 126,
+    "centrality_measure": "degree",
+    "graph_filter": "mst",
+    "threshold": 0.5
+  },
+  "underlying": "universe:em_equity",
+  "tags": [
+    "mech:diversification",
+    "variant:lookback"
+  ]
+}

@@ -37,3 +37,5 @@ in `research/ideas/`.
 | [Risk-Managed Momentum (volatility-scaled exposure)](ideas/risk-managed-momentum.md) | vol-premium | rejected | Barroso & Santa-Clara (2015), JFE 116(1) | 2026-07-13 |
 | [Flexible Asset Allocation (Generalized Momentum)](ideas/flexible-asset-allocation.md) | momentum-cs | validated | Keller & van Putten (2012), SSRN 2193735 | 2026-07-14 |
 | [Commodity Momentum with Intra-Market Correlation Filter](ideas/commodity-momentum-correlation-filter.md) | momentum-cs | rejected | Fuertes, Miffre & Rallis (2010), Journal of Banking & Finance 34(10) | 2026-07-14 |
+| [Defensive Asset Allocation (Breadth Momentum + Canary)](ideas/defensive-asset-allocation-canary.md) | regime | validated | Keller & Keuning (2018), SSRN 3212862 | 2026-07-14 |
+| [Gold–Silver Ratio Mean Reversion](ideas/gold-silver-ratio-mean-reversion.md) | mean-reversion | validated | Escribano & Granger (1998), Journal of Forecasting 17(2) | 2026-07-14 |

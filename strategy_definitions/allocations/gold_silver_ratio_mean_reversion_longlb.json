@@ -1,0 +1,18 @@
+{
+  "type": "allocation",
+  "class": "GoldSilverRatioStrategy",
+  "name": "Gold-Silver Ratio Mean Reversion (500d lookback)",
+  "description": "Slower-signal variant of the gold/silver ratio mean-reversion tilt: z-score computed over a ~500-day lookback (vs 250) so the tilt reacts to longer-horizon deviations from the equilibrium ratio, aiming to reduce turnover and drawdown at the cost of responsiveness.",
+  "parameters": {
+    "lookback_days": 500,
+    "k": 0.15,
+    "w_min": 0.2,
+    "w_max": 0.8,
+    "gold_symbol": "SGLN",
+    "silver_symbol": "SSLN"
+  },
+  "underlying": ["assets/sgln", "assets/ssln"],
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

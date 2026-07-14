@@ -80,6 +80,8 @@ from .low_volatility_tilt import LowVolatilityTiltStrategy
 from .time_series_momentum import TimeSeriesMomentumStrategy
 from .network_risk_parity import NetworkRiskParityStrategy
 from .seasonal_return_tilt import SeasonalReturnTiltStrategy
+from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
+from .gold_silver_ratio import GoldSilverRatioStrategy
 
 # Overlay strategies
 from .overlays import VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
@@ -208,6 +210,8 @@ __all__ = [
     "TimeSeriesMomentumStrategy",
     "NetworkRiskParityStrategy",
     "SeasonalReturnTiltStrategy",
+    "DefensiveAssetAllocationStrategy",
+    "GoldSilverRatioStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

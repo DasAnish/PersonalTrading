@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MomentumTopNStrategy",
+  "name": "Momentum Top-2 — Real Assets",
+  "description": "Momentum strategy selecting top 2 assets by 12-month trailing return on real assets.",
+  "parameters": {
+    "top_n": 2,
+    "lookback_days": 252
+  },
+  "underlying": "universe:theme_real_assets",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

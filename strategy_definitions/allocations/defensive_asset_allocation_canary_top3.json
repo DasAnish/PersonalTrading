@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "DefensiveAssetAllocationStrategy",
+  "name": "Defensive Asset Allocation (Canary, top 3)",
+  "description": "Concentrated variant of DAA (Keller & Keuning, 2018): same canary-breadth cash gate and 13612W momentum ranking, but the risky sleeve holds only the top 3 momentum assets instead of 4.",
+  "parameters": {
+    "canary_assets": ["IIND", "AGGU"],
+    "risky_assets": ["VUSA", "IWRD", "EQQQ", "SGLN", "SSLN", "COMM"],
+    "safe_asset": "VUTY",
+    "top_n": 3,
+    "lookback_days": 252
+  },
+  "underlying": ["assets/iind", "assets/aggu", "assets/vusa", "assets/iwrd", "assets/eqqq", "assets/sgln", "assets/ssln", "assets/comm", "assets/vuty"],
+  "tags": [
+    "mech:regime"
+  ]
+}

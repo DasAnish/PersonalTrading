@@ -1,0 +1,18 @@
+{
+  "type": "allocation",
+  "class": "GoldSilverRatioStrategy",
+  "name": "Gold-Silver Ratio Mean Reversion",
+  "description": "Two-asset long-only tilt between gold (SGLN) and silver (SSLN). Monthly. Exploits mean reversion in the gold/silver price ratio. High ratio (silver cheap) tilts to silver; low ratio (gold cheap) tilts to gold. Uses z-score with 250-day lookback and adjustable tilt gain (k).",
+  "parameters": {
+    "lookback_days": 250,
+    "k": 0.15,
+    "w_min": 0.2,
+    "w_max": 0.8,
+    "gold_symbol": "SGLN",
+    "silver_symbol": "SSLN"
+  },
+  "underlying": ["assets/sgln", "assets/ssln"],
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

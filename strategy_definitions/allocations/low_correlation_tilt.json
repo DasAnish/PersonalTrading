@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "LowCorrelationTiltStrategy",
+  "name": "Betting-Against-Correlation Tilt",
+  "description": "Long-only tilt toward the assets with the lowest average pairwise correlation to the rest of the universe (Asness, Frazzini, Gormsen & Pedersen 2020). Isolates the correlation component of the low-risk premium and maximises diversification. Ranks ascending and equal-weights the bottom N. Distinct from LowBetaTilt (full beta), LowVolatilityTilt (vol) and FAA (correlation as one blended factor).",
+  "parameters": {
+    "beta_lookback_days": 252,
+    "bottom_n": 5
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

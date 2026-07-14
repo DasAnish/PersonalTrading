@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "LowMaxTiltStrategy",
+  "name": "Low-MAX Lottery-Avoidance Tilt",
+  "description": "Long-only tilt toward the lowest-MAX assets (Bali, Cakici & Whitelaw 2011). MAX = the average of an asset's largest few daily returns over a trailing ~3-month window, a lottery-preference signal. Ranks ascending and equal-weights the bottom N, avoiding recently-spiking lottery-like assets. Distinct from volatility, IVOL and beta tilts.",
+  "parameters": {
+    "beta_lookback_days": 63,
+    "bottom_n": 5,
+    "n_max": 5
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

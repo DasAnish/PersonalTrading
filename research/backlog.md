@@ -47,3 +47,4 @@ in `research/ideas/`.
 | [Maximum Omega-Ratio Portfolio](ideas/omega-ratio-portfolio.md) | diversification | rejected | Keating & Shadwick (2002), Journal of Performance Measurement 6(3) | 2026-07-14 |
 | [Low Downside-Beta Defensive Tilt](ideas/downside-beta-tilt.md) | vol-premium | validated | Ang, Chen & Xing (2006), Review of Financial Studies 19(4) | 2026-07-14 |
 | [Low Idiosyncratic-Volatility Defensive Tilt](ideas/low-ivol-tilt.md) | vol-premium | validated | Ang, Hodrick, Xing & Zhang (2006), Journal of Finance 61(1) | 2026-07-14 |
+| [Low-MAX Lottery-Avoidance Tilt](ideas/low-max-lottery-tilt.md) | vol-premium | validated | Bali, Cakici & Whitelaw (2011), Journal of Financial Economics 99(2) | 2026-07-14 |

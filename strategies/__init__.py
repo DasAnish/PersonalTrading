@@ -91,6 +91,7 @@ from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 from .omega_ratio import OmegaRatioStrategy
 from .downside_beta_tilt import DownsideBetaTiltStrategy
 from .low_ivol_tilt import LowIVolTiltStrategy
+from .low_max_tilt import LowMaxTiltStrategy
 from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
 from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
@@ -242,6 +243,7 @@ __all__ = [
     "OmegaRatioStrategy",
     "DownsideBetaTiltStrategy",
     "LowIVolTiltStrategy",
+    "LowMaxTiltStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

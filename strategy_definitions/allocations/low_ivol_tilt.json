@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "LowIVolTiltStrategy",
+  "name": "Low Idiosyncratic-Volatility Defensive Tilt",
+  "description": "Long-only tilt toward the lowest-idiosyncratic-volatility assets (Ang, Hodrick, Xing & Zhang 2006). Idiosyncratic volatility is the residual standard deviation from a market-model regression on IWRD/VUSA, neutralising market-driven variance. Ranks ascending and equal-weights the bottom N. Distinct from total-vol LowVolatilityTilt and systematic-beta LowBetaTilt.",
+  "parameters": {
+    "beta_lookback_days": 252,
+    "bottom_n": 5
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

@@ -90,6 +90,7 @@ from .network_risk_parity import NetworkRiskParityStrategy
 from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 from .omega_ratio import OmegaRatioStrategy
 from .downside_beta_tilt import DownsideBetaTiltStrategy
+from .low_ivol_tilt import LowIVolTiltStrategy
 from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
 from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
@@ -240,6 +241,7 @@ __all__ = [
     "StrategyRiskParityMetaStrategy",
     "OmegaRatioStrategy",
     "DownsideBetaTiltStrategy",
+    "LowIVolTiltStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

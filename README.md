@@ -23,6 +23,19 @@ A Python framework for portfolio strategy research, backtesting, validation, and
 
 ---
 
+## Dashboard
+
+<p>
+  <img src="docs/images/overview.png" alt="Strategy Library overview — sortable metrics table with diverging performance heatmap" width="49%">
+  <img src="docs/images/validation.png" alt="Validation & Overfitting — SPA reality check and per-strategy DSR/PBO battery" width="49%">
+</p>
+
+Strategy Library (left) ranks every backtested allocation with an honest, colorblind-safe
+heatmap. Validation & Overfitting (right) runs the SPA go/no-go gate and per-strategy
+DSR/PBO battery across the whole library. See [docs/dashboard.md](docs/dashboard.md).
+
+---
+
 ## Quick Start
 
 ### Run a backtest

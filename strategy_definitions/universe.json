@@ -89,6 +89,21 @@
     "assets/brnt",
     "assets/comm"
   ],
+  "theme_balanced": [
+    "assets/vusa",
+    "assets/iwrd",
+    "assets/sgln",
+    "assets/comm",
+    "assets/aggu",
+    "assets/vuty"
+  ],
+  "defensive_plus": [
+    "assets/iwrd",
+    "assets/sgln",
+    "assets/aggu",
+    "assets/vuty",
+    "assets/sega"
+  ],
   "all": [
     "assets/vusa",
     "assets/eqqq",

@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MinimumCVaRStrategy",
+  "name": "Minimum CVaR Portfolio (theme balanced)",
+  "description": "Minimum Conditional Value at Risk (CVaR) optimization via Rockafellar-Uryasev LP: minimizes expected loss beyond the alpha-th percentile confidence level. Provides tail-risk management using scenario-based linear programming. Long-only portfolio with weights summing to 1. Full universe variant. Universe: universe:theme_balanced.",
+  "parameters": {
+    "lookback_days": 252,
+    "alpha": 0.95
+  },
+  "underlying": "universe:theme_balanced",
+  "tags": [
+    "mech:diversification"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "type": "allocation",
+  "class": "StockBondCorrelationRegimeStrategy",
+  "name": "Stock-Bond Correlation Regime (24m)",
+  "description": "Conditional defensive-sleeve allocation based on rolling stock-bond correlation. When correlation < 0.05 (bonds hedge), defensive sleeve = VUTY (bonds). When correlation >= 0.05, shift defensive to SGLN + COMM (50/50) to preserve diversification in inflationary regimes. Fixed 40% defensive; equity sleeve split equally. Hysteresis band ±0.05 reduces flip turnover.",
+  "parameters": {
+    "lookback_days": 504,
+    "def_frac": 0.4,
+    "correlation_threshold": 0.05,
+    "hysteresis": 0.05,
+    "equity_symbols": ["VUSA", "IWRD"],
+    "bond_symbol": "VUTY",
+    "gold_symbol": "SGLN",
+    "commodity_symbol": "COMM"
+  },
+  "underlying": [
+    "assets/vusa",
+    "assets/iwrd",
+    "assets/vuty",
+    "assets/sgln",
+    "assets/comm"
+  ],
+  "tags": [
+    "mech:regime",
+    "defensive:macro",
+    "style:tactical"
+  ]
+}

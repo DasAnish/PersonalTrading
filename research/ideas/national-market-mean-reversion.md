@@ -2,7 +2,7 @@
 title: National-Market Mean Reversion (Parametric Contrarian)
 source: "Balvers, R., Wu, Y. & Gilliland, E. (2000), Journal of Finance 55(2) — 'Mean Reversion across National Stock Markets and Parametric Contrarian Investment Strategies'"
 mechanism: mean-reversion
-status: new
+status: validated
 date_added: 2026-07-08
 ---
 

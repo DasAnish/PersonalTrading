@@ -89,6 +89,8 @@ from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
 from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
+from .national_market_mean_reversion import NationalMarketMeanReversionStrategy
+from .stock_bond_correlation_regime import StockBondCorrelationRegimeStrategy
 
 # Overlay strategies
 from .overlays import VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
@@ -226,6 +228,8 @@ __all__ = [
     "DefensiveAssetAllocationStrategy",
     "VigilantAssetAllocationStrategy",
     "GoldSilverRatioStrategy",
+    "NationalMarketMeanReversionStrategy",
+    "StockBondCorrelationRegimeStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "ResidualMomentumStrategy",
+  "name": "Residual Momentum (top half)",
+  "description": "Blitz, Huij & Martens (2011). Ranks assets by beta-adjusted residual return (market-model residuals from regressing on IWRD benchmark) rather than total return. Monthly rebalance. Selects top 50% by residual momentum score (mean residual / std, information-ratio scaled), equal-weighted among held. Long-only. Reduces momentum volatility and drawdowns by isolating behavioural underreaction while neutralising incidental factor exposure.",
+  "parameters": {
+    "residual_window": 504,
+    "formation_window": 252,
+    "skip_days": 21,
+    "top_frac": 0.5,
+    "market_benchmark": "IWRD"
+  },
+  "underlying": "universe:equity",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

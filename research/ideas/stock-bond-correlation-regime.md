@@ -2,7 +2,7 @@
 title: Stock-Bond Correlation Regime Allocation
 source: https://www.aqr.com/Insights/Research/Journal-Article/A-Changing-Stock-Bond-Correlation
 mechanism: regime
-status: new
+status: validated
 date_added: 2026-07-10
 ---
 

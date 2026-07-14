@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MinVarShrinkageStrategy",
+  "name": "Shrinkage Minimum-Variance Portfolio",
+  "description": "Minimum-variance optimization on a shrunk covariance matrix (Ledoit & Wolf 2004): the sample covariance is blended toward a scaled-identity target to reduce estimation error and stabilise the optimizer. Distinct from MinimumVarianceStrategy (raw sample covariance). Long-only, weights sum to 1.",
+  "parameters": {
+    "lookback_days": 252,
+    "shrinkage": 0.3
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

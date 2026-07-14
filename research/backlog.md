@@ -22,10 +22,10 @@ in `research/ideas/`.
 | [Strategy-Level Risk Parity Ensemble](ideas/strategy-level-risk-parity-ensemble.md) | meta | candidate | Qian (2005), PanAgora Asset Management | 2026-07-08 |
 | [Treasury Flight-to-Quality Hedge Overlay](ideas/treasury-flight-to-quality-hedge.md) | hedging-overlay | candidate | ScienceDirect — Stock-bond dependence and flight to/from quality | 2026-07-08 |
 | [Presidential Election Cycle Seasonality](ideas/presidential-election-cycle.md) | seasonality | candidate | Herbst & Slinkman (1984), Financial Analysts Journal 40(2) | 2026-07-08 |
-| [Residual (Idiosyncratic) Momentum](ideas/residual-momentum.md) | momentum-cs | new | Blitz, Huij & Martens (2011), Journal of Empirical Finance 18(3) | 2026-07-08 |
+| [Residual (Idiosyncratic) Momentum](ideas/residual-momentum.md) | momentum-cs | validated | Blitz, Huij & Martens (2011), Journal of Empirical Finance 18(3) | 2026-07-08 |
 | [National-Market Mean Reversion (Parametric Contrarian)](ideas/national-market-mean-reversion.md) | mean-reversion | new | Balvers, Wu & Gilliland (2000), Journal of Finance 55(2) | 2026-07-08 |
 | [Low-Volatility Anomaly (The Volatility Effect)](ideas/low-volatility-anomaly.md) | vol-premium | validated | Blitz & van Vliet (2007), Journal of Portfolio Management 34(1) | 2026-07-08 |
-| [Accelerating Dual Momentum](ideas/accelerating-dual-momentum.md) | momentum-cs | new | Ludlow & Hanly (2018), Engineered Portfolio | 2026-07-08 |
+| [Accelerating Dual Momentum](ideas/accelerating-dual-momentum.md) | momentum-cs | rejected | Ludlow & Hanly (2018), Engineered Portfolio | 2026-07-08 |
 | [Gold Autumn Effect (September/November seasonality)](ideas/gold-autumn-effect.md) | seasonality | validated | Baur (2013), Research in International Business and Finance 27(1) | 2026-07-10 |
 | [Stock-Bond Correlation Regime Allocation](ideas/stock-bond-correlation-regime.md) | regime | new | Brixton, Brooks, Hecht, Ilmanen, Maloney & McQuinn (2023), Financial Analysts Journal | 2026-07-10 |
 | [Financial Turbulence (Mahalanobis) Risk-Scaling Overlay](ideas/turbulence-scaled-exposure.md) | hedging-overlay | rejected | Kritzman & Li (2010), Financial Analysts Journal 66(5) | 2026-07-10 |

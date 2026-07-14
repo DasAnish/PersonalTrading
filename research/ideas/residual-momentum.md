@@ -2,7 +2,7 @@
 title: Residual (Idiosyncratic) Momentum
 source: "Blitz, D., Huij, J. & Martens, M. (2011), Journal of Empirical Finance 18(3), 506–521 — 'Residual Momentum'"
 mechanism: momentum-cs
-status: new
+status: validated
 date_added: 2026-07-08
 ---
 

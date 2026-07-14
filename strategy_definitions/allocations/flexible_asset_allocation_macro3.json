@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "FlexibleAssetAllocationStrategy",
+  "name": "Flexible Asset Allocation (macro 3)",
+  "description": "Multi-factor momentum strategy (Keller & van Putten, 2012). Ranks each asset on three factors: trailing return, realized volatility (low-vol favored), and average pairwise correlation to other assets (low-correlation favored). Combines rankings with configurable weights (default 1.0, 0.5, 0.5) and selects top N assets. Applies absolute-momentum gate: drops any selected asset with negative trailing return and redirects weight to safe asset (bonds). Equal-weights survivors.",
+  "parameters": {
+    "lookback_days": 84,
+    "top_n": 3,
+    "w_r": 1.0,
+    "w_v": 0.5,
+    "w_c": 0.5
+  },
+  "underlying": "universe:macro_3",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

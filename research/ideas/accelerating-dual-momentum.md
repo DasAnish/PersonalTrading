@@ -2,7 +2,7 @@
 title: Accelerating Dual Momentum
 source: "https://engineeredportfolio.com/2018/05/02/accelerating-dual-momentum-investing/ — Ludlow & Hanly (2018), Engineered Portfolio"
 mechanism: momentum-cs
-status: new
+status: rejected
 date_added: 2026-07-08
 ---
 

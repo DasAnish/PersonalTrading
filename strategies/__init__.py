@@ -62,6 +62,8 @@ from .short_term_reversal import ShortTermReversalStrategy
 from .skewness_weighted import SkewnessWeightedStrategy
 from .meta_portfolio import MetaPortfolioStrategy
 from .dual_momentum import DualMomentumStrategy
+from .residual_momentum import ResidualMomentumStrategy
+from .accelerating_dual_momentum import AcceleratingDualMomentumStrategy
 from .adaptive_asset_allocation import AdaptiveAssetAllocationStrategy
 from .flexible_asset_allocation import FlexibleAssetAllocationStrategy
 from .trend_signal_rp import TrendSignalRPStrategy
@@ -199,6 +201,8 @@ __all__ = [
     "SkewnessWeightedStrategy",
     "MetaPortfolioStrategy",
     "DualMomentumStrategy",
+    "ResidualMomentumStrategy",
+    "AcceleratingDualMomentumStrategy",
     "AdaptiveAssetAllocationStrategy",
     "FlexibleAssetAllocationStrategy",
     "TrendSignalRPStrategy",

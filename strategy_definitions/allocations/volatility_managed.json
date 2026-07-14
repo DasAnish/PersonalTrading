@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "VolatilityManagedStrategy",
+  "name": "Volatility-Managed Portfolio",
+  "description": "Scales exposure to an equal-weight risky sleeve inversely with recent realized variance (Moreira & Muir 2017); exposure = clip(target_vol^2 / realized_var, 0, 1), remainder parked in VUTY. Long-only, no-leverage version — de-risks in high-vol months. Distinct from the constant-vol-target overlay (which scales as 1/vol toward a fixed target).",
+  "parameters": {
+    "lookback_days": 63,
+    "target_vol": 0.10,
+    "safe_symbol": "VUTY"
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

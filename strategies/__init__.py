@@ -93,6 +93,7 @@ from .downside_beta_tilt import DownsideBetaTiltStrategy
 from .low_ivol_tilt import LowIVolTiltStrategy
 from .low_max_tilt import LowMaxTiltStrategy
 from .low_correlation_tilt import LowCorrelationTiltStrategy
+from .volatility_managed import VolatilityManagedStrategy
 from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
 from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
@@ -246,6 +247,7 @@ __all__ = [
     "LowIVolTiltStrategy",
     "LowMaxTiltStrategy",
     "LowCorrelationTiltStrategy",
+    "VolatilityManagedStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

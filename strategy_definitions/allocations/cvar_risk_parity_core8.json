@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "CVaRRiskParityStrategy",
+  "name": "CVaR Risk Parity (core 8)",
+  "description": "Allocates so each asset contributes equally to portfolio Conditional Value-at-Risk, via the historical component-CVaR decomposition (Boudt, Peterson & Croux 2008). Budgets tail risk equally across assets. Distinct from MinimumCVaR (minimizes total), RiskParity (volatility contributions) and DownsideRiskParity (semicovariance). Long-only, weights sum to 1.",
+  "parameters": {
+    "lookback_days": 252,
+    "alpha": 0.95
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:diversification"
+  ]
+}

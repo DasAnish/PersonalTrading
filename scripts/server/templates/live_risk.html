@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Risk</title>
     <link rel="stylesheet" href="{{ url_for('routes.static', filename='shared.css') }}">
+    <style>
+        /* Page-specific: Live Risk is the real monthly decision surface —
+           drift/breaches should read first and fastest, everything else recedes. */
+        .hint { font-size: 0.85rem; }
+
+        .decision-line {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin: 4px 0 14px;
+        }
+        .decision-line .status-dot {
+            width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+            background: var(--ink-faint);
+        }
+        .decision-line.ok .status-dot { background: var(--good); }
+        .decision-line.warn .status-dot { background: var(--bad); }
+        .decision-line strong { font-size: 0.98rem; }
+
+        /* Drift rows: magnitude + direction, tokens only — no rainbow. */
+        .drift-cell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+        .drift-bar-track {
+            width: 64px; height: 6px; border-radius: 999px; background: var(--line);
+            position: relative; overflow: hidden; flex-shrink: 0;
+        }
+        .drift-bar-fill {
+            position: absolute; top: 0; bottom: 0; background: var(--ink-faint); border-radius: 999px;
+        }
+        tr.flagged .drift-bar-fill { background: var(--bad); }
+        .drift-value { font-variant-numeric: tabular-nums; min-width: 4.5ch; text-align: right; }
+        tr.flagged .drift-value { color: var(--bad); font-weight: 700; }
+
+        .toolbar.tight { margin: 12px 0; }
+    </style>
 </head>
 <body>
     <header class="topbar">
@@ -18,7 +50,7 @@
         <span class="readonly-tag">read-only — orders entered manually in IB</span>
     </header>
 
-    <main class="page">
+    <main class="page reveal-page">
         <h1 class="page-title">Live Risk &amp; Rebalance</h1>
         <p class="page-intro">Your actual IB holdings versus strategy targets: risk metrics, drift, and the paper trail for your monthly manual rebalance.</p>
 
@@ -40,9 +72,10 @@
         <div id="banner"></div>
         <div id="regBanner"></div>
         <p class="muted" id="asOf"></p>
+        <div class="decision-line" id="decisionLine"></div>
 
-        <div class="toolbar" id="scopeSelector" style="margin: 16px 0;">
-            <span class="muted" style="font-size: 0.85rem;">View:</span>
+        <div class="toolbar tight" id="scopeSelector">
+            <span class="muted hint">View:</span>
         </div>
 
         <!-- Section A: Current Holdings -->
@@ -70,7 +103,7 @@
             <button class="btn primary" onclick="saveBlend()">Save blend</button>
             <span id="blendMsg" class="muted"></span>
         </div>
-        <div id="blendTarget" class="muted" style="font-size: 0.85rem; margin-top: 8px;"></div>
+        <div id="blendTarget" class="muted hint" style="margin-top: 8px;"></div>
 
         <h3 class="subsection">Target Allocation</h3>
         <div class="toolbar">
@@ -228,10 +261,32 @@
             }
             const driftHdr = data.target_source === 'blend' ? ' (vs preferred blend)'
                 : (data.target_source ? ` (vs ${data.target_source})` : '');
+            const maxAbsDrift = drift.length ? Math.max(...drift.map(d => Math.abs(d.drift)), 0.05) : 0.05;
             document.getElementById('drift').innerHTML = drift.length ? `
                 <table class="data-table"><thead><tr><th>Symbol</th><th>Current</th><th>Target</th><th>Drift</th></tr></thead>
-                <tbody>${drift.map(d => `<tr class="${d.flagged ? 'flagged' : ''}"><td>${d.symbol}</td><td>${pct(d.current_weight)}</td><td>${pct(d.target_weight)}</td><td>${pct(d.drift)}</td></tr>`).join('')}</tbody></table>`
+                <tbody>${drift.slice().sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).map(d => {
+                    const w = Math.min(Math.abs(d.drift) / maxAbsDrift, 1) * 100;
+                    const dir = d.drift > 0 ? '+' : (d.drift < 0 ? '−' : '');
+                    const barLeft = d.drift < 0 ? (50 - w / 2) : 50;
+                    return `<tr class="${d.flagged ? 'flagged' : ''}"><td>${d.symbol}</td><td>${pct(d.current_weight)}</td><td>${pct(d.target_weight)}</td>
+                        <td><div class="drift-cell"><span class="drift-value">${dir}${pct(Math.abs(d.drift))}</span>
+                            <div class="drift-bar-track"><div class="drift-bar-fill" style="left:${barLeft}%; width:${w / 2}%;"></div></div>
+                        </div></td></tr>`;
+                }).join('')}</tbody></table>`
                 : `<p class="muted">${driftMsg}</p>`;
+
+            const flaggedCount = drift.filter(d => d.flagged).length;
+            const decisionLine = document.getElementById('decisionLine');
+            if (!drift.length) {
+                decisionLine.className = 'decision-line';
+                decisionLine.innerHTML = '';
+            } else if (flaggedCount > 0) {
+                decisionLine.className = 'decision-line warn';
+                decisionLine.innerHTML = `<span class="status-dot"></span><strong>${flaggedCount} position${flaggedCount === 1 ? '' : 's'} drifted beyond ±5%${driftHdr}</strong> — review Drift vs Target below before entering orders in IB.`;
+            } else {
+                decisionLine.className = 'decision-line ok';
+                decisionLine.innerHTML = `<span class="status-dot"></span><strong>Holdings are within ±5% of target${driftHdr}.</strong> No rebalance needed.`;
+            }
         }
 
         // ---- Preferred blend editor ----

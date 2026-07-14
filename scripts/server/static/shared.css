@@ -20,6 +20,15 @@
     --bad-bg: #fbe9e8;
     --info-ink: #1e40af;
     --info-bg: #eaf1fd;
+
+    /* Display type scale (fluid, clamp-based) — editorial weight for headings only;
+       body copy keeps the fast system stack. Tracks tighten as size grows. */
+    --display-tracking: -0.015em;
+    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Motion timing — used by .reveal below */
+    --reveal-duration: 0.6s;
+    --reveal-distance: 10px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,12 +58,12 @@ body {
 }
 
 .topbar .brand {
-    font-weight: 700;
+    font-weight: 750;
     font-size: 0.95rem;
     color: var(--ink);
     text-decoration: none;
     white-space: nowrap;
-    letter-spacing: 0.01em;
+    letter-spacing: var(--display-tracking);
 }
 
 .topbar .brand small {
@@ -96,12 +105,30 @@ body {
 }
 
 .page-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 8px 0 4px; }
-.page-title h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
+.page-title h1 {
+    font-size: clamp(1.45rem, 1.15rem + 1.1vw, 1.9rem);
+    font-weight: 750;
+    letter-spacing: var(--display-tracking);
+    line-height: 1.15;
+}
 .page-intro { color: var(--ink-soft); font-size: 0.92rem; max-width: 72ch; margin-bottom: 16px; }
 .page-intro a { color: var(--accent); }
 
-h2.section { font-size: 1.08rem; font-weight: 700; margin: 36px 0 4px; display: flex; align-items: center; gap: 8px; }
-h3.subsection { font-size: 0.95rem; font-weight: 650; margin: 20px 0 4px; }
+h2.section {
+    font-size: clamp(1.08rem, 1rem + 0.35vw, 1.22rem);
+    font-weight: 700;
+    letter-spacing: var(--display-tracking);
+    margin: 36px 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+h3.subsection {
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    margin: 20px 0 4px;
+}
 .section-hint { color: var(--ink-soft); font-size: 0.85rem; margin: 0 0 10px; max-width: 78ch; }
 
 .muted { color: var(--ink-soft); }
@@ -249,10 +276,17 @@ label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
 }
 
 /* ---- Tables ---- */
-.data-table { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 0.88rem; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+/* No overflow:hidden here — it would clip the sticky header. Corners are kept
+   rounded via border-radius on the table; a rare 1px background poke past the
+   radius is not worth breaking sticky. */
+.data-table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 8px 0 4px; font-size: 0.88rem; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .data-table th, .data-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); }
 .data-table th:first-child, .data-table td:first-child { text-align: left; }
+/* Header sticks just below the 52px topbar as the table scrolls past. */
 .data-table thead th {
+    position: sticky;
+    top: 52px;
+    z-index: 5;
     background: #f4f5fa;
     color: var(--ink-soft);
     font-size: 0.78rem;
@@ -260,6 +294,7 @@ label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
     text-transform: uppercase;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--line-strong);
+    box-shadow: 0 1px 0 var(--line-strong);
 }
 .data-table tbody tr:last-child td { border-bottom: none; }
 .data-table tbody tr:hover { background: #f7f8fc; }
@@ -340,4 +375,37 @@ code { background: #eef0f4; padding: 1px 5px; border-radius: 4px; font-size: 0.8
 @media (max-width: 768px) {
     .topbar { gap: 10px; overflow-x: auto; }
     .topbar .brand small, .readonly-tag { display: none; }
+}
+
+/* ---- Page-load entrance motion ----
+   One orchestrated reveal on load. Opacity + translateY only (never layout
+   props). Opt in per element with `.reveal`, or stagger a whole page's direct
+   children with `.reveal-page` on the .page element. Fully disabled under
+   prefers-reduced-motion. Timing vars live in :root (--reveal-duration/distance,
+   --ease-out-quint). */
+@keyframes reveal-in {
+    from { opacity: 0; transform: translateY(var(--reveal-distance)); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal,
+.reveal-page > * {
+    animation: reveal-in var(--reveal-duration) var(--ease-out-quint) both;
+    animation-delay: var(--reveal-delay, 0s);
+}
+
+/* Gentle stagger for the first several children; later rows share the tail
+   delay so a long table never waits noticeably. */
+.reveal-page > *:nth-child(1) { --reveal-delay: 0s; }
+.reveal-page > *:nth-child(2) { --reveal-delay: 0.05s; }
+.reveal-page > *:nth-child(3) { --reveal-delay: 0.10s; }
+.reveal-page > *:nth-child(4) { --reveal-delay: 0.15s; }
+.reveal-page > *:nth-child(5) { --reveal-delay: 0.20s; }
+.reveal-page > *:nth-child(n+6) { --reveal-delay: 0.25s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .reveal-page > * {
+        animation: none;
+    }
 }

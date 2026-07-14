@@ -5,11 +5,27 @@ Commentary on the research-scan → build-strategies loop run on 2026-07-14
 compare results against the pre-registered hypotheses; the hypotheses
 themselves (in `research/ideas/*.md`) were frozen before each backtest.
 
+> **CORRECTION (post-run, after the nightly re-backtest).** The nightly
+> full-universe run exposed a read-only-numpy-view bug in
+> `FlexibleAssetAllocationStrategy` (`corr = returns.corr().values` mutated in
+> place): at some rebalances it silently fell back to equal weight, which
+> **inflated every FAA result**. After the fix (commit on 2026-07-14), **no FAA
+> variant passes** — the best is `flexible_asset_allocation_theme_defensive_volheavy`
+> at Sharpe 1.75 (WARN); the previously-reported flagship
+> `flexible_asset_allocation_theme_defensive_126d` "2.76" is **now 1.21 (FAIL)**.
+> The sections below have been corrected. The true library leaders are the
+> risk-parity / regime classes (which are bug-free), not FAA. Treat this as the
+> headline lesson of the run: a spectacular backtest was a bug artifact, and only
+> a second, independent full re-run caught it.
+
 ## 1. Scope
 
 - **88 new strategy definitions** added across 27 loop iterations.
-- **43 PASS · 19 WARN · 26 FAIL** (verdicts read directly from
-  `results/strategies/<key>/validation.json`, never from a builder's report).
+- Verdicts read directly from `results/strategies/<key>/validation.json`, never
+  from a builder's report. The pre-correction tally was 43 PASS / 19 WARN /
+  26 FAIL; **after the FAA bug fix, ~14 former FAA PASS/WARN entries drop, so the
+  corrected tally is roughly 29 PASS / 21 WARN / 38 FAIL** (re-run the SPA/battery
+  for the exact live count).
 - Library grew from ~300 to **343** definitions.
 - ~20 genuinely new **mechanisms** (new Python classes), the rest are
   universe/parameter variants of those.
@@ -36,7 +52,9 @@ themselves (in `research/ideas/*.md`) were frozen before each backtest.
 
 **Momentum & mean-reversion**
 - `flexible_asset_allocation` — Keller & van Putten (2012) generalized momentum.
-  On the defensive theme it is the **single best strategy of the run: 2.76**.
+  **Corrected:** after the read-only bug fix no FAA variant passes; best is
+  `theme_defensive_volheavy` at 1.75 (WARN). The mechanism is marginal on this
+  universe, not the flagship the buggy run suggested.
 - `short_term_reversal` — Jegadeesh (1990) 1-month reversal. 1.46.
 - `residual_momentum` — Blitz/Huij/Martens (2011). 1.27.
 - `national_market_mean_reversion` — Balvers/Wu/Gilliland (2000). 1.31.
@@ -52,13 +70,13 @@ themselves (in `research/ideas/*.md`) were frozen before each backtest.
 
 ## 3. What worked, what didn't — the empirical pattern
 
-1. **Universe composition matters far more than universe size.** Narrow
-   single-sleeve groups (`em_equity`, `theme_real_assets`, `commodity`,
-   `macro_3`) consistently FAILED validation. But small *diversified* groups win:
-   FAA on the 4-asset `theme_defensive` (world equity + gold + 2 bonds) scored the
-   run's best Sharpe (2.76) precisely because its low-vol/low-correlation ranking
-   thrives on a mixed-class basket. This was the key lesson from the user's
-   "use a different universe" steer.
+1. **Universe composition matters more than universe size.** Narrow single-sleeve
+   groups (`em_equity`, `theme_real_assets`, `commodity`, `macro_3`) consistently
+   FAILED validation, while broad or mixed-class groups did better. The original
+   write-up leaned on FAA-on-`theme_defensive` (2.76) as the proof point; that
+   number was a bug artifact, so the evidence is weaker than first claimed —
+   composition still clearly matters (the risk-parity family all peak on the full,
+   mixed universe), but the dramatic FAA figure should be ignored.
 
 2. **Downside/tail-risk optimizers want breadth.** `minimum_cvar` went 1.17
    (core_8) → **1.60** (full universe); `minimum_semivariance` went WARN → PASS on
@@ -83,12 +101,21 @@ themselves (in `research/ideas/*.md`) were frozen before each backtest.
 
 ## 4. Standouts and honest caveats
 
-**Standouts (high Sharpe + shallow drawdown + clean DSR):**
-`flexible_asset_allocation_theme_defensive_126d` (2.76 / -2.0% / DSR 0.99),
+**Standouts (corrected — high Sharpe + shallow drawdown + clean DSR, FAA excluded):**
+`stock_bond_correlation_regime` (1.82 / -4.6% / DSR 0.99),
 `cvar_risk_parity` (1.77 / -2.4% / 0.998), `inverse_volatility` (1.72 / 0.997),
-`min_var_shrinkage` (1.67 / 0.997), `stock_bond_correlation_regime` (1.82 / 0.99).
+`min_var_shrinkage` (1.67 / 0.997), `minimum_cvar_full` (1.60 / 0.95),
+`downside_risk_parity` (1.56 / 0.99). These are the true leaders; all are
+risk-parity / regime classes that do not use the buggy FAA code path.
 
 **Caveats — read before trusting any of these:**
+
+- **A headline result was a bug (the single most important caveat).** The
+  original "best strategy, Sharpe 2.76" was an artifact of a silent equal-weight
+  fallback in FAA. It survived the entire per-strategy DSR/PBO/k-fold battery and
+  was only caught by an independent full re-backtest (the nightly). Assume other
+  latent bugs of this kind may exist in the haiku-built classes; a green
+  validation verdict is not proof the code is correct.
 
 - **The library-wide SPA is underpowered.** `results/spa_analysis.json` reports
   `n_obs = 12` — the multiple-testing test that is meant to be the go/no-go has

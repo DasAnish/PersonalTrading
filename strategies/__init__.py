@@ -76,6 +76,7 @@ from .turn_of_month_seasonality import TurnOfMonthSeasonalityStrategy
 from .cross_asset_carry import CarryTiltStrategy
 from .gold_safe_haven_overlay import GoldSafeHavenOverlayStrategy
 from .bond_duration_hedge_overlay import BondDurationHedgeOverlayStrategy
+from .dynamic_crisis_hedge_overlay import DynamicCrisisHedgeOverlayStrategy
 from .low_beta_defensive_tilt import LowBetaTiltStrategy
 from .quality_weighted_stability import QualityWeightedStabilityStrategy
 from .presidential_election_cycle import PresidentialCycleSeasonalityStrategy
@@ -215,6 +216,7 @@ __all__ = [
     "CarryTiltStrategy",
     "GoldSafeHavenOverlayStrategy",
     "BondDurationHedgeOverlayStrategy",
+    "DynamicCrisisHedgeOverlayStrategy",
     "LowBetaTiltStrategy",
     "QualityWeightedStabilityStrategy",
     "PresidentialCycleSeasonalityStrategy",

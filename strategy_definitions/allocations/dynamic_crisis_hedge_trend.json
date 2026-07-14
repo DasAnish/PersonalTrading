@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "DynamicCrisisHedgeOverlayStrategy",
+  "name": "Dynamic Crisis Hedge — Fast Trend Selection",
+  "description": "Crisis-triggered overlay that dynamically selects the best-fast-trend defensive asset (VUTY/SGLN/COMM) when equity anchor (VUSA/IWRD) falls below its SMA. Carves hedge budget from equity sleeve and allocates to selected defensive(s), inverse-vol weighted. Based on Harvey et al 2019: during crises, the working defensive asset varies; fast momentum identifies it in real time. Expected: overlay leaves calm-period returns unchanged and improves crisis-period performance; portfolio Sharpe +0.1–0.2, max-DD reduction 20–35%.",
+  "parameters": {
+    "sma_months": 10,
+    "hedge_frac": 0.3,
+    "trend_months": 2,
+    "top_k": 1,
+    "equity_anchor": "VUSA"
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:hedging-overlay"
+  ]
+}

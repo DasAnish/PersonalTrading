@@ -2,7 +2,7 @@
 title: Dynamic Crisis Hedge — fast trend selects the defensive asset
 source: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3383173
 mechanism: hedging-overlay
-status: new
+status: validated
 date_added: 2026-07-10
 ---
 

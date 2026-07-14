@@ -30,7 +30,7 @@ in `research/ideas/`.
 | [Stock-Bond Correlation Regime Allocation](ideas/stock-bond-correlation-regime.md) | regime | validated | Brixton, Brooks, Hecht, Ilmanen, Maloney & McQuinn (2023), Financial Analysts Journal | 2026-07-10 |
 | [Financial Turbulence (Mahalanobis) Risk-Scaling Overlay](ideas/turbulence-scaled-exposure.md) | hedging-overlay | rejected | Kritzman & Li (2010), Financial Analysts Journal 66(5) | 2026-07-10 |
 | [Carry Conditioned on Trend (carry-trend interaction)](ideas/carry-trend-filter.md) | carry | rejected | Baz, Granger, Harvey, Le Roux & Rattray (2015), SSRN 2695101 | 2026-07-10 |
-| [Dynamic Crisis Hedge — fast trend selects the defensive asset](ideas/dynamic-crisis-hedge-trend.md) | hedging-overlay | new | Harvey, Hoyle, Rattray, Sargaison, Taylor & Van Hemert (2019), JPM 45(5) | 2026-07-10 |
+| [Dynamic Crisis Hedge — fast trend selects the defensive asset](ideas/dynamic-crisis-hedge-trend.md) | hedging-overlay | validated | Harvey, Hoyle, Rattray, Sargaison, Taylor & Van Hemert (2019), JPM 45(5) | 2026-07-10 |
 | [Time-Series Momentum (vol-scaled trailing-return sign)](ideas/time-series-momentum.md) | trend | validated | Moskowitz, Ooi & Pedersen (2012), JFE 104(2) | 2026-07-13 |
 | [Network Risk Parity (graph-theory portfolio construction)](ideas/network-risk-parity.md) | diversification | validated | Journal of Asset Management (2023), s41260-023-00347-8 | 2026-07-13 |
 | [Commodity Return Seasonality (calendar-month cross-sectional tilt)](ideas/commodity-return-seasonality.md) | seasonality | validated | Return seasonality in commodity futures, IREF (2024) | 2026-07-13 |

@@ -88,6 +88,7 @@ from .low_volatility_tilt import LowVolatilityTiltStrategy
 from .time_series_momentum import TimeSeriesMomentumStrategy
 from .network_risk_parity import NetworkRiskParityStrategy
 from .seasonal_return_tilt import SeasonalReturnTiltStrategy
+from .omega_ratio import OmegaRatioStrategy
 from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
 from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
@@ -236,6 +237,7 @@ __all__ = [
     "NationalMarketMeanReversionStrategy",
     "StockBondCorrelationRegimeStrategy",
     "StrategyRiskParityMetaStrategy",
+    "OmegaRatioStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

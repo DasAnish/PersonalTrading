@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "OmegaRatioStrategy",
+  "name": "Maximum Omega Ratio Portfolio",
+  "description": "Maximizes the Omega ratio (Keating & Shadwick, 2002) — probability-weighted gains over losses relative to a threshold return — using the full return distribution rather than just mean/variance. Long-only, weights sum to 1, SLSQP optimizer over the daily return scenario matrix. A construction objective distinct from minimum-variance, minimum-CVaR and minimum-semivariance.",
+  "parameters": {
+    "lookback_days": 252,
+    "threshold": 0.0
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

@@ -44,3 +44,4 @@ in `research/ideas/`.
 | [Minimum Semivariance Portfolio](ideas/minimum-semivariance.md) | diversification | validated | Estrada (2008), Journal of Applied Finance 18(1) | 2026-07-14 |
 | [Minimum CVaR Portfolio](ideas/minimum-cvar.md) | diversification | validated | Rockafellar & Uryasev (2000), Journal of Risk 2(3) | 2026-07-14 |
 | [Hierarchical Equal Risk Contribution (HERC)](ideas/hierarchical-equal-risk-contribution.md) | diversification | rejected | Raffinot (2018), SSRN 3237540 | 2026-07-14 |
+| [Maximum Omega-Ratio Portfolio](ideas/omega-ratio-portfolio.md) | diversification | rejected | Keating & Shadwick (2002), Journal of Performance Measurement 6(3) | 2026-07-14 |

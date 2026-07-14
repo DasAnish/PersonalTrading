@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "DownsideBetaTiltStrategy",
+  "name": "Low Downside-Beta Defensive Tilt",
+  "description": "Long-only defensive tilt toward the lowest-downside-beta assets (Ang, Chen & Xing 2006). Downside beta is estimated only on down-market days (market proxy IWRD/VUSA below its trailing mean), isolating crash co-movement. Ranks ascending and equal-weights the bottom N. Distinct from the full-beta LowBetaTilt and total-vol LowVolatilityTilt.",
+  "parameters": {
+    "beta_lookback_days": 252,
+    "bottom_n": 5
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:vol-premium"
+  ]
+}

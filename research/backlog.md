@@ -45,3 +45,4 @@ in `research/ideas/`.
 | [Minimum CVaR Portfolio](ideas/minimum-cvar.md) | diversification | validated | Rockafellar & Uryasev (2000), Journal of Risk 2(3) | 2026-07-14 |
 | [Hierarchical Equal Risk Contribution (HERC)](ideas/hierarchical-equal-risk-contribution.md) | diversification | rejected | Raffinot (2018), SSRN 3237540 | 2026-07-14 |
 | [Maximum Omega-Ratio Portfolio](ideas/omega-ratio-portfolio.md) | diversification | rejected | Keating & Shadwick (2002), Journal of Performance Measurement 6(3) | 2026-07-14 |
+| [Low Downside-Beta Defensive Tilt](ideas/downside-beta-tilt.md) | vol-premium | validated | Ang, Chen & Xing (2006), Review of Financial Studies 19(4) | 2026-07-14 |

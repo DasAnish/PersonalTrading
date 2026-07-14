@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "ResidualMomentumStrategy",
+  "name": "Residual Momentum (9m formation)",
+  "description": "Blitz, Huij & Martens (2011). Ranks assets by beta-adjusted residual return (market-model residuals from regressing on IWRD benchmark) rather than total return. Monthly rebalance. Selects top 40% by residual momentum score (mean residual / std, information-ratio scaled), equal-weighted among held. Long-only. Reduces momentum volatility and drawdowns by isolating behavioural underreaction while neutralising incidental factor exposure. Variant: {'formation_window': 189}.",
+  "parameters": {
+    "residual_window": 504,
+    "formation_window": 189,
+    "skip_days": 21,
+    "top_frac": 0.4,
+    "market_benchmark": "IWRD"
+  },
+  "underlying": "universe:equity",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

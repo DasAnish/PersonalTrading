@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "MinimumCDaRStrategy",
+  "name": "Minimum CDaR Portfolio",
+  "description": "Minimizes Conditional Drawdown-at-Risk (Chekhlov, Uryasev & Zabarankin 2005) — the average of the worst 5% of drawdowns along the portfolio's cumulative return path. A path-dependent risk objective distinct from minimum-variance, minimum-CVaR and minimum-semivariance. Long-only, weights sum to 1, SLSQP optimizer.",
+  "parameters": {
+    "lookback_days": 252,
+    "alpha": 0.95
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

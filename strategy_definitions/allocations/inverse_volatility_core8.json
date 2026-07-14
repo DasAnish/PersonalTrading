@@ -1,0 +1,13 @@
+{
+  "type": "allocation",
+  "class": "InverseVolatilityStrategy",
+  "name": "Inverse-Volatility Portfolio (core 8)",
+  "description": "Weights each asset proportionally to the inverse of its trailing volatility (Leote de Carvalho, Lu & Moulin 2012) \u00e2\u20ac\u201d the simplest risk-based allocation, no covariance or optimization. A robust naive-diversification baseline distinct from the full equal-risk-contribution RiskParityStrategy (which uses the covariance matrix). Long-only, weights sum to 1.",
+  "parameters": {
+    "lookback_days": 126
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:diversification"
+  ]
+}

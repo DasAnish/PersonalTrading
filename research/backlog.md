@@ -55,3 +55,4 @@ in `research/ideas/`.
 | [CVaR Risk Parity (equal component-CVaR contribution)](ideas/cvar-risk-parity.md) | diversification | validated | Boudt, Peterson & Croux (2008), Journal of Risk 11(2) | 2026-07-14 |
 | [Risk-Adjusted (Sharpe-Ratio) Momentum](ideas/sharpe-momentum.md) | momentum-cs | rejected | Rachev, Jasic, Stoyanov & Fabozzi (2007), Journal of Banking & Finance 31(8) | 2026-07-14 |
 | [Shrinkage Minimum-Variance Portfolio](ideas/min-var-shrinkage.md) | diversification | validated | Ledoit & Wolf (2004), Journal of Portfolio Management 30(4) | 2026-07-14 |
+| [Inverse-Volatility (Naive Risk Parity) Portfolio](ideas/inverse-volatility.md) | diversification | validated | Leote de Carvalho, Lu & Moulin (2012), Financial Analysts Journal 68(3) | 2026-07-14 |

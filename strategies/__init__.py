@@ -99,6 +99,7 @@ from .downside_risk_parity import DownsideRiskParityStrategy
 from .cvar_risk_parity import CVaRRiskParityStrategy
 from .sharpe_momentum import SharpeMomentumStrategy
 from .min_var_shrinkage import MinVarShrinkageStrategy
+from .inverse_volatility import InverseVolatilityStrategy
 from .defensive_asset_allocation import DefensiveAssetAllocationStrategy
 from .vigilant_asset_allocation import VigilantAssetAllocationStrategy
 from .gold_silver_ratio import GoldSilverRatioStrategy
@@ -258,6 +259,7 @@ __all__ = [
     "CVaRRiskParityStrategy",
     "SharpeMomentumStrategy",
     "MinVarShrinkageStrategy",
+    "InverseVolatilityStrategy",
     # Overlay strategies
     "VolatilityTargetStrategy",
     "ConstraintStrategy",

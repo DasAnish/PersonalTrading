@@ -51,3 +51,4 @@ in `research/ideas/`.
 | [Betting Against Correlation (Low Average-Correlation Tilt)](ideas/betting-against-correlation.md) | vol-premium | rejected | Asness, Frazzini, Gormsen & Pedersen (2020), Journal of Financial Economics 135(3) | 2026-07-14 |
 | [Volatility-Managed Portfolio](ideas/volatility-managed-portfolio.md) | vol-premium | validated | Moreira & Muir (2017), Journal of Finance 72(4) | 2026-07-14 |
 | [Minimum CDaR (Conditional Drawdown-at-Risk) Portfolio](ideas/minimum-cdar.md) | diversification | validated | Chekhlov, Uryasev & Zabarankin (2005), Int. J. Theoretical and Applied Finance 8(1) | 2026-07-14 |
+| [Downside Risk Parity (equal downside-risk contribution)](ideas/downside-risk-parity.md) | diversification | validated | Roncalli (2013), Introduction to Risk Parity and Budgeting, Chapman & Hall/CRC | 2026-07-14 |

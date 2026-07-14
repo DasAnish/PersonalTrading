@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "DownsideRiskParityStrategy",
+  "name": "Downside Risk Parity",
+  "description": "Equalizes each asset's contribution to portfolio downside risk using the semicovariance matrix (below-target return co-movements) in place of full covariance (Roncalli 2013 risk-budgeting with alternative risk measures). Distinct from full-vol RiskParity (equalizes total-vol contributions) and MinimumSemivariance (minimizes downside variance). Long-only, weights sum to 1.",
+  "parameters": {
+    "lookback_days": 252,
+    "target_return": 0.0
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

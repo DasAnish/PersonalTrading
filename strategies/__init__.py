@@ -43,6 +43,7 @@ from .core import (
 
 # Concrete allocation strategies
 from .hrp import HRPStrategy
+from .herc import HERCStrategy
 from .equal_weight import EqualWeightStrategy
 from .trend_following import TrendFollowingStrategy
 from .minimum_variance import MinimumVarianceStrategy
@@ -179,6 +180,7 @@ __all__ = [
     "prune_missing_assets",
     # Allocation strategies
     "HRPStrategy",
+    "HERCStrategy",
     "EqualWeightStrategy",
     "TrendFollowingStrategy",
     "MinimumVarianceStrategy",

@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "MinimumSemivarianceStrategy",
+  "name": "Minimum Semivariance Portfolio (full universe)",
+  "description": "Minimum Semivariance optimization: minimizes downside risk (deviations below target return) using semicovariance matrix. Focuses on tail protection rather than total volatility. Long-only portfolio with weights summing to 1. Full universe variant.",
+  "parameters": {
+    "lookback_days": 252,
+    "target_return": 0.0,
+    "min_weight": null,
+    "max_weight": null
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:diversification"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "HERCStrategy",
+  "name": "Hierarchical Equal Risk Contribution",
+  "description": "Hierarchical Equal Risk Contribution (HERC) allocation across core 8-asset universe using ward linkage clustering. Allocates risk equally between dendrogram branches, providing more balanced risk contribution across the hierarchical structure compared to HRP's recursive bisection.",
+  "parameters": {
+    "lookback_days": 252,
+    "linkage_method": "ward"
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:diversification"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Downside-Risk Suite",
+  "description": "Equal-weight blend of the four downside/tail-risk-oriented sleeves validated in the 2026-07-14 loop: minimum-CVaR (full universe), minimum-semivariance (full universe), the dynamic crisis-hedge overlay, and the treasury flight-to-quality overlay. Targets shallow drawdowns via complementary tail-risk constructions and crisis hedges.",
+  "parameters": {},
+  "underlying": [
+    "allocations/minimum_cvar_full",
+    "allocations/minimum_semivariance_full",
+    "allocations/dynamic_crisis_hedge_trend",
+    "allocations/treasury_flight_to_quality_hedge"
+  ],
+  "tags": ["ensemble", "defensive", "mech:meta"]
+}

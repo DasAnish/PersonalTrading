@@ -1,0 +1,14 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Reversal + Regime Blend",
+  "description": "Equal-weight blend of four low-momentum-correlation sleeves: short-term (1-month) reversal, national-market mean reversion, gold-silver ratio mean reversion, and the stock-bond correlation regime switch. Combines contrarian mean-reversion signals with a macro regime overlay for diversification against the library's momentum-heavy roster.",
+  "parameters": {},
+  "underlying": [
+    "allocations/short_term_reversal",
+    "allocations/national_market_mean_reversion",
+    "allocations/gold_silver_ratio_mean_reversion",
+    "allocations/stock_bond_correlation_regime"
+  ],
+  "tags": ["ensemble", "mean-reversion", "mech:meta"]
+}

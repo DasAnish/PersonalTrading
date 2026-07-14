@@ -1,0 +1,15 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: New Sleeves Diversified",
+  "description": "Equal-weight blend of five newly-validated, mechanistically-distinct sleeves from the 2026-07-14 build loop: FAA on the defensive theme (generalized momentum), stock-bond correlation regime, short-term reversal, minimum-CVaR (full universe), and residual momentum. Chosen for low cross-mechanism correlation (momentum + regime + mean-reversion + tail-risk construction).",
+  "parameters": {},
+  "underlying": [
+    "allocations/flexible_asset_allocation_theme_defensive",
+    "allocations/stock_bond_correlation_regime",
+    "allocations/short_term_reversal",
+    "allocations/minimum_cvar_full",
+    "allocations/residual_momentum"
+  ],
+  "tags": ["ensemble", "diversified", "mech:meta"]
+}

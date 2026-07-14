@@ -1,0 +1,14 @@
+{
+  "type": "allocation",
+  "class": "ShortTermReversalStrategy",
+  "name": "Short-Term Reversal (bottom 2)",
+  "description": "Short-horizon mean-reversion across equity ETFs. Ranks assets by trailing ~21-trading-day (1 month) total return and holds the bottom 2 worst performers equal-weighted, exploiting price reversal on short horizons. More concentrated than base variant. Jegadeesh (1990) 1-month cross-sectional reversal anomaly.",
+  "parameters": {
+    "lookback_days": 21,
+    "bottom_n": 2
+  },
+  "underlying": "universe:equity",
+  "tags": [
+    "mech:mean-reversion"
+  ]
+}

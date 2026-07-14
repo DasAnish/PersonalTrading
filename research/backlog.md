@@ -41,3 +41,5 @@ in `research/ideas/`.
 | [Gold–Silver Ratio Mean Reversion](ideas/gold-silver-ratio-mean-reversion.md) | mean-reversion | validated | Escribano & Granger (1998), Journal of Forecasting 17(2) | 2026-07-14 |
 | [Vigilant Asset Allocation (VAA)](ideas/vigilant-asset-allocation.md) | regime | rejected | Keller & Keuning (2017), SSRN 3002624 | 2026-07-14 |
 | [Short-Term (1-Month) Reversal](ideas/short-term-reversal.md) | mean-reversion | validated | Jegadeesh (1990), Journal of Finance 45(3) | 2026-07-14 |
+| [Minimum Semivariance Portfolio](ideas/minimum-semivariance.md) | diversification | validated | Estrada (2008), Journal of Applied Finance 18(1) | 2026-07-14 |
+| [Minimum CVaR Portfolio](ideas/minimum-cvar.md) | diversification | validated | Rockafellar & Uryasev (2000), Journal of Risk 2(3) | 2026-07-14 |

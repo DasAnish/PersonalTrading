@@ -46,6 +46,8 @@ from .hrp import HRPStrategy
 from .equal_weight import EqualWeightStrategy
 from .trend_following import TrendFollowingStrategy
 from .minimum_variance import MinimumVarianceStrategy
+from .minimum_semivariance import MinimumSemivarianceStrategy
+from .minimum_cvar import MinimumCVaRStrategy
 from .maximum_diversification import MaximumDiversificationStrategy
 from .risk_parity import RiskParityStrategy
 from .momentum import MomentumTopNStrategy
@@ -180,6 +182,8 @@ __all__ = [
     "EqualWeightStrategy",
     "TrendFollowingStrategy",
     "MinimumVarianceStrategy",
+    "MinimumSemivarianceStrategy",
+    "MinimumCVaRStrategy",
     "MaximumDiversificationStrategy",
     "RiskParityStrategy",
     "MomentumTopNStrategy",

@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "SharpeMomentumStrategy",
+  "name": "Risk-Adjusted (Sharpe-Ratio) Momentum",
+  "description": "Cross-sectional momentum ranking assets by trailing Sharpe ratio (mean/std of returns) rather than raw past return (Rachev, Jasic, Stoyanov & Fabozzi 2007). Holds the top N equal-weighted with an absolute-momentum gate to VUTY when trailing Sharpe is non-positive. Distinct from raw-return MomentumTopN and vol-scaled-sign TimeSeriesMomentum.",
+  "parameters": {
+    "lookback_days": 126,
+    "top_n": 3,
+    "safe_symbol": "VUTY"
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:momentum-cs"
+  ]
+}

@@ -53,3 +53,4 @@ in `research/ideas/`.
 | [Minimum CDaR (Conditional Drawdown-at-Risk) Portfolio](ideas/minimum-cdar.md) | diversification | validated | Chekhlov, Uryasev & Zabarankin (2005), Int. J. Theoretical and Applied Finance 8(1) | 2026-07-14 |
 | [Downside Risk Parity (equal downside-risk contribution)](ideas/downside-risk-parity.md) | diversification | validated | Roncalli (2013), Introduction to Risk Parity and Budgeting, Chapman & Hall/CRC | 2026-07-14 |
 | [CVaR Risk Parity (equal component-CVaR contribution)](ideas/cvar-risk-parity.md) | diversification | validated | Boudt, Peterson & Croux (2008), Journal of Risk 11(2) | 2026-07-14 |
+| [Risk-Adjusted (Sharpe-Ratio) Momentum](ideas/sharpe-momentum.md) | momentum-cs | rejected | Rachev, Jasic, Stoyanov & Fabozzi (2007), Journal of Banking & Finance 31(8) | 2026-07-14 |

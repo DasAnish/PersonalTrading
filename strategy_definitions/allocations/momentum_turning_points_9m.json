@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "MomentumTurningPointsStrategy",
+  "name": "Momentum Turning Points (slow 9m, core_8)",
+  "description": "Blended slow (252d) / fast (21d) time-series momentum per Garg-Goulding-Harvey-Mazzoleni (JFE 2023): full exposure in Bull, half in Correction/Rebound, zero in Bear; inverse-vol weighted, defensive fallback VUTY/SGLN. Parameter variant.",
+  "parameters": {
+    "slow_days": 189,
+    "fast_days": 21,
+    "vol_window_days": 63
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "research:momentum-turning-points",
+    "variant:lookback"
+  ]
+}

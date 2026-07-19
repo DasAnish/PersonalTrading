@@ -59,3 +59,4 @@ in `research/ideas/`.
 | [Strategy-Level (Factor) Momentum](ideas/strategy-factor-momentum.md) | meta | built | Ehsani & Linnainmaa (2022), Journal of Finance | 2026-07-19 |
 | [Absorption Ratio (PCA systemic-risk) regime de-risking](ideas/absorption-ratio-regime.md) | regime | built | Kritzman, Li, Page & Rigobon (2011), JPM 37(4) | 2026-07-19 |
 | [Momentum Turning Points (blended slow/fast TSM)](ideas/momentum-turning-points.md) | trend | validated | Garg, Goulding, Harvey & Mazzoleni (2023), JFE 149 | 2026-07-19 |
+| [Cross-Asset Time-Series Momentum](ideas/cross-asset-tsm.md) | trend | built | Pitkäjärvi, Suominen & Vaittinen (2020), JFE | 2026-07-19 |

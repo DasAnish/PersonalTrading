@@ -1,0 +1,15 @@
+{
+  "type": "allocation",
+  "class": "CrossAssetTSMStrategy",
+  "name": "Cross-Asset TSM (core_8)",
+  "description": "Cross-asset time-series momentum per Pitkajarvi-Suominen-Vaittinen (JFE 2020): equity exposure requires own trend plus bond-market confirmation; bond exposure follows own trend (halved when negative); inverse-vol weighted, defensive fallback VUTY/SGLN.",
+  "parameters": {
+    "lookback_days": 252,
+    "vol_window_days": 63
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "research:cross-asset-tsm"
+  ]
+}

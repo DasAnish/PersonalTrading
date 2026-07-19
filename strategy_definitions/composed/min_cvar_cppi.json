@@ -1,0 +1,25 @@
+{
+  "type": "composed",
+  "class": "CPPIStrategy",
+  "name": "Min CVaR core6 + CPPI (floor 85%, m=3)",
+  "description": "Black-Perold CPPI over the slate sleeve minimum_cvar_core6: ratcheting 85%-of-peak floor, m=3.",
+  "parameters": {
+    "floor_fraction": 0.85,
+    "multiplier": 3.0,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MinimumCVaRStrategy",
+    "parameters": {
+      "lookback_days": 252,
+      "alpha": 0.95
+    },
+    "underlying": "universe:core_6"
+  },
+  "tags": [
+    "mech:hedging-overlay",
+    "research:cppi-drawdown-floor",
+    "risk-managed"
+  ]
+}

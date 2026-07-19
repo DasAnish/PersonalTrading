@@ -1,0 +1,23 @@
+{
+  "type": "composed",
+  "class": "CPPIStrategy",
+  "name": "Risk Parity + CPPI (floor 90%, m=4)",
+  "description": "Tighter CPPI variant: 90%-of-peak floor, m=4, over risk parity core_8.",
+  "parameters": {
+    "floor_fraction": 0.9,
+    "multiplier": 4.0,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "RiskParityStrategy",
+    "parameters": {},
+    "underlying": "universe:core_8"
+  },
+  "tags": [
+    "mech:hedging-overlay",
+    "research:cppi-drawdown-floor",
+    "risk-managed",
+    "variant:params"
+  ]
+}

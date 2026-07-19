@@ -1,0 +1,20 @@
+{
+  "type": "allocation",
+  "class": "MTPNetworkStrategy",
+  "name": "MTP x Network (average, core_8)",
+  "description": "Signal-level combination: exposure = mean of MTP cycle exposure and network agreement. Combines Garg-Goulding-Harvey-Mazzoleni (JFE 2023) with Li-Ferreira (arXiv 2501.07135) at signal level rather than portfolio level.",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63,
+    "corr_threshold": 0.4,
+    "combine": "average"
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "signal-combination",
+    "research:momentum-turning-points",
+    "research:network-momentum-trend"
+  ]
+}

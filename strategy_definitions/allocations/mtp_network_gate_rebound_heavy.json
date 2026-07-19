@@ -1,0 +1,22 @@
+{
+  "type": "allocation",
+  "class": "MTPNetworkStrategy",
+  "name": "MTP x Network (gate, rebound-heavy, core_8)",
+  "description": "Gate combination with the rebound-heavy asymmetric cycle exposure (0.25/0.75) \u2014 best MTP config plus network confirmation. Combines Garg-Goulding-Harvey-Mazzoleni (JFE 2023) with Li-Ferreira (arXiv 2501.07135) at signal level rather than portfolio level.",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63,
+    "corr_threshold": 0.4,
+    "combine": "gate",
+    "correction_exposure": 0.25,
+    "rebound_exposure": 0.75
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "signal-combination",
+    "research:momentum-turning-points",
+    "research:network-momentum-trend"
+  ]
+}

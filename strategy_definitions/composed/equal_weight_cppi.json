@@ -1,0 +1,22 @@
+{
+  "type": "composed",
+  "class": "CPPIStrategy",
+  "name": "Equal Weight + CPPI (floor 85%, m=3)",
+  "description": "Black-Perold (1992) CPPI overlay: exposure = 3 x cushion above a ratcheting 85%-of-peak floor; mechanically caps drawdown near 15% at monthly cadence.",
+  "parameters": {
+    "floor_fraction": 0.85,
+    "multiplier": 3.0,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "EqualWeightStrategy",
+    "parameters": {},
+    "underlying": "universe:core_8"
+  },
+  "tags": [
+    "mech:hedging-overlay",
+    "research:cppi-drawdown-floor",
+    "risk-managed"
+  ]
+}

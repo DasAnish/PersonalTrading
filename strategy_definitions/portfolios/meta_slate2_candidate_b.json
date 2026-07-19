@@ -1,0 +1,26 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Slate 2 Candidate B (canary-gated MTP anchor)",
+  "description": "Slate-2 candidate variant B: canary-gated MTP rebound-heavy 35%, minimum CVaR core6 20%, stock-bond correlation regime light 15%, downside risk parity core6 20%, cash 10%. Replaces the separate DAA sleeve \u2014 its canary gate now lives inside the anchor signal stack.",
+  "parameters": {
+    "weights": [
+      0.35,
+      0.2,
+      0.15,
+      0.2
+    ],
+    "cash_weight": 0.1
+  },
+  "underlying": [
+    "allocations/canary_gated_mtp_rebound_heavy",
+    "allocations/minimum_cvar_core6",
+    "allocations/stock_bond_correlation_regime_light",
+    "allocations/downside_risk_parity_core6"
+  ],
+  "tags": [
+    "ensemble",
+    "mech:meta",
+    "pm-slate-candidate"
+  ]
+}

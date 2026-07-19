@@ -1,0 +1,19 @@
+{
+  "type": "allocation",
+  "class": "HurstRegimeStrategy",
+  "name": "Hurst Regime Filter (core_8)",
+  "description": "Per-asset trend vs mean-reversion rule switching on the estimated Hurst exponent (Lo 1991 rescaled-range literature): H>0.55 trend rule, H<0.45 reversion rule, neutral band 0.5 exposure; inverse-vol weighted.",
+  "parameters": {
+    "lookback_days": 252,
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63,
+    "trend_threshold": 0.55,
+    "reversion_threshold": 0.45
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:regime",
+    "research:hurst-regime-filter"
+  ]
+}

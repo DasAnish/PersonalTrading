@@ -95,6 +95,7 @@ from .moving_average_distance import MovingAverageDistanceStrategy
 from .canary_gated_mtp import CanaryGatedMTPStrategy
 from .inflation_regime import InflationRegimeStrategy
 from .cppi import CPPIStrategy
+from .hurst_regime import HurstRegimeStrategy
 from .network_risk_parity import NetworkRiskParityStrategy
 from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 from .omega_ratio import OmegaRatioStrategy
@@ -260,6 +261,7 @@ __all__ = [
     "CanaryGatedMTPStrategy",
     "InflationRegimeStrategy",
     "CPPIStrategy",
+    "HurstRegimeStrategy",
     "NetworkRiskParityStrategy",
     "SeasonalReturnTiltStrategy",
     "DefensiveAssetAllocationStrategy",

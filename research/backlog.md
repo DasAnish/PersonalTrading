@@ -65,3 +65,4 @@ in `research/ideas/`.
 | [Moving Average Distance (MAD) tilt](ideas/moving-average-distance.md) | momentum-cs | rejected | Avramov, Kaplanski & Subrahmanyam (2021), RFE 39(2) | 2026-07-19 |
 | [Inflation-Regime Quadrant Allocation](ideas/inflation-regime-quadrants.md) | regime | built | Baltussen, Swinkels, van Vliet & van Vliet (2023), FAJ 79(3) | 2026-07-20 |
 | [CPPI Drawdown-Floor Overlay](ideas/cppi-drawdown-floor.md) | hedging-overlay | validated | Black & Perold (1992), JEDC 16(3-4) | 2026-07-20 |
+| [Hurst-Exponent Regime Filter](ideas/hurst-regime-filter.md) | regime | built | Lo (1991), Econometrica 59(5) | 2026-07-20 |

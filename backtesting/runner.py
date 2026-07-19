@@ -203,6 +203,18 @@ def run_single_backtest(
         all_transactions.extend(transactions)
         portfolio_history.append(engine._record_state(portfolio, current_prices))
 
+    # Mark-to-market at the latest available price date, even if it falls
+    # between rebalances (e.g. mid-month). Repricing only — no trades — so
+    # performance/data_end reflect the freshest cached prices instead of
+    # freezing at the last completed rebalance.
+    if portfolio_history and backtest_end in prices.index:
+        last_data_date = backtest_end
+        if last_data_date > portfolio_history[-1]["timestamp"]:
+            final_prices = prices.loc[last_data_date]
+            portfolio.timestamp = last_data_date
+            portfolio.prices = final_prices.to_dict()
+            portfolio_history.append(engine._record_state(portfolio, final_prices))
+
     # Assemble result DataFrames
     history_df = pd.DataFrame(portfolio_history)
     if not history_df.empty:

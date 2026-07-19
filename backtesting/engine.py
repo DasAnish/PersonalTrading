@@ -250,6 +250,17 @@ class BacktestEngine:
                 failed_rebalances.append(rebalance_date)
                 continue
 
+        # Mark-to-market at the latest available data date, even if it falls
+        # between rebalances (e.g. mid-month). Repricing only — no trades —
+        # so performance/data_end reflect the freshest cached prices instead
+        # of freezing at the last completed rebalance.
+        last_data_date = backtest_data.index[-1]
+        if portfolio_history and last_data_date > portfolio_history[-1]["timestamp"]:
+            final_prices = backtest_data.loc[last_data_date]
+            portfolio.timestamp = last_data_date
+            portfolio.prices = final_prices.to_dict()
+            portfolio_history.append(self._record_state(portfolio, final_prices))
+
         # Convert history to DataFrame
         history_df = pd.DataFrame(portfolio_history)
         history_df.set_index("timestamp", inplace=True)

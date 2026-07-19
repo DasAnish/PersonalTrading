@@ -96,6 +96,7 @@ from .canary_gated_mtp import CanaryGatedMTPStrategy
 from .inflation_regime import InflationRegimeStrategy
 from .cppi import CPPIStrategy
 from .hurst_regime import HurstRegimeStrategy
+from .momentum_crash_managed import MomentumCrashManagedStrategy
 from .network_risk_parity import NetworkRiskParityStrategy
 from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 from .omega_ratio import OmegaRatioStrategy
@@ -262,6 +263,7 @@ __all__ = [
     "InflationRegimeStrategy",
     "CPPIStrategy",
     "HurstRegimeStrategy",
+    "MomentumCrashManagedStrategy",
     "NetworkRiskParityStrategy",
     "SeasonalReturnTiltStrategy",
     "DefensiveAssetAllocationStrategy",

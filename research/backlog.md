@@ -66,3 +66,4 @@ in `research/ideas/`.
 | [Inflation-Regime Quadrant Allocation](ideas/inflation-regime-quadrants.md) | regime | built | Baltussen, Swinkels, van Vliet & van Vliet (2023), FAJ 79(3) | 2026-07-20 |
 | [CPPI Drawdown-Floor Overlay](ideas/cppi-drawdown-floor.md) | hedging-overlay | validated | Black & Perold (1992), JEDC 16(3-4) | 2026-07-20 |
 | [Hurst-Exponent Regime Filter](ideas/hurst-regime-filter.md) | regime | built | Lo (1991), Econometrica 59(5) | 2026-07-20 |
+| [Momentum Crash Management](ideas/momentum-crash-management.md) | momentum-cs | built | Daniel & Moskowitz (2016), JFE 122(2) | 2026-07-20 |

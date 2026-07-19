@@ -1,0 +1,19 @@
+{
+  "type": "allocation",
+  "class": "MomentumTurningPointsStrategy",
+  "name": "Momentum Turning Points (rebound-heavy, vw126, core_8)",
+  "description": "Asymmetric cycle exposure: Correction 0.25, Rebound 0.75 \u2014 leans into fast-signal recoveries per the paper's finding that fast signals add most value at rebounds. Based on Garg-Goulding-Harvey-Mazzoleni (JFE 2023). Combined best params: rebound-heavy exposure + 126d vol window.",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 126,
+    "correction_exposure": 0.25,
+    "rebound_exposure": 0.75
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "research:momentum-turning-points",
+    "variant:params"
+  ]
+}

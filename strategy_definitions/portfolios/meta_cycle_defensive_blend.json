@@ -1,0 +1,20 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Cycle + Defensive Blend",
+  "description": "Weighted blend pairing the cycle-aware momentum turning points sleeve (35%) with the DAA canary regime sleeve (35%) and minimum CVaR core6 (20%), plus a 10% cash reserve — mechanism-diverse candidate for a future PM slate.",
+  "parameters": {
+    "weights": [0.35, 0.35, 0.20],
+    "cash_weight": 0.10
+  },
+  "underlying": [
+    "allocations/momentum_turning_points",
+    "allocations/defensive_asset_allocation_canary",
+    "allocations/minimum_cvar_core6"
+  ],
+  "tags": [
+    "ensemble",
+    "mech:meta",
+    "pm-slate-candidate"
+  ]
+}

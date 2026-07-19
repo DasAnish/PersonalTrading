@@ -1,0 +1,22 @@
+{
+  "type": "composed",
+  "class": "TargetCVaRStrategy",
+  "name": "Risk Parity + CVaR Target (5% monthly, 95%)",
+  "description": "Risk parity on core_8 with tail-risk targeting per Rickenberg (SSRN 3444999): exposure scaled so realised per-month 95% CVaR hits 5%; cuts exposure on left-tail thickening rather than symmetric volatility.",
+  "parameters": {
+    "target_cvar": 0.05,
+    "alpha": 0.95,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "RiskParityStrategy",
+    "parameters": {},
+    "underlying": "universe:core_8"
+  },
+  "tags": [
+    "mech:hedging-overlay",
+    "research:tail-risk-targeting",
+    "risk-managed"
+  ]
+}

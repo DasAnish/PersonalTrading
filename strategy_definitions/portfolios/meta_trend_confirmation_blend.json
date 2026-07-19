@@ -1,0 +1,19 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Trend Confirmation Blend",
+  "description": "Weighted blend of the 2026-07-19 validated trend-confirmation family with a downside-risk anchor: momentum turning points 40%, network momentum 30%, downside risk parity core6 30%. Combines two spillover/cycle trend signals with a defensive risk-budgeting sleeve.",
+  "parameters": {
+    "weights": [0.40, 0.30, 0.30]
+  },
+  "underlying": [
+    "allocations/momentum_turning_points",
+    "allocations/network_momentum",
+    "allocations/downside_risk_parity_core6"
+  ],
+  "tags": [
+    "ensemble",
+    "mech:meta",
+    "trend-blend"
+  ]
+}

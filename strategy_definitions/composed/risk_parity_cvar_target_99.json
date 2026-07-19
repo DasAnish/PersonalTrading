@@ -1,0 +1,23 @@
+{
+  "type": "composed",
+  "class": "TargetCVaRStrategy",
+  "name": "Risk Parity + CVaR Target (3% monthly, 99%)",
+  "description": "Deeper-tail variant of risk_parity_cvar_target: 99% CVaR targeted at 3% per month; reacts only to extreme left-tail observations.",
+  "parameters": {
+    "target_cvar": 0.03,
+    "alpha": 0.99,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "RiskParityStrategy",
+    "parameters": {},
+    "underlying": "universe:core_8"
+  },
+  "tags": [
+    "mech:hedging-overlay",
+    "research:tail-risk-targeting",
+    "risk-managed",
+    "variant:params"
+  ]
+}

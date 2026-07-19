@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "MomentumTurningPointsStrategy",
+  "name": "Momentum Turning Points (theme_defensive)",
+  "description": "Momentum turning points on the diversified 4-asset theme_defensive group (IWRD, SGLN, AGGU, VUTY). Based on Garg-Goulding-Harvey-Mazzoleni (JFE 2023).",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63
+  },
+  "underlying": "universe:theme_defensive",
+  "tags": [
+    "mech:trend",
+    "research:momentum-turning-points",
+    "variant:universe"
+  ]
+}

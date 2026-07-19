@@ -1,0 +1,26 @@
+{
+  "type": "composed",
+  "class": "TargetCVaRStrategy",
+  "name": "Momentum Turning Points + CVaR Target (5% monthly, 95%)",
+  "description": "Best-in-class MTP sleeve wrapped in Rickenberg tail-risk targeting: exposure scaled so realised per-month 95% CVaR hits 5%.",
+  "parameters": {
+    "target_cvar": 0.05,
+    "alpha": 0.95,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTurningPointsStrategy",
+    "parameters": {
+      "slow_days": 252,
+      "fast_days": 21,
+      "vol_window_days": 63
+    },
+    "underlying": "universe:core_8"
+  },
+  "tags": [
+    "mech:trend",
+    "risk-managed",
+    "research:momentum-turning-points"
+  ]
+}

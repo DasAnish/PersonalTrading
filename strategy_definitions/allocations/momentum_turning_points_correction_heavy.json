@@ -1,0 +1,19 @@
+{
+  "type": "allocation",
+  "class": "MomentumTurningPointsStrategy",
+  "name": "Momentum Turning Points (correction-heavy, core_8)",
+  "description": "Asymmetric cycle exposure: Correction 0.75, Rebound 0.25 \u2014 trusts the slow signal through corrections, discounts fast rebounds. Based on Garg-Goulding-Harvey-Mazzoleni (JFE 2023).",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63,
+    "correction_exposure": 0.75,
+    "rebound_exposure": 0.25
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "research:momentum-turning-points",
+    "variant:params"
+  ]
+}

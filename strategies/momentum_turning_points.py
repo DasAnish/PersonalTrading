@@ -41,6 +41,8 @@ class MomentumTurningPointsStrategy(AllocationStrategy):
         slow_days: int = 252,
         fast_days: int = 21,
         vol_window_days: int = 63,
+        correction_exposure: float = 0.5,
+        rebound_exposure: float = 0.5,
         defensive_symbols: List[str] = None,
         name: str = None,
     ):
@@ -50,6 +52,8 @@ class MomentumTurningPointsStrategy(AllocationStrategy):
         self.slow_days = slow_days
         self.fast_days = fast_days
         self.vol_window_days = vol_window_days
+        self.correction_exposure = correction_exposure
+        self.rebound_exposure = rebound_exposure
         self.defensive_symbols = defensive_symbols or ["VUTY", "SGLN"]
 
     def calculate_weights(self, context: StrategyContext) -> pd.Series:
@@ -72,10 +76,13 @@ class MomentumTurningPointsStrategy(AllocationStrategy):
         slow_ret = slow_window.iloc[-1] / slow_window.iloc[0] - 1
         fast_ret = fast_window.iloc[-1] / fast_window.iloc[0] - 1
 
-        # Cycle exposure: Bull 1.0, Correction/Rebound 0.5, Bear 0.0
+        # Cycle exposure: Bull 1.0, Correction (slow+/fast-)
+        # correction_exposure, Rebound (slow-/fast+) rebound_exposure,
+        # Bear 0.0
         exposure = pd.Series(0.0, index=prices.columns)
         exposure[(slow_ret > 0) & (fast_ret > 0)] = 1.0
-        exposure[(slow_ret > 0) != (fast_ret > 0)] = 0.5
+        exposure[(slow_ret > 0) & (fast_ret <= 0)] = self.correction_exposure
+        exposure[(slow_ret <= 0) & (fast_ret > 0)] = self.rebound_exposure
 
         symbol_to_name = self._build_name_map()
         index = [symbol_to_name.get(s, s) for s in prices.columns]

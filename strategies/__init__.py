@@ -106,6 +106,8 @@ from .gold_silver_ratio import GoldSilverRatioStrategy
 from .national_market_mean_reversion import NationalMarketMeanReversionStrategy
 from .stock_bond_correlation_regime import StockBondCorrelationRegimeStrategy
 from .strategy_risk_parity_meta import StrategyRiskParityMetaStrategy
+from .absorption_ratio_regime import AbsorptionRatioRegimeStrategy
+from .strategy_factor_momentum import StrategyFactorMomentumStrategy
 
 # Overlay strategies
 from .overlays import VolatilityTargetStrategy, ConstraintStrategy, LeverageStrategy
@@ -248,6 +250,8 @@ __all__ = [
     "NationalMarketMeanReversionStrategy",
     "StockBondCorrelationRegimeStrategy",
     "StrategyRiskParityMetaStrategy",
+    "AbsorptionRatioRegimeStrategy",
+    "StrategyFactorMomentumStrategy",
     "OmegaRatioStrategy",
     "DownsideBetaTiltStrategy",
     "LowIVolTiltStrategy",

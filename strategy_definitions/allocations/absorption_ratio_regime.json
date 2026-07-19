@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "AbsorptionRatioRegimeStrategy",
+  "name": "Absorption Ratio Regime (15d, z=1.0)",
+  "description": "PCA-based systemic-risk regime de-risking (Kritzman et al. 2011). Computes rolling absorption ratio (fraction of return variance explained by top ~N/5 principal components). When standardized AR shift > +1σ, markets are tightly coupled and diversification fails—shift to defensive assets (VUTY, SGLN, AGGU). When AR shift < -1σ, full risk-on. Between thresholds, 50/50 blend. Hedge against concentration risk and common-factor crises.",
+  "parameters": {
+    "ar_short_days": 15,
+    "entry_z": 1.0
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:regime",
+    "defensive:macro",
+    "systemic-risk"
+  ]
+}

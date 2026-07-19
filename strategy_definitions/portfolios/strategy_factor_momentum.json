@@ -1,0 +1,22 @@
+{
+  "type": "portfolio",
+  "class": "StrategyFactorMomentumStrategy",
+  "name": "Strategy Factor Momentum (252d)",
+  "description": "Time-series momentum applied at the strategy-sleeve level (Ehsani & Linnainmaa, 2022). Hold only sub-strategies whose trailing 12-month paper NAV return is positive; allocate freed weight to defensive assets (VUTY, SGLN, AGGU). Economic rationale: factor premia autocorrelate as arbitrage capital moves slowly and crowding builds gradually. Expected Sharpe uplift 0.1–0.3 over static equal-weight blend, with lower drawdown from regime-mismatch period exclusions.",
+  "parameters": {
+    "momentum_lookback_days": 252
+  },
+  "underlying": [
+    "allocations/defensive_asset_allocation_canary",
+    "allocations/minimum_cvar_core6",
+    "allocations/time_series_momentum_core8",
+    "allocations/stock_bond_correlation_regime_light",
+    "allocations/network_risk_parity_theme_defensive"
+  ],
+  "tags": [
+    "mech:meta",
+    "factor-momentum",
+    "time-series-momentum",
+    "ensemble"
+  ]
+}

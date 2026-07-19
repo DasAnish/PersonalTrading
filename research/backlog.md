@@ -56,3 +56,5 @@ in `research/ideas/`.
 | [Risk-Adjusted (Sharpe-Ratio) Momentum](ideas/sharpe-momentum.md) | momentum-cs | rejected | Rachev, Jasic, Stoyanov & Fabozzi (2007), Journal of Banking & Finance 31(8) | 2026-07-14 |
 | [Shrinkage Minimum-Variance Portfolio](ideas/min-var-shrinkage.md) | diversification | validated | Ledoit & Wolf (2004), Journal of Portfolio Management 30(4) | 2026-07-14 |
 | [Inverse-Volatility (Naive Risk Parity) Portfolio](ideas/inverse-volatility.md) | diversification | validated | Leote de Carvalho, Lu & Moulin (2012), Financial Analysts Journal 68(3) | 2026-07-14 |
+| [Strategy-Level (Factor) Momentum](ideas/strategy-factor-momentum.md) | meta | built | Ehsani & Linnainmaa (2022), Journal of Finance | 2026-07-19 |
+| [Absorption Ratio (PCA systemic-risk) regime de-risking](ideas/absorption-ratio-regime.md) | regime | built | Kritzman, Li, Page & Rigobon (2011), JPM 37(4) | 2026-07-19 |

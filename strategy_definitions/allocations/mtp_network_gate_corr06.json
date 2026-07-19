@@ -1,0 +1,21 @@
+{
+  "type": "allocation",
+  "class": "MTPNetworkStrategy",
+  "name": "MTP x Network (gate, corr>0.6, core_8)",
+  "description": "Signal-level combination: MTP cycle exposure multiplied by (0.5 + 0.5 x network agreement) \u2014 network disagreement halves exposure. Combines Garg-Goulding-Harvey-Mazzoleni (JFE 2023) with Li-Ferreira (arXiv 2501.07135) at signal level rather than portfolio level. Tighter network threshold (0.6) variant.",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63,
+    "corr_threshold": 0.6,
+    "combine": "gate"
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "signal-combination",
+    "research:momentum-turning-points",
+    "research:network-momentum-trend",
+    "variant:params"
+  ]
+}

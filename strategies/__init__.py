@@ -86,6 +86,7 @@ from .gold_autumn_seasonality import GoldAutumnSeasonalityStrategy
 from .sma_trend_filter import SMATrendFilterStrategy
 from .low_volatility_tilt import LowVolatilityTiltStrategy
 from .time_series_momentum import TimeSeriesMomentumStrategy
+from .momentum_turning_points import MomentumTurningPointsStrategy
 from .network_risk_parity import NetworkRiskParityStrategy
 from .seasonal_return_tilt import SeasonalReturnTiltStrategy
 from .omega_ratio import OmegaRatioStrategy
@@ -242,6 +243,7 @@ __all__ = [
     "SMATrendFilterStrategy",
     "LowVolatilityTiltStrategy",
     "TimeSeriesMomentumStrategy",
+    "MomentumTurningPointsStrategy",
     "NetworkRiskParityStrategy",
     "SeasonalReturnTiltStrategy",
     "DefensiveAssetAllocationStrategy",

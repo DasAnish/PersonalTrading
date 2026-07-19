@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "InflationRegimeStrategy",
+  "name": "Inflation Regime Quadrants (all)",
+  "description": "Price-proxied growth x inflation quadrant allocation per Baltussen-Swinkels-van Vliet-van Vliet (FAJ 2023): commodity-sleeve trend proxies inflation, equity-sleeve trend proxies growth; quadrant maps to equity/commodity/gold/bond sleeve weights, inverse-vol within sleeve.",
+  "parameters": {
+    "lookback_days": 252,
+    "vol_window_days": 63
+  },
+  "underlying": "universe:all",
+  "tags": [
+    "mech:regime",
+    "research:inflation-regime-quadrants",
+    "variant:universe"
+  ]
+}

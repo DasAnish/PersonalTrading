@@ -63,3 +63,4 @@ in `research/ideas/`.
 | [Network Momentum (peer-spillover trend)](ideas/network-momentum-trend.md) | trend | validated | Li & Ferreira (2025), arXiv 2501.07135 | 2026-07-19 |
 | [Tail Risk Targeting (target-CVaR overlay)](ideas/tail-risk-targeting.md) | hedging-overlay | built | Rickenberg (2019), SSRN 3444999 | 2026-07-19 |
 | [Moving Average Distance (MAD) tilt](ideas/moving-average-distance.md) | momentum-cs | rejected | Avramov, Kaplanski & Subrahmanyam (2021), RFE 39(2) | 2026-07-19 |
+| [Inflation-Regime Quadrant Allocation](ideas/inflation-regime-quadrants.md) | regime | built | Baltussen, Swinkels, van Vliet & van Vliet (2023), FAJ 79(3) | 2026-07-20 |

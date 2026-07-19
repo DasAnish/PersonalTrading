@@ -130,30 +130,20 @@ def _definition_exists(strategy_key: str) -> bool:
 
 def _estimate_n_trials(strategy_key: str) -> int:
     """
-    n_trials for run_overfitting.py Mode 2: count sibling definitions that
-    share this key's ``class`` (the effective number of variants tried),
-    floored at 2 — same idea as build_n_trials_map's class-sibling tier,
-    kept dependency-free so the server doesn't import the analysis stack.
+    n_trials for run_overfitting.py Mode 2: total number of strategy
+    definitions in the universe. Selection is a best-of-all-leaderboard
+    choice, so the honest trial count is the FULL pool, not just the class
+    siblings (which understated N and inflated DSR). Same global-pool logic
+    as build_n_trials_map, kept dependency-free so the server doesn't
+    import the analysis stack.
     """
-    target_class = None
-    definitions: list[tuple[str, str]] = []  # (key, class)
+    total = 0
     for sub in ("allocations", "composed", "portfolios"):
         subdir = STRATEGY_DEFS_DIR / sub
         if not subdir.exists():
             continue
-        for path in subdir.glob("*.json"):
-            try:
-                with open(path, "r") as f:
-                    cls = json.load(f).get("class")
-            except Exception:
-                continue
-            definitions.append((path.stem, cls))
-            if path.stem == strategy_key:
-                target_class = cls
-    if target_class is None:
-        return 2
-    siblings = sum(1 for _, cls in definitions if cls == target_class)
-    return max(2, siblings)
+        total += sum(1 for _ in subdir.glob("*.json"))
+    return max(2, total)
 
 
 def _step_command(step: str, strategy_key: str) -> list[str]:

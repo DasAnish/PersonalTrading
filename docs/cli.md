@@ -133,7 +133,8 @@ Options:
 - `--all` — Run the battery for every strategy under `results/strategies/`;
   per-key errors don't abort the batch
 - `--n-trials N` — Trials for DSR / MinBTL (default: auto per strategy via
-  `build_n_trials_map`, i.e. the strategy's family/sibling count)
+  `build_n_trials_map`, i.e. the global selection pool: all strategies plus
+  unmaterialised param-sweep cells — selection is best-of-leaderboard)
 - `--cpcv-folds K` — CPCV fold count (default: 6)
 - `--bootstrap-n N` — Bootstrap iterations (default: 500)
 - `--block-months M` — Bootstrap block size in months (default: 3)

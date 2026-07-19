@@ -119,16 +119,19 @@ def build_n_trials_map(
     """
     Estimate n_trials (N) for DSR / MinBTL per strategy key.
 
-    Two-tier logic (fixes the old bug of lumping trend_following,
-    trend_signal_rp, trend_signal_mvo together just because they share a
-    "trend" prefix token — they are different strategy classes):
+    Selection happens across the FULL universe: the leaderboard ranks every
+    strategy against every other, so the best strategy's Sharpe was selected
+    from the whole pool, not just its own class. The honest N is therefore
+    global and identical for every key:
 
-    (a) If a strategy's key matches a ``PBO_PARAM_GRIDS`` family (by prefix)
-        AND its definition ``class`` equals that family's
-        ``strategy_class``, n_trials = the cartesian product size of that
-        family's grid — the TRUE number of configurations swept.
-    (b) Otherwise, group by the definition's ``class`` field and count real
-        siblings sharing that class.
+        N = len(strategy_keys)
+            + sum over PBO_PARAM_GRIDS families with >= 1 key present of
+              max(0, grid cartesian size - keys already in that family)
+
+    i.e. every materialised strategy plus every ephemeral sweep configuration
+    explored but not saved as its own key. (The old per-family/class-sibling
+    N understated the pool by an order of magnitude — e.g. 115 vs 341+ —
+    inflating DSR for everything.)
 
     Floors n_trials at 2 (DSR/MinBTL require N >= 2).
 
@@ -142,8 +145,7 @@ def build_n_trials_map(
     if class_lookup is None:
         class_lookup = _load_class_lookup(strategy_keys)
 
-    n_trials_map: Dict[str, int] = {}
-    remaining: List[str] = []
+    family_key_counts: Counter = Counter()
 
     for key in strategy_keys:
         family = None
@@ -154,19 +156,18 @@ def build_n_trials_map(
                 family = fam
                 break
         if family is not None:
-            grid = PBO_PARAM_GRIDS[family]["param_grid"]
-            n = 1
-            for values in grid.values():
-                n *= len(values)
-            n_trials_map[key] = max(n, 2)
-        else:
-            remaining.append(key)
+            family_key_counts[family] += 1
 
-    class_counts = Counter(class_lookup.get(k, k) for k in remaining)
-    for key in remaining:
-        n_trials_map[key] = max(class_counts[class_lookup.get(key, key)], 2)
+    extra_sweep_cells = 0
+    for family, count in family_key_counts.items():
+        grid = PBO_PARAM_GRIDS[family]["param_grid"]
+        grid_size = 1
+        for values in grid.values():
+            grid_size *= len(values)
+        extra_sweep_cells += max(0, grid_size - count)
 
-    return n_trials_map
+    global_n = max(len(strategy_keys) + extra_sweep_cells, 2)
+    return {key: global_n for key in strategy_keys}
 
 
 def run_dsr_kfold_batch(

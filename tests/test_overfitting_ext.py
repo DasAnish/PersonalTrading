@@ -271,73 +271,58 @@ class TestPurgedKFold:
 
 
 class TestBuildNTrialsMap:
-    def test_grid_family_uses_cartesian_size(self):
-        keys = ["hrp_ward", "hrp_single", "hrp_complete"]
-        class_lookup = {k: "HRPStrategy" for k in keys}
-        result = build_n_trials_map(keys, class_lookup=class_lookup)
-        # hrp grid: linkage_method has 4 values -> cartesian size 4
-        expected_n = len(PBO_PARAM_GRIDS["hrp"]["param_grid"]["linkage_method"])
-        assert all(v == expected_n for v in result.values())
+    """Global-pool semantics: every key gets the same N = total keys plus
+    unmaterialised sweep cells for grid families with at least one key."""
 
-    def test_trend_following_grid_family_size(self):
-        class_lookup = {"trend_following": "TrendFollowingStrategy"}
-        result = build_n_trials_map(["trend_following"], class_lookup=class_lookup)
-        grid = PBO_PARAM_GRIDS["trend_following"]["param_grid"]
-        expected_n = len(grid["lookback_days"]) * len(grid["half_life_days"])
-        assert result["trend_following"] == expected_n == 9
-
-    def test_class_grouped_family_counts_siblings(self):
+    def test_global_pool_uniform_across_keys(self):
         keys = ["custom_a", "custom_b", "custom_c"]
         class_lookup = {k: "CustomStrategy" for k in keys}
         result = build_n_trials_map(keys, class_lookup=class_lookup)
         assert all(v == 3 for v in result.values())
 
-    def test_singleton_class_floors_at_2(self):
+    def test_singleton_floors_at_2(self):
         result = build_n_trials_map(
             ["lonely_strategy"], class_lookup={"lonely_strategy": "LonelyClass"}
         )
         assert result["lonely_strategy"] == 2
 
-    def test_does_not_lump_different_classes_sharing_prefix_token(self):
-        """Regression test: trend_following / trend_signal_rp /
-        trend_signal_mvo share a "trend" prefix TOKEN but are different
-        strategy classes and must not be treated as siblings."""
-        keys = ["trend_following", "trend_signal_rp", "trend_signal_mvo"]
-        class_lookup = {
-            "trend_following": "TrendFollowingStrategy",
-            "trend_signal_rp": "TrendSignalRPStrategy",
-            "trend_signal_mvo": "TrendSignalMVOStrategy",
-        }
-        result = build_n_trials_map(keys, class_lookup=class_lookup)
-        assert result["trend_following"] == 9  # matches PBO grid family
-        # each of these is a singleton class among the given keys -> floor 2,
-        # NOT 3 (the old prefix-based bug would have given all three N=3).
-        assert result["trend_signal_rp"] == 2
-        assert result["trend_signal_mvo"] == 2
-
-    def test_mixed_grid_and_class_grouped_keys(self):
-        keys = ["hrp_ward", "hrp_single", "my_custom_strategy", "my_custom_strategy_2"]
+    def test_grid_family_adds_unmaterialised_sweep_cells(self):
+        # hrp grid has 4 cells; 3 hrp keys present -> 1 extra cell.
+        keys = ["hrp_ward", "hrp_single", "hrp_complete", "custom_a"]
         class_lookup = {
             "hrp_ward": "HRPStrategy",
             "hrp_single": "HRPStrategy",
-            "my_custom_strategy": "MyCustomStrategy",
-            "my_custom_strategy_2": "MyCustomStrategy",
+            "hrp_complete": "HRPStrategy",
+            "custom_a": "CustomStrategy",
         }
         result = build_n_trials_map(keys, class_lookup=class_lookup)
-        hrp_n = len(PBO_PARAM_GRIDS["hrp"]["param_grid"]["linkage_method"])
-        assert result["hrp_ward"] == hrp_n
-        assert result["hrp_single"] == hrp_n
-        assert result["my_custom_strategy"] == 2
-        assert result["my_custom_strategy_2"] == 2
+        grid_size = len(PBO_PARAM_GRIDS["hrp"]["param_grid"]["linkage_method"])
+        expected = len(keys) + (grid_size - 3)
+        assert all(v == expected for v in result.values())
 
-    def test_key_prefix_match_without_class_match_falls_back_to_class_grouping(self):
+    def test_trend_following_grid_counts_full_cartesian(self):
+        class_lookup = {"trend_following": "TrendFollowingStrategy"}
+        result = build_n_trials_map(["trend_following"], class_lookup=class_lookup)
+        grid = PBO_PARAM_GRIDS["trend_following"]["param_grid"]
+        grid_size = len(grid["lookback_days"]) * len(grid["half_life_days"])
+        # 1 key + (9 - 1) unmaterialised cells = 9
+        assert result["trend_following"] == 1 + (grid_size - 1) == 9
+
+    def test_key_prefix_match_without_class_match_adds_no_grid_cells(self):
         """A key sharing a PBO_PARAM_GRIDS family's name PREFIX but with a
-        different class must NOT get the grid's n_trials."""
+        different class must NOT pull in that family's grid cells."""
         keys = ["hrp_15vol"]
         # hrp_15vol is a composed/overlay strategy, not an HRPStrategy itself
         class_lookup = {"hrp_15vol": "VolatilityTargetStrategy"}
         result = build_n_trials_map(keys, class_lookup=class_lookup)
-        assert result["hrp_15vol"] == 2  # floor, singleton class, NOT the hrp grid size
+        assert result["hrp_15vol"] == 2  # floor: 1 key, no grid family matched
+
+    def test_more_family_keys_than_grid_cells_adds_nothing(self):
+        # 5 hrp keys > 4 grid cells -> extra cells clamp at 0, N = len(keys).
+        keys = [f"hrp_{i}" for i in range(5)]
+        class_lookup = {k: "HRPStrategy" for k in keys}
+        result = build_n_trials_map(keys, class_lookup=class_lookup)
+        assert all(v == 5 for v in result.values())
 
 
 # ---------------------------------------------------------------------------

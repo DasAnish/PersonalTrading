@@ -1,0 +1,31 @@
+{
+  "type": "allocation",
+  "class": "CanaryGatedMTPStrategy",
+  "name": "Canary-Gated MTP (rebound-heavy)",
+  "description": "Signal-level DAA x MTP combination: canary breadth (IIND+AGGU fast momentum) scales the invested fraction of the MTP cycle allocation; remainder to VUTY. Combines Keller-Keuning (2018) canary gate with Garg-Goulding-Harvey-Mazzoleni (JFE 2023) cycle exposure.",
+  "parameters": {
+    "slow_days": 252,
+    "fast_days": 21,
+    "vol_window_days": 63,
+    "correction_exposure": 0.25,
+    "rebound_exposure": 0.75
+  },
+  "underlying": [
+    "assets/iind",
+    "assets/aggu",
+    "assets/vusa",
+    "assets/iwrd",
+    "assets/eqqq",
+    "assets/sgln",
+    "assets/ssln",
+    "assets/comm",
+    "assets/vuty"
+  ],
+  "tags": [
+    "mech:regime",
+    "signal-combination",
+    "research:momentum-turning-points",
+    "research:defensive-asset-allocation-canary",
+    "variant:params"
+  ]
+}

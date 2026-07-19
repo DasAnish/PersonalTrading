@@ -1,0 +1,17 @@
+{
+  "type": "allocation",
+  "class": "MovingAverageDistanceStrategy",
+  "name": "Moving Average Distance Top-3 (core_8)",
+  "description": "Anchoring-driven MAD tilt per Avramov-Kaplanski-Subrahmanyam (RFE 2021): hold top-N assets by SMA21/SMA200 ratio (>1 required), inverse-vol weighted, shortfall to VUTY/SGLN.",
+  "parameters": {
+    "short_days": 21,
+    "long_days": 200,
+    "top_n": 3,
+    "vol_window_days": 63
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:momentum-cs",
+    "research:moving-average-distance"
+  ]
+}

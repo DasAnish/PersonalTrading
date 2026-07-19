@@ -251,6 +251,11 @@ class MarketDataService:
             (all_data.index >= lookback_start) & (all_data.index <= current_date)
         ]
 
+        # Ragged panel: exclude assets without a complete lookback window at
+        # this date (leading NaNs before inception). Once an asset has full
+        # history it stays included (unlimited ffill upstream).
+        sliced_data = sliced_data.dropna(axis=1)
+
         # Validate sufficient data
         if sliced_data.empty:
             raise ValueError(
@@ -294,11 +299,11 @@ class MarketDataService:
         # Convert to DataFrame
         df = pd.DataFrame(data_dict)
 
-        # Forward fill for up to 3 days (handle short gaps)
-        df = df.ffill(limit=3)
-
-        # Drop remaining rows with any NaN
-        df = df.dropna()
+        # Ragged panel: asset enters at first price date, stays included after
+        # (unlimited ffill covers gaps / vanished future prices). Leading NaNs
+        # preserved; rows dropped only when no asset has data.
+        df = df.ffill()
+        df = df.dropna(how="all")
 
         # Sort by index
         df = df.sort_index()

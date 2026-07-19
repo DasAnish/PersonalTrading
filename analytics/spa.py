@@ -86,6 +86,23 @@ def compute_spa(
     aligned = aligned.reindex(bench.index)
     d = aligned.sub(bench, axis=0)  # (T, N) differentials
 
+    # Drop benchmark near-clones: a strategy whose differential has ~zero
+    # variance (e.g. an overlay that never triggered, degenerating to the
+    # benchmark) produces an unbounded studentized statistic once omega hits
+    # its numerical floor, collapsing all SPA p-values to 0 regardless of the
+    # data. Their information content vs the benchmark is nil anyway.
+    non_degenerate = d.std(axis=0) > 1e-6
+    if not non_degenerate.all():
+        dropped = list(d.columns[~non_degenerate])
+        logger.warning(
+            "SPA: dropping %d benchmark near-clone strategies (differential "
+            "std <= 1e-6): %s",
+            len(dropped),
+            dropped,
+        )
+        d = d.loc[:, non_degenerate]
+        aligned = aligned.loc[:, non_degenerate]
+
     t, n = d.shape
     if t < 12 or n < 1:
         raise ValueError(f"Need >= 12 obs and >= 1 strategy, got T={t}, N={n}")

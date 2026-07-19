@@ -161,6 +161,11 @@ def run_single_backtest(
         except Exception:
             pass  # fall back to full price frame if get_symbols() fails
 
+        # Ragged panel: exclude assets without a complete lookback window at
+        # this date (leading NaNs before inception). Once past inception the
+        # unlimited ffill upstream guarantees a full window.
+        sliced = sliced.dropna(axis=1)
+
         if sliced.empty or len(sliced) < 5:
             continue
 

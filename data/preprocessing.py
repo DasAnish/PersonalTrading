@@ -76,16 +76,20 @@ def align_dataframes(data_dict: Dict[str, pd.DataFrame]) -> pd.DataFrame:
                 f"{symbol_data.index[0].date()} to {symbol_data.index[-1].date()}"
             )
 
-    # Forward fill missing values (max 3 days)
-    prices = prices.ffill(limit=3)
+    # Ragged panel: each asset enters at its first price date and stays
+    # included afterwards. Unlimited forward-fill covers gaps and any future
+    # disappearance of prices (last price carries, 0% return); leading NaNs
+    # before inception are preserved so per-rebalance logic can exclude
+    # assets that lack sufficient history.
+    prices = prices.ffill()
 
-    # Drop any remaining NaN rows
+    # Drop only rows where no asset has a price yet
     before_drop = len(prices)
-    prices = prices.dropna()
+    prices = prices.dropna(how="all")
     after_drop = len(prices)
 
     if before_drop > after_drop:
-        logger.info(f"Dropped {before_drop - after_drop} rows with missing data")
+        logger.info(f"Dropped {before_drop - after_drop} rows with no data at all")
 
     # Log final aligned date range
     if not prices.empty:
@@ -134,8 +138,19 @@ def validate_data_quality(
         )
         return False
 
-    # Check NaN percentage
-    nan_pct = prices.isnull().sum().sum() / (len(prices) * len(prices.columns))
+    # Check NaN percentage, ignoring pre-inception NaNs (ragged panel: an
+    # asset legitimately has no data before its first price date). Only NaNs
+    # after each column's first valid index indicate a data-quality problem.
+    post_inception_nans = 0
+    total_cells = 0
+    for col in prices.columns:
+        first = prices[col].first_valid_index()
+        if first is None:
+            continue
+        series = prices.loc[first:, col]
+        post_inception_nans += series.isnull().sum()
+        total_cells += len(series)
+    nan_pct = post_inception_nans / total_cells if total_cells else 1.0
     if nan_pct > max_nan_pct:
         logger.error(
             f"Too many NaN values: {nan_pct*100:.2f}% > {max_nan_pct*100:.2f}% threshold"

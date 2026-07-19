@@ -1,0 +1,16 @@
+{
+  "type": "allocation",
+  "class": "NetworkMomentumStrategy",
+  "name": "Network Momentum (core_8)",
+  "description": "Trend-following with peer-spillover confirmation per Li-Ferreira (arXiv 2501.07135): exposure requires agreement between own 252d trend and correlation-weighted neighbour trend; inverse-vol weighted, defensive fallback VUTY/SGLN.",
+  "parameters": {
+    "lookback_days": 252,
+    "vol_window_days": 63,
+    "corr_threshold": 0.4
+  },
+  "underlying": "universe:core_8",
+  "tags": [
+    "mech:trend",
+    "research:network-momentum-trend"
+  ]
+}

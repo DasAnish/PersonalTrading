@@ -60,3 +60,4 @@ in `research/ideas/`.
 | [Absorption Ratio (PCA systemic-risk) regime de-risking](ideas/absorption-ratio-regime.md) | regime | built | Kritzman, Li, Page & Rigobon (2011), JPM 37(4) | 2026-07-19 |
 | [Momentum Turning Points (blended slow/fast TSM)](ideas/momentum-turning-points.md) | trend | validated | Garg, Goulding, Harvey & Mazzoleni (2023), JFE 149 | 2026-07-19 |
 | [Cross-Asset Time-Series Momentum](ideas/cross-asset-tsm.md) | trend | built | Pitkäjärvi, Suominen & Vaittinen (2020), JFE | 2026-07-19 |
+| [Network Momentum (peer-spillover trend)](ideas/network-momentum-trend.md) | trend | validated | Li & Ferreira (2025), arXiv 2501.07135 | 2026-07-19 |

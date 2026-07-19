@@ -1,0 +1,29 @@
+{
+  "type": "composed",
+  "class": "CPPIStrategy",
+  "name": "MTP rh+vw126 + CPPI (floor 85%, m=3)",
+  "description": "Library-best alpha sleeve (momentum turning points rebound-heavy vw126) under the Black-Perold CPPI ratchet floor.",
+  "parameters": {
+    "floor_fraction": 0.85,
+    "multiplier": 3.0,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "allocation",
+    "class": "MomentumTurningPointsStrategy",
+    "parameters": {
+      "slow_days": 252,
+      "fast_days": 21,
+      "vol_window_days": 126,
+      "correction_exposure": 0.25,
+      "rebound_exposure": 0.75
+    },
+    "underlying": "universe:core_8"
+  },
+  "tags": [
+    "mech:trend",
+    "risk-managed",
+    "research:cppi-drawdown-floor",
+    "research:momentum-turning-points"
+  ]
+}

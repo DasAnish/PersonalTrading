@@ -1,0 +1,36 @@
+{
+  "type": "composed",
+  "class": "CPPIStrategy",
+  "name": "Slate2 Candidate A + CPPI (floor 85%, m=3)",
+  "description": "meta_slate2_candidate composition (MTP rebound-heavy 30/DAA 25/minCVaR 20/SBC 15/cash 10) under the CPPI ratchet floor.",
+  "parameters": {
+    "floor_fraction": 0.85,
+    "multiplier": 3.0,
+    "lookback_days": 252
+  },
+  "underlying": {
+    "type": "portfolio",
+    "class": "MetaPortfolioStrategy",
+    "parameters": {
+      "weights": [
+        0.3,
+        0.25,
+        0.2,
+        0.15
+      ],
+      "cash_weight": 0.1
+    },
+    "underlying": [
+      "allocations/momentum_turning_points_rebound_heavy",
+      "allocations/defensive_asset_allocation_canary",
+      "allocations/minimum_cvar_core6",
+      "allocations/stock_bond_correlation_regime_light"
+    ]
+  },
+  "tags": [
+    "ensemble",
+    "risk-managed",
+    "research:cppi-drawdown-floor",
+    "pm-slate-candidate"
+  ]
+}

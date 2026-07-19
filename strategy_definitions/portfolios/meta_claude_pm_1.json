@@ -1,0 +1,25 @@
+{
+  "type": "portfolio",
+  "class": "MetaPortfolioStrategy",
+  "name": "Meta: Claude PM Slate 1",
+  "description": "Claude PM slate 1 (chosen 2026-07-19 after ragged-panel 10y rebuild; weights effective from 2026-07-20): fixed-weight blend of five mechanism-diverse sleeves plus a 10% cash reserve. DAA canary 25%, minimum CVaR core6 20%, time-series momentum core8 20%, stock-bond correlation regime light 15%, network risk parity theme defensive 10%, cash 10%. Registered for forward out-of-sample paper tracking; weights frozen — a re-slate becomes meta_claude_pm_2 (see update-meta-portfolio skill).",
+  "effective_from": "2026-07-20",
+  "parameters": {
+    "weights": [0.25, 0.20, 0.20, 0.15, 0.10],
+    "cash_weight": 0.10
+  },
+  "underlying": [
+    "allocations/defensive_asset_allocation_canary",
+    "allocations/minimum_cvar_core6",
+    "allocations/time_series_momentum_core8",
+    "allocations/stock_bond_correlation_regime_light",
+    "allocations/network_risk_parity_theme_defensive"
+  ],
+  "tags": [
+    "ensemble",
+    "pm-slate",
+    "pre-registered",
+    "paper-trading",
+    "mech:meta"
+  ]
+}

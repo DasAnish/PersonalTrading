@@ -48,17 +48,37 @@ class MetaPortfolioStrategy(AllocationStrategy):
 
     If a sub-strategy fails to compute weights, it is skipped and the
     remaining strategies are re-normalised to sum to 1.
+
+    Optional ``weights`` gives each sub-strategy a fixed blend weight
+    (same order as ``underlying``; default equal weight). Optional
+    ``cash_weight`` (0..1) reserves that fraction unallocated — asset
+    weights then sum to ``1 - cash_weight`` and the engine holds the
+    remainder as cash.
     """
 
     def __init__(
         self,
         underlying: List[Strategy],
         name: str = None,
+        weights: List[float] = None,
+        cash_weight: float = 0.0,
     ):
         super().__init__(
             underlying=underlying,
             name=name or "Meta Portfolio",
         )
+        if weights is not None:
+            if len(weights) != len(underlying):
+                raise ValueError(
+                    f"weights length {len(weights)} != underlying "
+                    f"length {len(underlying)}"
+                )
+            if any(w < 0 for w in weights) or sum(weights) <= 0:
+                raise ValueError("weights must be non-negative with positive sum")
+        if not 0.0 <= cash_weight < 1.0:
+            raise ValueError(f"cash_weight must be in [0, 1), got {cash_weight}")
+        self.sub_weights = weights
+        self.cash_weight = cash_weight
 
     # ------------------------------------------------------------------
     # Public interface
@@ -70,9 +90,10 @@ class MetaPortfolioStrategy(AllocationStrategy):
         )
 
         blended = pd.Series(0.0, index=all_symbols)
-        n_ok = 0
+        ok_weight = 0.0
 
-        for sub_strategy in self.underlying:
+        for i, sub_strategy in enumerate(self.underlying):
+            blend_w = self.sub_weights[i] if self.sub_weights is not None else 1.0
             try:
                 sub_weights = sub_strategy.calculate_weights(context)
                 # sub_weights may be indexed by strategy names or asset symbols;
@@ -80,26 +101,29 @@ class MetaPortfolioStrategy(AllocationStrategy):
                 asset_weights = self._resolve_to_symbols(
                     sub_weights, sub_strategy, all_symbols
                 )
-                blended += asset_weights
-                n_ok += 1
+                blended += blend_w * asset_weights
+                ok_weight += blend_w
             except Exception as e:
                 logger.warning(
                     f"MetaPortfolio: sub-strategy {sub_strategy.name} failed: {e}, skipping"
                 )
 
-        if n_ok == 0:
+        if ok_weight == 0.0:
             # All sub-strategies failed — equal weight fallback
             logger.warning(
                 "MetaPortfolio: all sub-strategies failed, using equal weight"
             )
-            return pd.Series(1.0 / len(all_symbols), index=all_symbols)
+            return pd.Series(
+                (1.0 - self.cash_weight) / len(all_symbols), index=all_symbols
+            )
 
-        blended /= n_ok
+        blended /= ok_weight
 
-        # Normalise (floating-point safety)
+        # Normalise (floating-point safety), then reserve the cash sleeve
         total = blended.sum()
         if total > 0:
             blended /= total
+        blended *= 1.0 - self.cash_weight
 
         return blended
 
